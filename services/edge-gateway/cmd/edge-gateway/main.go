@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/quanta-exchange/exchange-platform/services/edge-gateway/internal/gateway"
 )
@@ -13,6 +15,15 @@ func main() {
 		Addr:        getenv("EDGE_ADDR", ":8080"),
 		DBDsn:       getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:5432/exchange?sslmode=disable"),
 		WSQueueSize: getenvInt("EDGE_WS_QUEUE_SIZE", 128),
+		DisableDB:   getenv("EDGE_DISABLE_DB", "false") == "true",
+		APISecrets:  parseSecrets(getenv("EDGE_API_SECRETS", "")),
+		TimestampSkew: time.Duration(getenvInt("EDGE_AUTH_SKEW_SEC", 30)) *
+			time.Second,
+		ReplayTTL:          time.Duration(getenvInt("EDGE_REPLAY_TTL_SEC", 120)) * time.Second,
+		RateLimitPerMinute: getenvInt("EDGE_RATE_LIMIT_PER_MINUTE", 1000),
+		RedisAddr:          getenv("EDGE_REDIS_ADDR", ""),
+		RedisPassword:      getenv("EDGE_REDIS_PASSWORD", ""),
+		RedisDB:            getenvInt("EDGE_REDIS_DB", 0),
 	}
 	srv, err := gateway.New(cfg)
 	if err != nil {
@@ -40,4 +51,25 @@ func getenvInt(key string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+func parseSecrets(raw string) map[string]string {
+	out := map[string]string{}
+	if strings.TrimSpace(raw) == "" {
+		return out
+	}
+	pairs := strings.Split(raw, ",")
+	for _, p := range pairs {
+		parts := strings.SplitN(strings.TrimSpace(p), ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		secret := strings.TrimSpace(parts[1])
+		if key == "" || secret == "" {
+			continue
+		}
+		out[key] = secret
+	}
+	return out
 }

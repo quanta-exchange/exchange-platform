@@ -23,6 +23,8 @@
   - settlement lag, consumer lag, DB tx errors, invariants check results
 - WS:
   - connected clients, outbound rate, drop/close counts, backlog per conn
+- Edge auth:
+  - auth_fail_total{reason}, replay_detect_total, per-key rate-limit drops
 
 ---
 

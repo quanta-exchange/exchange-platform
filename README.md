@@ -86,7 +86,12 @@ Market order liquidity policy (v1):
   - `GET /readyz`
   - `GET /metrics`
   - `POST /v1/orders`
+  - `DELETE /v1/orders/{orderId}`
+  - `GET /v1/orders/{orderId}`
   - `POST /v1/smoke/trades`
+  - `GET /v1/markets/{symbol}/trades`
+  - `GET /v1/markets/{symbol}/orderbook`
+  - `GET /v1/markets/{symbol}/candles`
   - `GET /ws`
 - Postgres: `localhost:5432`
 - Redpanda Kafka: `localhost:19092`
@@ -103,3 +108,16 @@ Market order liquidity policy (v1):
 - Ledger is append-only; corrections only via reversal/adjustment.
 - Every event must include `event_id`, `event_version`, `symbol`, `seq`, `occurred_at`, `correlation_id`, `causation_id`.
 - WS must enforce backpressure and allow conflation for book/candle streams.
+
+## Edge auth (G2)
+Configure auth in env:
+- `EDGE_API_SECRETS="key1:secret1,key2:secret2"`
+- `EDGE_AUTH_SKEW_SEC=30`
+- `EDGE_REPLAY_TTL_SEC=120`
+- `EDGE_RATE_LIMIT_PER_MINUTE=1000`
+
+Request headers for trading endpoints:
+- `X-API-KEY`
+- `X-TS` (epoch ms)
+- `X-SIGNATURE` (HMAC-SHA256 of `METHOD\nPATH\nX-TS\nBODY`)
+- `Idempotency-Key` (POST/DELETE required)

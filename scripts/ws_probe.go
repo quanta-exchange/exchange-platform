@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -22,7 +23,20 @@ func main() {
 		os.Exit(1)
 	}
 	defer conn.Close()
-	_ = conn.SetReadDeadline(time.Now().Add(*timeout))
+	deadline := time.Now().Add(*timeout)
+	_ = conn.SetReadDeadline(deadline)
+
+	subCommands := []map[string]interface{}{
+		{"op": "SUB", "channel": "trades", "symbol": "BTC-KRW"},
+		{"op": "SUB", "channel": "candles", "symbol": "BTC-KRW"},
+	}
+	for _, cmd := range subCommands {
+		payload, _ := json.Marshal(cmd)
+		if err := conn.WriteMessage(websocket.TextMessage, payload); err != nil {
+			fmt.Fprintf(os.Stderr, "write sub command: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	f, err := os.Create(*out)
 	if err != nil {
@@ -31,15 +45,32 @@ func main() {
 	}
 	defer f.Close()
 
-	for i := 0; i < *count; i++ {
+	collected := 0
+	for time.Now().Before(deadline) {
+		_ = conn.SetReadDeadline(deadline)
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "read message: %v\n", err)
 			os.Exit(1)
 		}
+
+		var parsed map[string]interface{}
+		_ = json.Unmarshal(message, &parsed)
+		msgType, _ := parsed["type"].(string)
+		if msgType != "TradeExecuted" && msgType != "CandleUpdated" {
+			continue
+		}
+
 		if _, err := f.Write(append(message, '\n')); err != nil {
 			fmt.Fprintf(os.Stderr, "write output: %v\n", err)
 			os.Exit(1)
 		}
+		collected++
+		if collected >= *count {
+			return
+		}
 	}
+
+	fmt.Fprintf(os.Stderr, "timed out waiting for %d target ws events, got %d\n", *count, collected)
+	os.Exit(1)
 }

@@ -11,6 +11,7 @@
   - REST entrypoint + auth/signature + rate limit + request tracing
   - WS fan‑out (trades/book/ticker/candles) with backpressure
   - snapshot+delta + seq gap recovery
+  - replay-protection cache (Redis preferred, in-memory fallback for local)
 - **Ledger Service (Kotlin/Spring)** — `services/ledger-service`
   - double‑entry ledger (append‑only)
   - idempotent settlement consumer (TradeExecuted → ledger postings)

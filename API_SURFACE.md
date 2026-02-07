@@ -23,6 +23,10 @@ Base: `/v1`
   - `X-TS` (epoch ms)
   - `X-SIGNATURE`
   - `Idempotency-Key` (required for write)
+- Signature canonical string:
+  - `METHOD + "\\n" + PATH + "\\n" + X-TS + "\\n" + RAW_BODY`
+- Replay defense:
+  - duplicate `(api_key, signature, ts)` within replay window must be rejected
 
 ### Orders
 #### POST `/v1/orders`
