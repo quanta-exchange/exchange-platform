@@ -1,0 +1,38 @@
+# tasks/backlog — Index
+
+- `B-0002` — Protobuf contracts v1 + buf pipeline
+- `B-0101` — Trading Core: command/event contract integration
+- `B-0102` — Orderbook data structures v1 (correctness-first)
+- `B-0103` — Matching rules v1 (LIMIT/MARKET + liquidity policy)
+- `B-0104` — Risk hot-path v1 (reserve + limits + price band guard)
+- `B-0110` — Trading Core WAL v1 (durable-before-publish)
+- `B-0111` — Snapshotting v1 + fast recovery
+- `B-0112` — Leader election + fencing token (split-brain defense)
+- `B-0113` — Determinism harness + state hash checkpoints
+- `B-0114` — Trading Core outbox publisher v1 (durable publish, retry-safe)
+- `B-0115` — Market protections v2 (volatility guard + cancel-only transitions)
+- `B-0201` — Edge Gateway REST v1 (orders + status)
+- `B-0202` — Edge Gateway WS v1 (subscribe, snapshot+delta, gap recovery)
+- `B-0203` — Market data cache v1 (Redis hot snapshots)
+- `B-0204` — Edge: request authentication & replay protection hardening
+- `B-0301` — Ledger schema v1 (double-entry, append-only)
+- `B-0302` — Settlement consumer v1 (TradeExecuted → postings, idempotent)
+- `B-0303` — Reserve model v1 (available vs hold accounts)
+- `B-0304` — Balances materialization v1 + rebuild tooling
+- `B-0305` — Ledger invariants guard + auto safety policy hooks
+- `B-0306` — Engine↔Ledger coverage reconciliation v1
+- `B-0307` — Corrections workflow v1 (reversal/adjustment + 2-person approval)
+- `B-0401` — Flink candles 1m aggregator v1 (trade stream → candles)
+- `B-0402` — Flink ticker(24h) stream v1
+- `B-0403` — ClickHouse schema for trades/candles + query performance targets
+- `I-0001` — Monorepo skeleton + docs baseline
+- `I-0003` — Local dev compose: Postgres + Redpanda + Redis + ClickHouse + MinIO + OTel
+- `I-0004` — CI: path-based build/test + security baseline
+- `I-0101` — Kubernetes baseline + namespaces + network policy
+- `I-0102` — OpenTelemetry end-to-end tracing
+- `I-0103` — GitOps with ArgoCD (dev/staging/prod)
+- `I-0104` — KMS/HSM integration plan + secrets policy
+- `I-0105` — Load testing harness (orders + WS) + regression thresholds
+- `I-0106` — DR rehearsal: backup/restore + replay
+- `I-0107` — Production access control: RBAC + JIT + audit logging
+- `I-0108` — Safety-case generator (evidence bundle) for release gates

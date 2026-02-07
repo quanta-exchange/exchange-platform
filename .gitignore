@@ -1,0 +1,25 @@
+# OS files
+.DS_Store
+
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Logs/temp
+*.log
+tmp/
+temp/
+
+# Common dependencies/build outputs
+node_modules/
+dist/
+build/
+out/
+.gradle/
+target/
