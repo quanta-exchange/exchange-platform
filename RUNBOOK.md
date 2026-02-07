@@ -86,6 +86,9 @@
 - Restart/replace the other node; resync from snapshot+WAL
 - Resume in `CANCEL_ONLY` first, then NORMAL after validation
 
+Gate G1 operational check:
+- if stale leader rejection appears (`FENCING_TOKEN`), verify lease/token source first before manual recovery actions.
+
 ---
 
 ### 3.4 WS fan‑out overload (SEV2/SEV3)

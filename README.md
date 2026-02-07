@@ -64,6 +64,22 @@ This script verifies:
 - synthetic trade settlement row appended to Postgres
 - WebSocket `TradeExecuted` and `CandleUpdated` fan-out observed
 
+## Gate G1 status
+- Trading Core implements:
+  - command contract handling (`PlaceOrder`, `CancelOrder`, `SetSymbolMode`, `CancelAll`)
+  - price-time priority orderbook (FIFO in level, best-price across levels)
+  - LIMIT/MARKET matching with deterministic sequencing
+  - risk hot-path guards (reserve, rate/open-order limits, price band)
+  - WAL (CRC framed records) with durable-before-outbox commit line
+  - snapshot + WAL-tail recovery
+  - determinism state hashing and replay checks
+  - fencing token checks for split-brain defense
+  - durable outbox with retry-safe publish cursor
+
+Market order liquidity policy (v1):
+- partial fills are allowed
+- unfilled remainder is canceled (non-resting)
+
 ## Service endpoints (local)
 - Edge Gateway: `http://localhost:8081`
   - `GET /healthz`

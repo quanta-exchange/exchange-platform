@@ -157,6 +157,11 @@ Service: `TradingCoreService`
 **Required fields on every command**
 - `command_id`, `idempotency_key`, `user_id`, `symbol`, `ts_server`, `trace_id`
 
+Matching policy notes (v1):
+- `MARKET` orders sweep available opposite-side liquidity by best price.
+- If liquidity is insufficient, partial fills are emitted and remainder is canceled.
+- `LIMIT` orders that are not fully matched can rest on book (GTC) or be canceled by policy.
+
 ---
 
 ## 4) Events (Kafka/Redpanda)

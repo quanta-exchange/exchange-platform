@@ -1,5 +1,15 @@
 use serde::{Deserialize, Serialize};
 
+pub mod determinism;
+pub mod engine;
+pub mod leader;
+pub mod model;
+pub mod orderbook;
+pub mod outbox;
+pub mod risk;
+pub mod snapshot;
+pub mod wal;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CoreHealth {
     pub service: String,
@@ -31,27 +41,4 @@ pub mod contracts {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn health_is_ok() {
-        let result = health();
-        assert_eq!(result.service, "trading-core");
-        assert_eq!(result.status, "ok");
-    }
-
-    #[test]
-    fn generated_contract_types_compile() {
-        let envelope = contracts::exchange::v1::EventEnvelope {
-            event_id: "evt-1".to_string(),
-            event_version: 1,
-            symbol: "BTC-KRW".to_string(),
-            seq: 1,
-            occurred_at: None,
-            correlation_id: "corr-1".to_string(),
-            causation_id: "cause-1".to_string(),
-        };
-        assert_eq!(envelope.symbol, "BTC-KRW");
-    }
-}
+mod tests;

@@ -136,3 +136,11 @@ sequenceDiagram
   - WS may degrade; clients reconnect and resync via snapshots
 - Ledger outage:
   - settlement lag grows; policy may throttle/halt trading at thresholds
+
+---
+
+## 9) Gate G1 implementation notes
+- Trading Core currently persists command results in WAL records with CRC checks.
+- External publish path is through outbox records, written only after WAL durable append.
+- Periodic state hash checkpoints are embedded in command processing and persisted in WAL.
+- Leadership fencing token is checked before commit; stale leaders are forced to reject commits and enter halt mode.
