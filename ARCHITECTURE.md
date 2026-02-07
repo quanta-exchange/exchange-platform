@@ -117,7 +117,17 @@ sequenceDiagram
 
 ---
 
-## 7) Failure semantics (short)
+## 7) Local dev baseline (Gate G0)
+- Local infra is provided via `infra/compose/docker-compose.yml`.
+- Included services:
+  - PostgreSQL, Redpanda(Kafka API), Redis, ClickHouse, MinIO, OTel Collector, Prometheus
+- Contracts source of truth:
+  - `contracts/proto/exchange/v1/*.proto`
+  - generated outputs under `contracts/gen/{go,rust,kotlin}`
+
+---
+
+## 8) Failure semantics (short)
 - Trading Core crash:
   - restart → snapshot load → WAL replay → resume
   - if leader change: fencing token prevents dual leader commits

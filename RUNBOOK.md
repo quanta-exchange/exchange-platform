@@ -144,7 +144,36 @@
 
 ---
 
-## 5) Emergency controls (Admin)
+## 5) Local smoke (Gate G0)
+
+### Purpose
+- Verify minimum end-to-end path on local stack:
+  - order accepted
+  - trade settlement append in Postgres
+  - WS trade/candle updates delivered
+
+### Steps
+1) Bring infra up:
+   - `docker compose -f infra/compose/docker-compose.yml up -d`
+2) Run smoke:
+   - `./scripts/smoke_g0.sh`
+3) Validate outputs:
+   - script prints `smoke_g0_success=true`
+   - `ws_events` contains both `TradeExecuted` and `CandleUpdated`
+
+### Failure handling
+- If readiness fails:
+  - inspect `/tmp/edge-gateway-smoke.log`
+  - check DB reachability: `docker compose -f infra/compose/docker-compose.yml exec -T postgres pg_isready -U exchange -d exchange`
+- If settlement append fails:
+  - inspect table: `docker compose -f infra/compose/docker-compose.yml exec -T postgres psql -U exchange -d exchange -c 'SELECT * FROM smoke_ledger_entries ORDER BY id DESC LIMIT 20;'`
+- If WS event missing:
+  - check `/tmp/ws-events-smoke.log`
+  - verify `POST /v1/smoke/trades` returned `status=settled`
+
+---
+
+## 6) Emergency controls (Admin)
 - `SetSymbolMode(symbol, CANCEL_ONLY|SOFT_HALT|HARD_HALT)`
 - `CancelAll(symbol)`
 - `WithdrawalsHalt(on/off)` (if custody is enabled later)

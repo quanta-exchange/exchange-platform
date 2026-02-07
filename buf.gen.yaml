@@ -1,0 +1,23 @@
+version: v1
+managed:
+  enabled: true
+plugins:
+  - plugin: buf.build/protocolbuffers/go
+    out: contracts/gen/go
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/grpc/go
+    out: contracts/gen/go
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/community/neoeinstein-prost
+    out: contracts/gen/rust
+    opt:
+      - compile_well_known_types=true
+      - file_descriptor_set=false
+  - plugin: buf.build/protocolbuffers/java
+    out: contracts/gen/kotlin/java
+  - plugin: buf.build/grpc/java
+    out: contracts/gen/kotlin/java
+  - plugin: buf.build/protocolbuffers/kotlin
+    out: contracts/gen/kotlin

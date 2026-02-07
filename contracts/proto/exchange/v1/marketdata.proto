@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package exchange.v1;
+
+import "exchange/v1/common.proto";
+
+option go_package = "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1;exchangev1";
+option java_multiple_files = true;
+option java_package = "com.quanta.exchange.contracts.v1";
+
+message BookDelta {
+  EventEnvelope envelope = 1;
+  uint32 depth = 2;
+  repeated PriceLevel bids = 3;
+  repeated PriceLevel asks = 4;
+  bool is_snapshot = 5;
+}
+
+message CandleUpdated {
+  EventEnvelope envelope = 1;
+  string interval = 2;
+  int64 open_time_ms = 3;
+  int64 close_time_ms = 4;
+  string open = 5;
+  string high = 6;
+  string low = 7;
+  string close = 8;
+  string volume = 9;
+  uint64 trade_count = 10;
+  bool is_final = 11;
+}
+
+message TickerUpdated {
+  EventEnvelope envelope = 1;
+  string last_price = 2;
+  string high_24h = 3;
+  string low_24h = 4;
+  string volume_24h = 5;
+  string quote_volume_24h = 6;
+}

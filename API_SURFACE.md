@@ -2,6 +2,14 @@
 
 This document defines external API contracts and internal service interfaces.
 
+Contract source of truth:
+- `contracts/proto/exchange/v1/*.proto`
+- `buf lint` / `buf breaking` / `buf generate` are required gates.
+
+Versioning rule:
+- package suffix `v1` for non-breaking evolution
+- breaking changes require a new package major (`v2`) with compatibility plan
+
 ---
 
 ## 1) External REST API (Edge Gateway)
