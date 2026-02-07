@@ -89,6 +89,12 @@ type WSMessage struct {
 	Data    interface{} `json:"data"`
 }
 
+type tradePoint struct {
+	tsMs  int64
+	price int64
+	qty   int64
+}
+
 type WSCommand struct {
 	Op      string `json:"op"`
 	Channel string `json:"channel"`
@@ -118,6 +124,7 @@ type state struct {
 	clients map[*client]struct{}
 
 	historyBySymbol map[string][]WSMessage
+	tradeTape       map[string][]tradePoint
 	cacheMemory     map[string][]byte
 
 	ordersTotal        uint64
@@ -199,6 +206,7 @@ func New(cfg Config) (*Server, error) {
 			authFailReason:     map[string]uint64{},
 			clients:            map[*client]struct{}{},
 			historyBySymbol:    map[string][]WSMessage{},
+			tradeTape:          map[string][]tradePoint{},
 			cacheMemory:        map[string][]byte{},
 		},
 		upgrader: websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }},
@@ -218,6 +226,7 @@ func New(cfg Config) (*Server, error) {
 	r.Get("/v1/markets/{symbol}/trades", s.handleGetTrades)
 	r.Get("/v1/markets/{symbol}/orderbook", s.handleGetOrderbook)
 	r.Get("/v1/markets/{symbol}/candles", s.handleGetCandles)
+	r.Get("/v1/markets/{symbol}/ticker", s.handleGetTicker)
 
 	r.Group(func(protected chi.Router) {
 		protected.Use(s.authMiddleware)
@@ -546,14 +555,26 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 			"isFinal":    false,
 		},
 	}
+	tickerData := s.recordTicker(req.Symbol, req.Price, req.Qty, ts)
+	tickerMsg := WSMessage{
+		Type:    "TickerUpdated",
+		Channel: "ticker",
+		Symbol:  req.Symbol,
+		Seq:     seq,
+		Ts:      ts,
+		Data:    tickerData,
+	}
 
 	s.appendHistory(req.Symbol, tradeMsg)
 	s.appendHistory(req.Symbol, candleMsg)
+	s.appendHistory(req.Symbol, tickerMsg)
 	_ = s.cacheSet(r.Context(), cacheKey("trades", req.Symbol), tradeMsg)
 	_ = s.cacheSet(r.Context(), cacheKey("candles", req.Symbol), candleMsg)
+	_ = s.cacheSet(r.Context(), cacheKey("ticker", req.Symbol), tickerMsg)
 
 	s.broadcast(tradeMsg)
 	s.broadcast(candleMsg)
+	s.broadcast(tickerMsg)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "settled", "seq": seq})
 }
 
@@ -812,6 +833,23 @@ func (s *Server) handleGetCandles(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "candles": []WSMessage{msg}})
 }
 
+func (s *Server) handleGetTicker(w http.ResponseWriter, r *http.Request) {
+	symbol := chi.URLParam(r, "symbol")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	payload, ok := s.cacheGet(ctx, cacheKey("ticker", symbol))
+	if !ok {
+		writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "ticker": map[string]interface{}{}})
+		return
+	}
+	var msg WSMessage
+	if err := json.Unmarshal(payload, &msg); err != nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "ticker": map[string]interface{}{}})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "ticker": msg})
+}
+
 func (s *Server) cacheSet(ctx context.Context, key string, value interface{}) error {
 	payload, err := json.Marshal(value)
 	if err != nil {
@@ -850,7 +888,7 @@ func cacheKey(channel, symbol string) string {
 }
 
 func conflatable(channel string) bool {
-	return channel == "book" || channel == "candles"
+	return channel == "book" || channel == "candles" || channel == "ticker"
 }
 
 func (s *Server) idempotencyGet(apiKey, idemKey, method, path string) (int, []byte, bool) {
@@ -954,6 +992,64 @@ func abs64(v int64) int64 {
 		return -v
 	}
 	return v
+}
+
+func (s *Server) recordTicker(symbol, priceRaw, qtyRaw string, tsMs int64) map[string]string {
+	price, err := strconv.ParseInt(priceRaw, 10, 64)
+	if err != nil {
+		price = 0
+	}
+	qty, err := strconv.ParseInt(qtyRaw, 10, 64)
+	if err != nil {
+		qty = 0
+	}
+
+	const dayMs = int64(24 * 60 * 60 * 1000)
+	cutoff := tsMs - dayMs
+
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+
+	tape := append(s.state.tradeTape[symbol], tradePoint{
+		tsMs:  tsMs,
+		price: price,
+		qty:   qty,
+	})
+	filtered := tape[:0]
+	for _, item := range tape {
+		if item.tsMs >= cutoff {
+			filtered = append(filtered, item)
+		}
+	}
+	s.state.tradeTape[symbol] = filtered
+
+	high := int64(0)
+	low := int64(0)
+	volume := int64(0)
+	quoteVolume := int64(0)
+	for i, item := range filtered {
+		if i == 0 {
+			high = item.price
+			low = item.price
+		} else {
+			if item.price > high {
+				high = item.price
+			}
+			if item.price < low {
+				low = item.price
+			}
+		}
+		volume += item.qty
+		quoteVolume += item.price * item.qty
+	}
+
+	return map[string]string{
+		"lastPrice":      strconv.FormatInt(price, 10),
+		"high24h":        strconv.FormatInt(high, 10),
+		"low24h":         strconv.FormatInt(low, 10),
+		"volume24h":      strconv.FormatInt(volume, 10),
+		"quoteVolume24h": strconv.FormatInt(quoteVolume, 10),
+	}
 }
 
 func readBodyAndRestore(r *http.Request) ([]byte, error) {

@@ -100,6 +100,7 @@ Gate G1 operational check:
 
 **Immediate actions**
 1) Enable aggressive conflation for book/candle updates
+   - include ticker channel conflation in overload mode
 2) Lower book depth default (e.g., 20)
 3) Increase rate limits for subscription operations (protect server)
 
@@ -175,6 +176,29 @@ Gate G1 operational check:
 - If WS event missing:
   - check `/tmp/ws-events-smoke.log`
   - verify `POST /v1/smoke/trades` returned `status=settled`
+
+### 5.1 Gate G3 smoke (ledger safety path)
+Purpose:
+- verify reserve + settlement append into ledger tables and WS updates in same local run
+
+Steps:
+1) Bring infra up:
+   - `docker compose -f infra/compose/docker-compose.yml up -d`
+2) Run G3 smoke:
+   - `./scripts/smoke_g3.sh`
+3) Validate outputs:
+   - script prints `smoke_g3_success=true`
+   - ledger query returns one trade entry for `trade-smoke-g3-1`
+   - `ws_events` contains both `TradeExecuted` and `CandleUpdated`
+
+Failure handling:
+- If ledger readiness fails:
+  - inspect `/tmp/ledger-service-smoke-g3.log`
+- If settlement append fails:
+  - inspect table:
+    - `docker compose -f infra/compose/docker-compose.yml exec -T postgres psql -U exchange -d exchange -c "SELECT reference_type, reference_id, entry_kind, symbol, engine_seq FROM ledger_entries ORDER BY created_at DESC LIMIT 20;"`
+- If correction/invariant checks are noisy during incident:
+  - keep guard enabled, tune thresholds/config only through audited change
 
 ---
 

@@ -28,6 +28,7 @@ infra/
   gitops/                 # gitops placeholders
 scripts/
   smoke_g0.sh             # gate G0 local smoke
+  smoke_g3.sh             # gate G3 ledger safety smoke
 ```
 
 ## Gate G0 commands
@@ -64,6 +65,15 @@ This script verifies:
 - synthetic trade settlement row appended to Postgres
 - WebSocket `TradeExecuted` and `CandleUpdated` fan-out observed
 
+### 5) Smoke (ledger safety path)
+```bash
+./scripts/smoke_g3.sh
+```
+This script verifies:
+- order creation on edge
+- ledger reserve + trade settlement append into `ledger_entries`
+- WebSocket `TradeExecuted` and `CandleUpdated` fan-out observed
+
 ## Gate G1 status
 - Trading Core implements:
   - command contract handling (`PlaceOrder`, `CancelOrder`, `SetSymbolMode`, `CancelAll`)
@@ -80,6 +90,24 @@ Market order liquidity policy (v1):
 - partial fills are allowed
 - unfilled remainder is canceled (non-resting)
 
+## Gate G3 status
+- Ledger service implements:
+  - append-only double-entry schema + Flyway migration
+  - idempotent settlement consumer path (`trade_id` dedup via unique trade reference)
+  - reserve model (`available`↔`hold`) for reserve/release/fill
+  - balances materialization and rebuild endpoint
+  - invariant checks + reconciliation gap tracking
+  - correction workflow (request, 2-person approval, reversal apply)
+  - Kafka consumer baseline (`LEDGER_KAFKA_ENABLED=true`)
+
+## Gate G2/3 parallel status (B-0401~B-0403 baseline)
+- Streaming module includes deterministic:
+  - 1m candle aggregation with boundary finalization and seq-preferred out-of-order handling
+  - rolling 24h ticker aggregation
+- ClickHouse init schema added for:
+  - `exchange.trades` (partition by day, order by symbol+time+seq)
+  - `exchange.candles` (partition by day, order by symbol+interval+open_time)
+
 ## Service endpoints (local)
 - Edge Gateway: `http://localhost:8081`
   - `GET /healthz`
@@ -92,7 +120,24 @@ Market order liquidity policy (v1):
   - `GET /v1/markets/{symbol}/trades`
   - `GET /v1/markets/{symbol}/orderbook`
   - `GET /v1/markets/{symbol}/candles`
+  - `GET /v1/markets/{symbol}/ticker`
   - `GET /ws`
+- Ledger Service: `http://localhost:8082`
+  - `GET /healthz`
+  - `GET /readyz`
+  - `GET /metrics`
+  - `POST /v1/internal/trades/executed`
+  - `POST /v1/internal/orders/reserve`
+  - `POST /v1/internal/orders/release`
+  - `POST /v1/internal/reconciliation/engine-seq`
+  - `POST /v1/admin/adjustments`
+  - `GET /v1/balances`
+  - `POST /v1/admin/rebuild-balances`
+  - `POST /v1/admin/invariants/check`
+  - `GET /v1/admin/reconciliation/{symbol}`
+  - `POST /v1/admin/corrections/requests`
+  - `POST /v1/admin/corrections/{correctionId}/approve`
+  - `POST /v1/admin/corrections/{correctionId}/apply`
 - Postgres: `localhost:5432`
 - Redpanda Kafka: `localhost:19092`
 - Redpanda HTTP proxy: `localhost:18082`

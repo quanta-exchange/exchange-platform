@@ -145,3 +145,30 @@ sequenceDiagram
 - External publish path is through outbox records, written only after WAL durable append.
 - Periodic state hash checkpoints are embedded in command processing and persisted in WAL.
 - Leadership fencing token is checked before commit; stale leaders are forced to reject commits and enter halt mode.
+
+## 10) Gate G3 implementation notes
+- Ledger schema is migrated by Flyway (`V1__ledger_schema.sql`) and keeps append-only history in:
+  - `ledger_entries`
+  - `ledger_postings`
+  - `correction_requests`
+- Settlement path maps `TradeExecuted` into balanced postings and enforces idempotency by unique trade reference.
+- Reserve model uses `AVAILABLE` and `HOLD` subaccounts:
+  - reserve: `AVAILABLE -> HOLD`
+  - release: `HOLD -> AVAILABLE`
+  - fill: consume hold + transfer asset/proceeds + fees
+- Reconciliation tracks `last_engine_seq` vs `last_settled_seq` per symbol and exposes gap policy hints.
+- Correction flow is append-only:
+  - request
+  - two distinct approvers
+  - reversal entry apply
+  - no historical mutation
+
+## 11) B-040x baseline implementation notes
+- `streaming/flink-jobs` currently contains deterministic reference aggregators used for test-first verification:
+  - `CandleAggregator` (1m): emits progress updates and `isFinal` at bucket rollover
+  - `Ticker24hAggregator`: rolling 24h high/low/volume/quote-volume with seq de-dup
+- Out-of-order rule in baseline:
+  - engine `seq` is authoritative; stale seq events are dropped
+- ClickHouse init schema (`infra/compose/clickhouse-init/001_exchange.sql`):
+  - `exchange.trades` MergeTree, partition by day, order by `(symbol,event_time,seq)`
+  - `exchange.candles` ReplacingMergeTree, partition by day, order by `(symbol,interval,open_time)`

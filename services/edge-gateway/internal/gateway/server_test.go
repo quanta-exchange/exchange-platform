@@ -202,3 +202,45 @@ func TestOrderLifecycleCreateGetCancel(t *testing.T) {
 		t.Fatalf("cancel failed: %d", cancelW.Code)
 	}
 }
+
+func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
+	s := newTestServer(t)
+	defer func() { _ = s.Close() }()
+
+	body := []byte(`{"tradeId":"trade-1","symbol":"BTC-KRW","price":"100","qty":"2"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/smoke/trades", bytes.NewReader(body))
+	for k, vals := range signHeaders(t, http.MethodPost, "/v1/smoke/trades", body, time.Now().UnixMilli()) {
+		req.Header[k] = vals
+	}
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("smoke trade failed: %d", w.Code)
+	}
+
+	tickerReq := httptest.NewRequest(http.MethodGet, "/v1/markets/BTC-KRW/ticker", nil)
+	tickerW := httptest.NewRecorder()
+	s.Router().ServeHTTP(tickerW, tickerReq)
+	if tickerW.Code != http.StatusOK {
+		t.Fatalf("ticker get failed: %d", tickerW.Code)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(tickerW.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode ticker response: %v", err)
+	}
+	ticker, ok := resp["ticker"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing ticker object in response: %v", resp)
+	}
+	data, ok := ticker["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing ticker data payload: %v", ticker)
+	}
+	if data["lastPrice"] != "100" {
+		t.Fatalf("unexpected lastPrice: %v", data["lastPrice"])
+	}
+	if data["volume24h"] != "2" {
+		t.Fatalf("unexpected volume24h: %v", data["volume24h"])
+	}
+}

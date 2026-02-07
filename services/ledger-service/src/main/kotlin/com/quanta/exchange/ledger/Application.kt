@@ -1,9 +1,13 @@
 package com.quanta.exchange.ledger
 
-data class HealthResponse(val service: String, val status: String)
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.scheduling.annotation.EnableScheduling
 
-fun health(): HealthResponse = HealthResponse(service = "ledger-service", status = "ok")
+@SpringBootApplication
+@EnableScheduling
+class LedgerApplication
 
-fun main() {
-    println(health())
+fun main(args: Array<String>) {
+    runApplication<LedgerApplication>(*args)
 }

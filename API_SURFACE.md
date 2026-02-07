@@ -80,6 +80,9 @@ Orderbook snapshot (from Redis/cache or Edge snapshot service)
 #### GET `/v1/markets/{symbol}/candles?interval=1m&from=...&to=...`
 Candles history (ClickHouse)
 
+#### GET `/v1/markets/{symbol}/ticker`
+Latest rolling 24h ticker snapshot
+
 ---
 
 ## 2) External WebSocket API (Edge Gateway)
@@ -196,3 +199,42 @@ Topic naming (suggested)
 - `symbol`, `seq`
 - `occurred_at`
 - `correlation_id`, `causation_id`
+
+---
+
+## 5) Ledger Service API (internal/admin, v1 baseline)
+
+Base: `/v1`
+
+### Internal settlement/reserve
+- `POST /internal/trades/executed`
+  - consumes `TradeExecuted` payload with envelope
+  - idempotent by trade reference; duplicate returns `applied=false`
+- `POST /internal/orders/reserve`
+  - reserve move for BUY/SELL: available→hold
+- `POST /internal/orders/release`
+  - release move after cancel/partial fill: hold→available
+- `POST /internal/reconciliation/engine-seq`
+  - update latest engine seq per symbol
+
+### Admin controls
+- `POST /admin/adjustments`
+  - manual adjustment entry (append-only)
+- `GET /balances`
+  - read materialized balances snapshot
+- `POST /admin/rebuild-balances`
+  - recompute `account_balances` from postings
+- `POST /admin/invariants/check`
+  - run invariant guard and return safety recommendation
+- `GET /admin/reconciliation/{symbol}`
+  - return engine/settled coverage gap and recommendation
+
+### Corrections workflow
+- `POST /admin/corrections/requests`
+- `POST /admin/corrections/{correctionId}/approve`
+- `POST /admin/corrections/{correctionId}/apply`
+
+Rules:
+- no direct update/delete on historical ledger rows
+- 2-person approval required before apply
+- v1 apply mode supports `REVERSAL` (adjustment mode planned)
