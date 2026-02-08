@@ -2,6 +2,14 @@
 
 This document defines external API contracts and internal service interfaces.
 
+Contract source of truth:
+- `contracts/proto/exchange/v1/*.proto`
+- `buf lint` / `buf breaking` / `buf generate` are required gates.
+
+Versioning rule:
+- package suffix `v1` for non-breaking evolution
+- breaking changes require a new package major (`v2`) with compatibility plan
+
 ---
 
 ## 1) External REST API (Edge Gateway)
@@ -15,6 +23,13 @@ Base: `/v1`
   - `X-TS` (epoch ms)
   - `X-SIGNATURE`
   - `Idempotency-Key` (required for write)
+- Signature canonical string:
+  - `METHOD + "\\n" + PATH + "\\n" + X-TS + "\\n" + RAW_BODY`
+- Replay defense:
+  - duplicate `(api_key, signature, ts)` within replay window must be rejected
+- Tracing:
+  - request accepts `traceparent` (W3C)
+  - response includes `X-Trace-Id`
 
 ### Orders
 #### POST `/v1/orders`
@@ -67,6 +82,9 @@ Orderbook snapshot (from Redis/cache or Edge snapshot service)
 
 #### GET `/v1/markets/{symbol}/candles?interval=1m&from=...&to=...`
 Candles history (ClickHouse)
+
+#### GET `/v1/markets/{symbol}/ticker`
+Latest rolling 24h ticker snapshot
 
 ---
 
@@ -149,6 +167,11 @@ Service: `TradingCoreService`
 **Required fields on every command**
 - `command_id`, `idempotency_key`, `user_id`, `symbol`, `ts_server`, `trace_id`
 
+Matching policy notes (v1):
+- `MARKET` orders sweep available opposite-side liquidity by best price.
+- If liquidity is insufficient, partial fills are emitted and remainder is canceled.
+- `LIMIT` orders that are not fully matched can rest on book (GTC) or be canceled by policy.
+
 ---
 
 ## 4) Events (Kafka/Redpanda)
@@ -179,3 +202,42 @@ Topic naming (suggested)
 - `symbol`, `seq`
 - `occurred_at`
 - `correlation_id`, `causation_id`
+
+---
+
+## 5) Ledger Service API (internal/admin, v1 baseline)
+
+Base: `/v1`
+
+### Internal settlement/reserve
+- `POST /internal/trades/executed`
+  - consumes `TradeExecuted` payload with envelope
+  - idempotent by trade reference; duplicate returns `applied=false`
+- `POST /internal/orders/reserve`
+  - reserve move for BUY/SELL: available→hold
+- `POST /internal/orders/release`
+  - release move after cancel/partial fill: hold→available
+- `POST /internal/reconciliation/engine-seq`
+  - update latest engine seq per symbol
+
+### Admin controls
+- `POST /admin/adjustments`
+  - manual adjustment entry (append-only)
+- `GET /balances`
+  - read materialized balances snapshot
+- `POST /admin/rebuild-balances`
+  - recompute `account_balances` from postings
+- `POST /admin/invariants/check`
+  - run invariant guard and return safety recommendation
+- `GET /admin/reconciliation/{symbol}`
+  - return engine/settled coverage gap and recommendation
+
+### Corrections workflow
+- `POST /admin/corrections/requests`
+- `POST /admin/corrections/{correctionId}/approve`
+- `POST /admin/corrections/{correctionId}/apply`
+
+Rules:
+- no direct update/delete on historical ledger rows
+- 2-person approval required before apply
+- v1 apply mode supports `REVERSAL` (adjustment mode planned)

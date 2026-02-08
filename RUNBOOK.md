@@ -23,6 +23,8 @@
   - settlement lag, consumer lag, DB tx errors, invariants check results
 - WS:
   - connected clients, outbound rate, drop/close counts, backlog per conn
+- Edge auth:
+  - auth_fail_total{reason}, replay_detect_total, per-key rate-limit drops
 
 ---
 
@@ -86,6 +88,9 @@
 - Restart/replace the other node; resync from snapshot+WAL
 - Resume in `CANCEL_ONLY` first, then NORMAL after validation
 
+Gate G1 operational check:
+- if stale leader rejection appears (`FENCING_TOKEN`), verify lease/token source first before manual recovery actions.
+
 ---
 
 ### 3.4 WS fan‑out overload (SEV2/SEV3)
@@ -95,6 +100,7 @@
 
 **Immediate actions**
 1) Enable aggressive conflation for book/candle updates
+   - include ticker channel conflation in overload mode
 2) Lower book depth default (e.g., 20)
 3) Increase rate limits for subscription operations (protect server)
 
@@ -144,8 +150,121 @@
 
 ---
 
-## 5) Emergency controls (Admin)
+## 5) Local smoke (Gate G0)
+
+### Purpose
+- Verify minimum end-to-end path on local stack:
+  - order accepted
+  - trade settlement append in Postgres
+  - WS trade/candle updates delivered
+
+### Steps
+1) Bring infra up:
+   - `docker compose -f infra/compose/docker-compose.yml up -d`
+2) Run smoke:
+   - `./scripts/smoke_g0.sh`
+3) Validate outputs:
+   - script prints `smoke_g0_success=true`
+   - `ws_events` contains both `TradeExecuted` and `CandleUpdated`
+
+### Failure handling
+- If readiness fails:
+  - inspect `/tmp/edge-gateway-smoke.log`
+  - check DB reachability: `docker compose -f infra/compose/docker-compose.yml exec -T postgres pg_isready -U exchange -d exchange`
+- If settlement append fails:
+  - inspect table: `docker compose -f infra/compose/docker-compose.yml exec -T postgres psql -U exchange -d exchange -c 'SELECT * FROM smoke_ledger_entries ORDER BY id DESC LIMIT 20;'`
+- If WS event missing:
+  - check `/tmp/ws-events-smoke.log`
+  - verify `POST /v1/smoke/trades` returned `status=settled`
+
+### 5.1 Gate G3 smoke (ledger safety path)
+Purpose:
+- verify reserve + settlement append into ledger tables and WS updates in same local run
+
+Steps:
+1) Bring infra up:
+   - `docker compose -f infra/compose/docker-compose.yml up -d`
+2) Run G3 smoke:
+   - `./scripts/smoke_g3.sh`
+3) Validate outputs:
+   - script prints `smoke_g3_success=true`
+   - ledger query returns one trade entry for `trade-smoke-g3-1`
+   - `ws_events` contains both `TradeExecuted` and `CandleUpdated`
+
+Failure handling:
+- If ledger readiness fails:
+  - inspect `/tmp/ledger-service-smoke-g3.log`
+- If settlement append fails:
+  - inspect table:
+    - `docker compose -f infra/compose/docker-compose.yml exec -T postgres psql -U exchange -d exchange -c "SELECT reference_type, reference_id, entry_kind, symbol, engine_seq FROM ledger_entries ORDER BY created_at DESC LIMIT 20;"`
+- If correction/invariant checks are noisy during incident:
+  - keep guard enabled, tune thresholds/config only through audited change
+
+---
+
+## 6) Emergency controls (Admin)
 - `SetSymbolMode(symbol, CANCEL_ONLY|SOFT_HALT|HARD_HALT)`
 - `CancelAll(symbol)`
 - `WithdrawalsHalt(on/off)` (if custody is enabled later)
 - All actions must be audited with reason + ticket id
+
+---
+
+## 7) Load Harness (I-0105)
+Purpose:
+- detect order/WS regressions before release
+
+Command:
+- `./scripts/load_smoke.sh`
+
+Outputs:
+- `build/load/load-smoke.json`
+- key fields: `order_p99_ms`, `order_error_rate`, `order_tps`, `ws_messages`
+
+Response:
+- if threshold violation: block release and investigate perf regression before retry
+
+---
+
+## 8) DR Rehearsal (I-0106)
+Purpose:
+- verify backup/restore and replay timings against RTO/RPO targets
+
+Command:
+- `./scripts/dr_rehearsal.sh`
+
+Outputs:
+- `build/dr/dr-report.json`
+- key fields: `restore_time_ms`, `replay_time_ms`, `invariant_violations`
+
+Response:
+- any failure or invariant violation blocks launch
+
+---
+
+## 9) Access Control (I-0107)
+JIT grant generation:
+- `./scripts/jit_access_grant.sh <user> <ticket_id> <reason> <duration_minutes>`
+
+Validation:
+- generated binding must include `ticket-id`, `reason`, `expires-at` annotations
+- all production admin actions require audit trail
+
+Unauthorized attempt playbook:
+1) revoke active JIT grants
+2) rotate potentially exposed credentials
+3) review audit logs and incident timeline
+
+---
+
+## 10) Safety Case (I-0108)
+Command:
+- `make safety-case`
+
+Output bundle:
+- `build/safety-case/manifest.json`
+- `build/safety-case/safety-case-<commit>.tar.gz`
+- `build/safety-case/safety-case-<commit>.tar.gz.sha256`
+
+Gate policy:
+- if safety-case generation fails or evidence is missing, release is blocked

@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: ledger-service
+  datasource:
+    url: ${LEDGER_DB_URL:jdbc:postgresql://localhost:5432/exchange}
+    username: ${LEDGER_DB_USER:exchange}
+    password: ${LEDGER_DB_PASSWORD:exchange}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    baseline-on-migrate: ${LEDGER_FLYWAY_BASELINE_ON_MIGRATE:false}
+  kafka:
+    bootstrap-servers: ${LEDGER_KAFKA_BOOTSTRAP:localhost:19092}
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: ${LEDGER_OTEL_SAMPLE_PROB:1.0}
+  otlp:
+    tracing:
+      endpoint: ${LEDGER_OTEL_ENDPOINT:http://localhost:14318/v1/traces}
+
+ledger:
+  kafka:
+    enabled: ${LEDGER_KAFKA_ENABLED:false}
+    trade-topic: ${LEDGER_KAFKA_TRADE_TOPIC:core.trade-events.v1}
+    group-id: ${LEDGER_KAFKA_GROUP_ID:ledger-settlement-v1}
+  guard:
+    enabled: ${LEDGER_GUARD_ENABLED:true}
+    interval-ms: ${LEDGER_GUARD_INTERVAL_MS:30000}
+server:
+  port: ${LEDGER_PORT:8082}

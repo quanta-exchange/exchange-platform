@@ -11,6 +11,7 @@
   - REST entrypoint + auth/signature + rate limit + request tracing
   - WS fan‑out (trades/book/ticker/candles) with backpressure
   - snapshot+delta + seq gap recovery
+  - replay-protection cache (Redis preferred, in-memory fallback for local)
 - **Ledger Service (Kotlin/Spring)** — `services/ledger-service`
   - double‑entry ledger (append‑only)
   - idempotent settlement consumer (TradeExecuted → ledger postings)
@@ -117,7 +118,17 @@ sequenceDiagram
 
 ---
 
-## 7) Failure semantics (short)
+## 7) Local dev baseline (Gate G0)
+- Local infra is provided via `infra/compose/docker-compose.yml`.
+- Included services:
+  - PostgreSQL, Redpanda(Kafka API), Redis, ClickHouse, MinIO, OTel Collector, Prometheus
+- Contracts source of truth:
+  - `contracts/proto/exchange/v1/*.proto`
+  - generated outputs under `contracts/gen/{go,rust,kotlin}`
+
+---
+
+## 8) Failure semantics (short)
 - Trading Core crash:
   - restart → snapshot load → WAL replay → resume
   - if leader change: fencing token prevents dual leader commits
@@ -126,3 +137,54 @@ sequenceDiagram
   - WS may degrade; clients reconnect and resync via snapshots
 - Ledger outage:
   - settlement lag grows; policy may throttle/halt trading at thresholds
+
+---
+
+## 9) Gate G1 implementation notes
+- Trading Core currently persists command results in WAL records with CRC checks.
+- External publish path is through outbox records, written only after WAL durable append.
+- Periodic state hash checkpoints are embedded in command processing and persisted in WAL.
+- Leadership fencing token is checked before commit; stale leaders are forced to reject commits and enter halt mode.
+
+## 10) Gate G3 implementation notes
+- Ledger schema is migrated by Flyway (`V1__ledger_schema.sql`) and keeps append-only history in:
+  - `ledger_entries`
+  - `ledger_postings`
+  - `correction_requests`
+- Settlement path maps `TradeExecuted` into balanced postings and enforces idempotency by unique trade reference.
+- Reserve model uses `AVAILABLE` and `HOLD` subaccounts:
+  - reserve: `AVAILABLE -> HOLD`
+  - release: `HOLD -> AVAILABLE`
+  - fill: consume hold + transfer asset/proceeds + fees
+- Reconciliation tracks `last_engine_seq` vs `last_settled_seq` per symbol and exposes gap policy hints.
+- Correction flow is append-only:
+  - request
+  - two distinct approvers
+  - reversal entry apply
+  - no historical mutation
+
+## 11) B-040x baseline implementation notes
+- `streaming/flink-jobs` currently contains deterministic reference aggregators used for test-first verification:
+  - `CandleAggregator` (1m): emits progress updates and `isFinal` at bucket rollover
+  - `Ticker24hAggregator`: rolling 24h high/low/volume/quote-volume with seq de-dup
+- Out-of-order rule in baseline:
+  - engine `seq` is authoritative; stale seq events are dropped
+- ClickHouse init schema (`infra/compose/clickhouse-init/001_exchange.sql`):
+  - `exchange.trades` MergeTree, partition by day, order by `(symbol,event_time,seq)`
+  - `exchange.candles` ReplacingMergeTree, partition by day, order by `(symbol,interval,open_time)`
+
+## 12) I-010x Ops/Infra baseline notes
+- Kubernetes baseline (`infra/k8s`):
+  - namespace split (`core`, `edge`, `ledger`, `streaming`, `infra`)
+  - pod security restricted labels by default
+  - deny-by-default network policy with explicit allowlist flows
+- GitOps baseline (`infra/gitops`):
+  - ArgoCD project + app-of-apps root
+  - dev/staging automated sync, prod manual gated sync
+- Tracing baseline:
+  - edge gateway emits OTel server spans and propagates trace context
+  - collector exports spanmetrics and debug traces
+  - ledger uses Micrometer OTel bridge for OTLP export
+- Security baseline (`infra/security`):
+  - secrets policy and KMS/HSM phased integration plan
+  - JIT RBAC template and audit policy examples

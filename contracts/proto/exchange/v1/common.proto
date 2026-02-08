@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package exchange.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1;exchangev1";
+option java_multiple_files = true;
+option java_package = "com.quanta.exchange.contracts.v1";
+
+message EventEnvelope {
+  string event_id = 1;
+  uint32 event_version = 2;
+  string symbol = 3;
+  uint64 seq = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+}
+
+message CommandMetadata {
+  string command_id = 1;
+  string idempotency_key = 2;
+  string user_id = 3;
+  string symbol = 4;
+  google.protobuf.Timestamp ts_server = 5;
+  string trace_id = 6;
+  string correlation_id = 7;
+}
+
+message PriceLevel {
+  string price = 1;
+  string quantity = 2;
+}

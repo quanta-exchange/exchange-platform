@@ -1,0 +1,3 @@
+[workspace]
+members = ["services/trading-core"]
+resolver = "2"

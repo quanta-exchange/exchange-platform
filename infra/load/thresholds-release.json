@@ -1,0 +1,7 @@
+{
+  "max_order_error_rate": 0.01,
+  "max_order_p99_ms": 200.0,
+  "min_order_tps": 300.0,
+  "max_ws_error_rate": 0.05,
+  "min_ws_messages": 5000
+}

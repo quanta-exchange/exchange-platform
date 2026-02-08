@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package exchange.v1;
+
+import "exchange/v1/common.proto";
+
+option go_package = "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1;exchangev1";
+option java_multiple_files = true;
+option java_package = "com.quanta.exchange.contracts.v1";
+
+message LedgerPosting {
+  string account_id = 1;
+  string currency = 2;
+  int64 amount = 3;
+  bool is_debit = 4;
+}
+
+message LedgerEntryAppended {
+  EventEnvelope envelope = 1;
+  string entry_id = 2;
+  string reference_type = 3;
+  string reference_id = 4;
+  string entry_kind = 5;
+  repeated LedgerPosting postings = 6;
+}

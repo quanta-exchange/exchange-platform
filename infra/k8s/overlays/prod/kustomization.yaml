@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+labels:
+  - pairs:
+      exchange.quanta.io/environment: prod
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: exchange-env
+    namespace: infra
+    literals:
+      - environment=prod
+      - argocd.syncPolicy=manual-gated
