@@ -136,6 +136,8 @@ services:
       - "14317:4317"
       - "14318:4318"
       - "18889:8889"
+      - "18888:8888"
+      - "13133:13133"
     depends_on:
       redpanda:
         condition: service_started

@@ -172,3 +172,19 @@ sequenceDiagram
 - ClickHouse init schema (`infra/compose/clickhouse-init/001_exchange.sql`):
   - `exchange.trades` MergeTree, partition by day, order by `(symbol,event_time,seq)`
   - `exchange.candles` ReplacingMergeTree, partition by day, order by `(symbol,interval,open_time)`
+
+## 12) I-010x Ops/Infra baseline notes
+- Kubernetes baseline (`infra/k8s`):
+  - namespace split (`core`, `edge`, `ledger`, `streaming`, `infra`)
+  - pod security restricted labels by default
+  - deny-by-default network policy with explicit allowlist flows
+- GitOps baseline (`infra/gitops`):
+  - ArgoCD project + app-of-apps root
+  - dev/staging automated sync, prod manual gated sync
+- Tracing baseline:
+  - edge gateway emits OTel server spans and propagates trace context
+  - collector exports spanmetrics and debug traces
+  - ledger uses Micrometer OTel bridge for OTLP export
+- Security baseline (`infra/security`):
+  - secrets policy and KMS/HSM phased integration plan
+  - JIT RBAC template and audit policy examples

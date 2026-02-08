@@ -29,6 +29,9 @@ infra/
 scripts/
   smoke_g0.sh             # gate G0 local smoke
   smoke_g3.sh             # gate G3 ledger safety smoke
+  load_smoke.sh           # I-0105 load smoke harness
+  dr_rehearsal.sh         # I-0106 backup/restore rehearsal
+  safety_case.sh          # I-0108 evidence bundle generator
 ```
 
 ## Gate G0 commands
@@ -49,6 +52,14 @@ docker run --rm -v "$PWD":/workspace -w /workspace bufbuild/buf:1.37.0 generate
 cargo test
 go test ./...
 ./gradlew test
+```
+
+### 2.1) Ops/Infra validation
+```bash
+./scripts/validate_infra.sh
+./scripts/load_smoke.sh
+./scripts/dr_rehearsal.sh
+make safety-case
 ```
 
 ### 3) Infra up
@@ -108,6 +119,24 @@ Market order liquidity policy (v1):
   - `exchange.trades` (partition by day, order by symbol+time+seq)
   - `exchange.candles` (partition by day, order by symbol+interval+open_time)
 
+## Gate G4 proximity status (I-0101~I-0108 baseline)
+- Kubernetes baseline manifests:
+  - namespaces (`core`, `edge`, `ledger`, `streaming`, `infra`)
+  - deny-by-default network policies with explicit allow rules
+  - RBAC and JIT access templates
+- GitOps baseline:
+  - ArgoCD `AppProject`, root app-of-apps, `dev/staging/prod` applications
+- Observability baseline:
+  - OTel collector spanmetrics pipeline and Prometheus scraping
+  - edge request tracing + `X-Trace-Id` response header
+- Security/ops baseline:
+  - secrets policy + KMS/HSM plan
+  - secret rotation drill and JIT access helper scripts
+- Release evidence baseline:
+  - load smoke report
+  - DR rehearsal report
+  - `make safety-case` artifact bundle + integrity hash
+
 ## Service endpoints (local)
 - Edge Gateway: `http://localhost:8081`
   - `GET /healthz`
@@ -166,3 +195,14 @@ Request headers for trading endpoints:
 - `X-TS` (epoch ms)
 - `X-SIGNATURE` (HMAC-SHA256 of `METHOD\nPATH\nX-TS\nBODY`)
 - `Idempotency-Key` (POST/DELETE required)
+
+## OTel config (I-0102)
+Edge env:
+- `EDGE_OTEL_ENDPOINT=localhost:14317`
+- `EDGE_OTEL_INSECURE=true`
+- `EDGE_OTEL_SERVICE_NAME=edge-gateway`
+- `EDGE_OTEL_SAMPLE_RATIO=1.0`
+
+Ledger env:
+- `LEDGER_OTEL_ENDPOINT=http://localhost:14318/v1/traces`
+- `LEDGER_OTEL_SAMPLE_PROB=1.0`

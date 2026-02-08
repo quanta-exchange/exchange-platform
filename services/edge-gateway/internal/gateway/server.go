@@ -21,6 +21,15 @@ import (
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const slowConsumerCloseCode = 4001
@@ -42,6 +51,10 @@ type Config struct {
 	RedisAddr          string
 	RedisPassword      string
 	RedisDB            int
+	OTelEndpoint       string
+	OTelServiceName    string
+	OTelSampleRatio    float64
+	OTelInsecure       bool
 }
 
 type OrderRequest struct {
@@ -146,12 +159,14 @@ func (c *client) subscribeKey(channel, symbol string) string {
 }
 
 type Server struct {
-	cfg      Config
-	router   *chi.Mux
-	db       *sql.DB
-	redis    *redis.Client
-	state    *state
-	upgrader websocket.Upgrader
+	cfg           Config
+	router        *chi.Mux
+	db            *sql.DB
+	redis         *redis.Client
+	state         *state
+	upgrader      websocket.Upgrader
+	tracer        trace.Tracer
+	traceShutdown func(context.Context) error
 }
 
 func New(cfg Config) (*Server, error) {
@@ -173,6 +188,12 @@ func New(cfg Config) (*Server, error) {
 	if cfg.RateLimitPerMinute <= 0 {
 		cfg.RateLimitPerMinute = 1_000
 	}
+	if cfg.OTelServiceName == "" {
+		cfg.OTelServiceName = "edge-gateway"
+	}
+	if cfg.OTelSampleRatio <= 0 {
+		cfg.OTelSampleRatio = 1.0
+	}
 
 	var db *sql.DB
 	var err error
@@ -192,6 +213,11 @@ func New(cfg Config) (*Server, error) {
 		})
 	}
 
+	otelTracer, otelShutdown, err := initTracer(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
 		cfg:   cfg,
 		db:    db,
@@ -209,7 +235,9 @@ func New(cfg Config) (*Server, error) {
 			tradeTape:          map[string][]tradePoint{},
 			cacheMemory:        map[string][]byte{},
 		},
-		upgrader: websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }},
+		upgrader:      websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }},
+		tracer:        otelTracer,
+		traceShutdown: otelShutdown,
 	}
 
 	if s.db != nil {
@@ -219,6 +247,7 @@ func New(cfg Config) (*Server, error) {
 	}
 
 	r := chi.NewRouter()
+	r.Use(s.traceMiddleware)
 	r.Get("/healthz", s.handleHealth)
 	r.Get("/readyz", s.handleReady)
 	r.Get("/metrics", s.handleMetrics)
@@ -250,6 +279,11 @@ func (s *Server) Close() error {
 	}
 	if s.redis != nil {
 		_ = s.redis.Close()
+	}
+	if s.traceShutdown != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = s.traceShutdown(ctx)
 	}
 	return nil
 }
@@ -1062,6 +1096,87 @@ func readBodyAndRestore(r *http.Request) ([]byte, error) {
 	}
 	r.Body = io.NopCloser(strings.NewReader(string(raw)))
 	return raw, nil
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusRecorder) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (s *Server) traceMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		spanName := r.Method + " " + r.URL.Path
+		ctx, span := s.tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindServer))
+		defer span.End()
+
+		traceID := span.SpanContext().TraceID().String()
+		if r.URL.Path == "/ws" {
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		if traceID != "" && traceID != "00000000000000000000000000000000" {
+			recorder.Header().Set("X-Trace-Id", traceID)
+		}
+		next.ServeHTTP(recorder, r.WithContext(ctx))
+		span.SetAttributes(
+			attribute.String("http.method", r.Method),
+			attribute.String("http.target", r.URL.Path),
+			attribute.Int("http.status_code", recorder.status),
+		)
+		if recorder.status >= 500 {
+			span.RecordError(fmt.Errorf("http_status_%d", recorder.status))
+		}
+	})
+}
+
+func initTracer(cfg Config) (trace.Tracer, func(context.Context) error, error) {
+	if cfg.OTelEndpoint == "" {
+		noop := otel.Tracer("exchange/edge-gateway")
+		return noop, func(context.Context) error { return nil }, nil
+	}
+
+	opts := []otlptracegrpc.Option{
+		otlptracegrpc.WithEndpoint(cfg.OTelEndpoint),
+	}
+	if cfg.OTelInsecure {
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(insecure.NewCredentials()))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	exporter, err := otlptracegrpc.New(ctx, opts...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("init otel exporter: %w", err)
+	}
+
+	res, err := resource.New(
+		ctx,
+		resource.WithAttributes(
+			semconv.ServiceName(cfg.OTelServiceName),
+			semconv.DeploymentEnvironment("local"),
+		),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("init otel resource: %w", err)
+	}
+
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(cfg.OTelSampleRatio)),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
+	)
+	otel.SetTracerProvider(provider)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	return provider.Tracer("exchange/edge-gateway"), provider.Shutdown, nil
 }
 
 func marshalResponse(status int, v interface{}) (int, []byte) {

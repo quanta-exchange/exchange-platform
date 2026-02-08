@@ -27,6 +27,9 @@ Base: `/v1`
   - `METHOD + "\\n" + PATH + "\\n" + X-TS + "\\n" + RAW_BODY`
 - Replay defense:
   - duplicate `(api_key, signature, ts)` within replay window must be rejected
+- Tracing:
+  - request accepts `traceparent` (W3C)
+  - response includes `X-Trace-Id`
 
 ### Orders
 #### POST `/v1/orders`

@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jit-ops-admin-REPLACE_ME
+  annotations:
+    exchange.quanta.io/ticket-id: REPLACE_ME
+    exchange.quanta.io/reason: REPLACE_ME
+    exchange.quanta.io/expires-at: REPLACE_ME_ISO8601
+subjects:
+  - kind: User
+    name: REPLACE_ME_USER
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: exchange-ops-admin

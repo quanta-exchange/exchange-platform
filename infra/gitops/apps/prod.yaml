@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: exchange-platform-prod
+  namespace: argocd
+  labels:
+    exchange.quanta.io/environment: prod
+spec:
+  project: exchange-platform
+  source:
+    repoURL: https://github.com/quanta-exchange/exchange-platform.git
+    targetRevision: main
+    path: infra/k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: infra
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

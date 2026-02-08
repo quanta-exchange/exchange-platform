@@ -207,3 +207,64 @@ Failure handling:
 - `CancelAll(symbol)`
 - `WithdrawalsHalt(on/off)` (if custody is enabled later)
 - All actions must be audited with reason + ticket id
+
+---
+
+## 7) Load Harness (I-0105)
+Purpose:
+- detect order/WS regressions before release
+
+Command:
+- `./scripts/load_smoke.sh`
+
+Outputs:
+- `build/load/load-smoke.json`
+- key fields: `order_p99_ms`, `order_error_rate`, `order_tps`, `ws_messages`
+
+Response:
+- if threshold violation: block release and investigate perf regression before retry
+
+---
+
+## 8) DR Rehearsal (I-0106)
+Purpose:
+- verify backup/restore and replay timings against RTO/RPO targets
+
+Command:
+- `./scripts/dr_rehearsal.sh`
+
+Outputs:
+- `build/dr/dr-report.json`
+- key fields: `restore_time_ms`, `replay_time_ms`, `invariant_violations`
+
+Response:
+- any failure or invariant violation blocks launch
+
+---
+
+## 9) Access Control (I-0107)
+JIT grant generation:
+- `./scripts/jit_access_grant.sh <user> <ticket_id> <reason> <duration_minutes>`
+
+Validation:
+- generated binding must include `ticket-id`, `reason`, `expires-at` annotations
+- all production admin actions require audit trail
+
+Unauthorized attempt playbook:
+1) revoke active JIT grants
+2) rotate potentially exposed credentials
+3) review audit logs and incident timeline
+
+---
+
+## 10) Safety Case (I-0108)
+Command:
+- `make safety-case`
+
+Output bundle:
+- `build/safety-case/manifest.json`
+- `build/safety-case/safety-case-<commit>.tar.gz`
+- `build/safety-case/safety-case-<commit>.tar.gz.sha256`
+
+Gate policy:
+- if safety-case generation fails or evidence is missing, release is blocked

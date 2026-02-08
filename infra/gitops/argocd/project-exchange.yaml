@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: exchange-platform
+  namespace: argocd
+spec:
+  description: Exchange platform GitOps project
+  sourceRepos:
+    - https://github.com/quanta-exchange/exchange-platform.git
+  destinations:
+    - namespace: core
+      server: https://kubernetes.default.svc
+    - namespace: edge
+      server: https://kubernetes.default.svc
+    - namespace: ledger
+      server: https://kubernetes.default.svc
+    - namespace: streaming
+      server: https://kubernetes.default.svc
+    - namespace: infra
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

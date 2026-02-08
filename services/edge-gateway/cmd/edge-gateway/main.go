@@ -24,6 +24,10 @@ func main() {
 		RedisAddr:          getenv("EDGE_REDIS_ADDR", ""),
 		RedisPassword:      getenv("EDGE_REDIS_PASSWORD", ""),
 		RedisDB:            getenvInt("EDGE_REDIS_DB", 0),
+		OTelEndpoint:       getenv("EDGE_OTEL_ENDPOINT", ""),
+		OTelServiceName:    getenv("EDGE_OTEL_SERVICE_NAME", "edge-gateway"),
+		OTelSampleRatio:    getenvFloat("EDGE_OTEL_SAMPLE_RATIO", 1.0),
+		OTelInsecure:       getenv("EDGE_OTEL_INSECURE", "true") == "true",
 	}
 	srv, err := gateway.New(cfg)
 	if err != nil {
@@ -46,6 +50,16 @@ func getenv(key, fallback string) string {
 func getenvInt(key string, fallback int) int {
 	if v := os.Getenv(key); v != "" {
 		parsed, err := strconv.Atoi(v)
+		if err == nil {
+			return parsed
+		}
+	}
+	return fallback
+}
+
+func getenvFloat(key string, fallback float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		parsed, err := strconv.ParseFloat(v, 64)
 		if err == nil {
 			return parsed
 		}
