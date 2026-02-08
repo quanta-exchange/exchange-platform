@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -14,6 +18,7 @@ jobs:
       go: ${{ steps.filter.outputs.go }}
       kotlin: ${{ steps.filter.outputs.kotlin }}
       infra: ${{ steps.filter.outputs.infra }}
+      ops: ${{ steps.filter.outputs.ops }}
     steps:
       - uses: actions/checkout@v4
       - id: filter
@@ -42,6 +47,14 @@ jobs:
               - 'gradlew.bat'
             infra:
               - 'infra/**'
+            ops:
+              - 'infra/**'
+              - 'scripts/**'
+              - 'Makefile'
+              - 'README.md'
+              - 'RUNBOOK.md'
+              - 'ARCHITECTURE.md'
+              - 'API_SURFACE.md'
 
   contracts:
     runs-on: ubuntu-latest
@@ -99,7 +112,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24.x'
       - name: go test
         run: |
           set -o pipefail
@@ -134,29 +147,100 @@ jobs:
   infra-validate:
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.infra == 'true'
+    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.ops == 'true'
     steps:
       - uses: actions/checkout@v4
       - name: docker compose config
         run: docker compose -f infra/compose/docker-compose.yml config > /tmp/compose.rendered.yml
+      - name: validate infra manifests
+        run: ./scripts/validate_infra.sh
       - name: upload infra report
         uses: actions/upload-artifact@v4
         with:
           name: infra-compose-rendered
           path: /tmp/compose.rendered.yml
 
+  load-smoke:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.ops == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+      - name: run load smoke
+        run: ./scripts/load_smoke.sh
+      - name: upload load smoke report
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-smoke-report
+          path: build/load/load-smoke.json
+
+  dr-rehearsal:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.ops == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: run DR rehearsal
+        run: ./scripts/dr_rehearsal.sh
+      - name: upload dr report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-rehearsal-report
+          path: build/dr/dr-report.json
+
+  safety-case:
+    runs-on: ubuntu-latest
+    needs: [changes, load-smoke, dr-rehearsal]
+    if: needs.changes.outputs.ops == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: regenerate load and dr evidence
+        run: |
+          ./scripts/load_smoke.sh
+          ./scripts/dr_rehearsal.sh
+      - name: generate safety case
+        run: ./scripts/safety_case.sh
+      - name: upload safety case bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-case-bundle
+          path: |
+            build/safety-case/*.json
+            build/safety-case/*.tar.gz
+            build/safety-case/*.sha256
+            build/safety-case/reports
+
   security-baseline:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: gitleaks (secret scan)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: trivy (secret scan)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scanners: secret
+          format: sarif
+          output: trivy-secrets.sarif
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+      - name: secret rotation drill
+        run: ./scripts/secret_rotation_drill.sh
       - name: trivy (dependency and fs vulnerability scan)
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: fs
+          scanners: vuln
           format: sarif
           output: trivy-results.sarif
           ignore-unfixed: true
@@ -165,4 +249,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: security-report
-          path: trivy-results.sarif
+          path: |
+            trivy-results.sarif
+            trivy-secrets.sarif
