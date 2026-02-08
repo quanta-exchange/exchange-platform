@@ -16,7 +16,7 @@ cd "$ROOT_DIR"
 EDGE_ADDR=":18081" EDGE_DISABLE_DB="true" go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
 EDGE_PID=$!
 
-for _ in {1..30}; do
+for _ in {1..120}; do
   if curl -fsS "http://localhost:18081/readyz" >/dev/null 2>&1; then
     break
   fi

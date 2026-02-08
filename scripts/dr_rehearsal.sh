@@ -12,6 +12,17 @@ mkdir -p "$OUT_DIR"
 echo "dr_rehearsal_start=true"
 $COMPOSE up -d postgres >/dev/null
 
+for _ in {1..60}; do
+  if $COMPOSE exec -T postgres pg_isready -U exchange -d postgres >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+if ! $COMPOSE exec -T postgres pg_isready -U exchange -d postgres >/dev/null 2>&1; then
+  echo "dr_rehearsal_failed=postgres_not_ready"
+  exit 1
+fi
+
 $COMPOSE exec -T postgres psql -U exchange -d postgres -c "DROP DATABASE IF EXISTS dr_source WITH (FORCE);" >/dev/null
 $COMPOSE exec -T postgres psql -U exchange -d postgres -c "CREATE DATABASE dr_source;" >/dev/null
 
