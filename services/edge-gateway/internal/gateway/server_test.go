@@ -2,12 +2,19 @@ package gateway
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func newTestServer(t *testing.T) *Server {
@@ -242,5 +249,74 @@ func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
 	}
 	if data["volume24h"] != "2" {
 		t.Fatalf("unexpected volume24h: %v", data["volume24h"])
+	}
+}
+
+func TestHealthzIncludesTraceHeader(t *testing.T) {
+	prevProvider := otel.GetTracerProvider()
+	tp := sdktrace.NewTracerProvider()
+	otel.SetTracerProvider(tp)
+	defer func() {
+		_ = tp.Shutdown(context.Background())
+		otel.SetTracerProvider(prevProvider)
+	}()
+
+	s := newTestServer(t)
+	defer func() { _ = s.Close() }()
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("healthz failed: %d", w.Code)
+	}
+
+	traceID := w.Header().Get("X-Trace-Id")
+	if traceID == "" {
+		t.Fatalf("expected X-Trace-Id header")
+	}
+	if traceID == "00000000000000000000000000000000" {
+		t.Fatalf("expected non-zero trace id")
+	}
+}
+
+func TestWebSocketUpgradeWithTraceMiddleware(t *testing.T) {
+	s := newTestServer(t)
+	defer func() { _ = s.Close() }()
+
+	httpSrv := httptest.NewServer(s.Router())
+	defer httpSrv.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(httpSrv.URL, "http") + "/ws"
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		status := 0
+		body := ""
+		if resp != nil {
+			status = resp.StatusCode
+			if resp.Body != nil {
+				raw, _ := io.ReadAll(resp.Body)
+				body = string(raw)
+			}
+		}
+		t.Fatalf("websocket dial failed: err=%v status=%d body=%q", err, status, body)
+	}
+	defer conn.Close()
+
+	if resp == nil || resp.StatusCode != http.StatusSwitchingProtocols {
+		code := 0
+		if resp != nil {
+			code = resp.StatusCode
+		}
+		t.Fatalf("expected websocket upgrade 101, got %d", code)
+	}
+
+	if err := conn.WriteJSON(map[string]interface{}{
+		"op":      "SUB",
+		"channel": "trades",
+		"symbol":  "BTC-KRW",
+	}); err != nil {
+		t.Fatalf("write subscribe frame: %v", err)
 	}
 }
