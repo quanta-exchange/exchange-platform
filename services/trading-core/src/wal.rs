@@ -159,7 +159,11 @@ impl Wal {
 
 fn ensure_segment_file(path: &Path) -> Result<File, WalError> {
     let exists = path.exists();
-    let mut file = OpenOptions::new().create(true).append(true).read(true).open(path)?;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .read(true)
+        .open(path)?;
     if !exists {
         file.write_all(SEGMENT_MAGIC)?;
         file.sync_data()?;
@@ -231,13 +235,19 @@ mod tests {
             .map(|e| e.unwrap().path())
             .collect::<Vec<_>>();
         files.sort();
-        let file_path = files.into_iter().find(|p| p.to_string_lossy().ends_with(".wal")).unwrap();
+        let file_path = files
+            .into_iter()
+            .find(|p| p.to_string_lossy().ends_with(".wal"))
+            .unwrap();
         let mut bytes = std::fs::read(&file_path).unwrap();
         let last = bytes.len() - 1;
         bytes[last] ^= 0xAA;
         std::fs::write(file_path, bytes).unwrap();
 
-        let err = Wal::open(dir.path(), 1024 * 1024).unwrap().replay_all().unwrap_err();
+        let err = Wal::open(dir.path(), 1024 * 1024)
+            .unwrap()
+            .replay_all()
+            .unwrap_err();
         assert!(matches!(err, WalError::CrcMismatch));
     }
 }

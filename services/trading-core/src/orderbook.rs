@@ -26,10 +26,16 @@ impl OrderBook {
         let price = order.price.unwrap_or(0);
         match order.side {
             Side::Buy => {
-                self.bids.entry(price).or_default().push_back(order_id.clone());
+                self.bids
+                    .entry(price)
+                    .or_default()
+                    .push_back(order_id.clone());
             }
             Side::Sell => {
-                self.asks.entry(price).or_default().push_back(order_id.clone());
+                self.asks
+                    .entry(price)
+                    .or_default()
+                    .push_back(order_id.clone());
             }
         }
         self.orders.insert(order_id, order);
@@ -262,7 +268,11 @@ mod tests {
         let fills = book.match_order(&mut taker);
 
         assert_eq!(fills[0].quantity, 10);
-        let remaining = book.all_orders().into_iter().find(|o| o.order_id == "ask").unwrap();
+        let remaining = book
+            .all_orders()
+            .into_iter()
+            .find(|o| o.order_id == "ask")
+            .unwrap();
         assert_eq!(remaining.remaining_qty, 5);
     }
 

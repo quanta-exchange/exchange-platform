@@ -1,0 +1,120 @@
+use crate::model::{CoreEvent, EventEnvelope, TradeExecutedEvent};
+use crate::outbox::EventSink;
+use rdkafka::config::ClientConfig;
+use rdkafka::producer::{BaseProducer, BaseRecord};
+use rdkafka::util::Timeout;
+use serde::Serialize;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
+
+#[derive(Debug)]
+pub struct KafkaTradePublisher {
+    producer: BaseProducer,
+    topic: String,
+    flush_timeout: std::time::Duration,
+}
+
+impl KafkaTradePublisher {
+    pub fn new(
+        brokers: &str,
+        topic: &str,
+        flush_timeout: std::time::Duration,
+    ) -> Result<Self, String> {
+        let producer = ClientConfig::new()
+            .set("bootstrap.servers", brokers)
+            .set("message.timeout.ms", "5000")
+            .create::<BaseProducer>()
+            .map_err(|e| e.to_string())?;
+        Ok(Self {
+            producer,
+            topic: topic.to_string(),
+            flush_timeout,
+        })
+    }
+}
+
+impl EventSink for KafkaTradePublisher {
+    fn publish(&mut self, event: &CoreEvent) -> Result<(), String> {
+        let trade = match event {
+            CoreEvent::TradeExecuted(e) => e,
+            _ => return Ok(()),
+        };
+
+        let payload = TradeExecutedPayload::from(trade)?;
+        let json = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
+        self.producer
+            .send(
+                BaseRecord::to(&self.topic)
+                    .payload(&json)
+                    .key(&payload.trade_id),
+            )
+            .map_err(|(e, _)| e.to_string())?;
+        self.producer.flush(Timeout::After(self.flush_timeout));
+        Ok(())
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TradeExecutedPayload {
+    envelope: EventEnvelopePayload,
+    trade_id: String,
+    buyer_user_id: String,
+    seller_user_id: String,
+    price: i64,
+    quantity: i64,
+    quote_amount: i64,
+    fee_buyer: i64,
+    fee_seller: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EventEnvelopePayload {
+    event_id: String,
+    event_version: u32,
+    symbol: String,
+    seq: u64,
+    occurred_at: String,
+    correlation_id: String,
+    causation_id: String,
+}
+
+impl TradeExecutedPayload {
+    fn from(event: &TradeExecutedEvent) -> Result<Self, String> {
+        let envelope = EventEnvelopePayload::from(&event.envelope)?;
+        Ok(Self {
+            envelope,
+            trade_id: event.trade_id.clone(),
+            buyer_user_id: event.buyer_user_id.clone(),
+            seller_user_id: event.seller_user_id.clone(),
+            price: parse_i64(&event.price),
+            quantity: parse_i64(&event.quantity),
+            quote_amount: parse_i64(&event.quote_amount),
+            fee_buyer: parse_i64(&event.fee_buyer),
+            fee_seller: parse_i64(&event.fee_seller),
+        })
+    }
+}
+
+impl EventEnvelopePayload {
+    fn from(event: &EventEnvelope) -> Result<Self, String> {
+        let occurred_at = OffsetDateTime::from_unix_timestamp_millis(event.occurred_at_ms)
+            .map_err(|e| e.to_string())?
+            .format(&Rfc3339)
+            .map_err(|e| e.to_string())?;
+        Ok(Self {
+            event_id: event.event_id.clone(),
+            event_version: event.event_version,
+            symbol: event.symbol.clone(),
+            seq: event.seq,
+            occurred_at,
+            correlation_id: event.correlation_id.clone(),
+            causation_id: event.causation_id.clone(),
+        })
+    }
+}
+
+fn parse_i64(value: &str) -> i64 {
+    value.parse::<i64>().unwrap_or(0)
+}

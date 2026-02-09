@@ -11,7 +11,15 @@ prost-types = "0.13"
 serde_json = "1"
 crc32fast = "1"
 sha2 = "0.10"
+rdkafka = { version = "0.36", features = ["cmake-build"] }
+time = { version = "0.3", features = ["formatting"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
+tonic = "0.12"
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 pretty_assertions = "1"
 tempfile = "3"
+
+[build-dependencies]
+tonic-build = "0.12"

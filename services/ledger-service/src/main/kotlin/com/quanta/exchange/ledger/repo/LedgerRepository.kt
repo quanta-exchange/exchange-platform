@@ -5,6 +5,7 @@ import com.quanta.exchange.ledger.core.InvariantCheckResult
 import com.quanta.exchange.ledger.core.LedgerEntryCommand
 import com.quanta.exchange.ledger.core.LedgerPostingCommand
 import com.quanta.exchange.ledger.core.ReconciliationStatus
+import com.quanta.exchange.ledger.core.TradeLookup
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
@@ -375,6 +376,27 @@ class LedgerRepository(
         return rows.associate { row ->
             "${row["account_id"]}:${row["currency"]}" to (row["balance"] as Number).toLong()
         }
+    }
+
+    fun findTrade(tradeId: String): TradeLookup? {
+        val rows = jdbc.queryForList(
+            """
+            SELECT entry_id, symbol, engine_seq, occurred_at
+            FROM ledger_entries
+            WHERE reference_type = 'TRADE' AND reference_id = ?
+            ORDER BY occurred_at DESC
+            LIMIT 1
+            """.trimIndent(),
+            tradeId,
+        )
+        val row = rows.firstOrNull() ?: return null
+        return TradeLookup(
+            tradeId = tradeId,
+            entryId = row["entry_id"].toString(),
+            symbol = row["symbol"].toString(),
+            engineSeq = (row["engine_seq"] as Number).toLong(),
+            occurredAt = (row["occurred_at"] as java.sql.Timestamp).toInstant(),
+        )
     }
 
     private fun isDoubleEntry(command: LedgerEntryCommand): Boolean {

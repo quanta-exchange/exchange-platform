@@ -164,7 +164,11 @@ impl RiskManager {
         Ok(())
     }
 
-    fn enforce_price_band(&mut self, order: &Order, ref_price: Option<u64>) -> Result<(), RejectCode> {
+    fn enforce_price_band(
+        &mut self,
+        order: &Order,
+        ref_price: Option<u64>,
+    ) -> Result<(), RejectCode> {
         if order.order_type != OrderType::Limit {
             return Ok(());
         }
@@ -298,7 +302,9 @@ impl RiskManager {
     }
 
     pub fn invariant_holds(&self) -> bool {
-        self.balances.values().all(|v| v.available >= 0 && v.hold >= 0)
+        self.balances
+            .values()
+            .all(|v| v.available >= 0 && v.hold >= 0)
     }
 
     pub fn to_snapshot(&self) -> RiskSnapshot {
@@ -311,7 +317,10 @@ impl RiskManager {
                 hold: bal.hold,
             });
         }
-        balances.sort_by(|a, b| (a.user_id.as_str(), a.currency.as_str()).cmp(&(b.user_id.as_str(), b.currency.as_str())));
+        balances.sort_by(|a, b| {
+            (a.user_id.as_str(), a.currency.as_str())
+                .cmp(&(b.user_id.as_str(), b.currency.as_str()))
+        });
 
         let mut reservations = Vec::with_capacity(self.reservations.len());
         for (order_id, res) in &self.reservations {
@@ -331,7 +340,9 @@ impl RiskManager {
                 count: *count,
             });
         }
-        open_orders.sort_by(|a, b| (a.user_id.as_str(), a.symbol.as_str()).cmp(&(b.user_id.as_str(), b.symbol.as_str())));
+        open_orders.sort_by(|a, b| {
+            (a.user_id.as_str(), a.symbol.as_str()).cmp(&(b.user_id.as_str(), b.symbol.as_str()))
+        });
 
         let mut recent_commands = Vec::with_capacity(self.recent_commands.len());
         for ((user_id, symbol), timestamps) in &self.recent_commands {
@@ -341,8 +352,9 @@ impl RiskManager {
                 timestamps_ms: timestamps.iter().copied().collect(),
             });
         }
-        recent_commands
-            .sort_by(|a, b| (a.user_id.as_str(), a.symbol.as_str()).cmp(&(b.user_id.as_str(), b.symbol.as_str())));
+        recent_commands.sort_by(|a, b| {
+            (a.user_id.as_str(), a.symbol.as_str()).cmp(&(b.user_id.as_str(), b.symbol.as_str()))
+        });
 
         RiskSnapshot {
             balances,

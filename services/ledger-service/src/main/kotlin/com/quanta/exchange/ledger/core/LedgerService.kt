@@ -219,6 +219,8 @@ class LedgerService(
 
     fun listBalances(): Map<String, Long> = repo.listBalances()
 
+    fun findTrade(tradeId: String): TradeLookup? = repo.findTrade(tradeId)
+
     private fun tradeToEntry(entryId: String, event: TradeExecuted): LedgerEntryCommand {
         require(event.price > 0) { "price must be > 0" }
         require(event.quantity > 0) { "quantity must be > 0" }

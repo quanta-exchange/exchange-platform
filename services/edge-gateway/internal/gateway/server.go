@@ -18,8 +18,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
+	exchangev1 "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -29,7 +31,9 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const slowConsumerCloseCode = 4001
@@ -55,6 +59,8 @@ type Config struct {
 	OTelServiceName    string
 	OTelSampleRatio    float64
 	OTelInsecure       bool
+	CoreAddr           string
+	CoreTimeout        time.Duration
 }
 
 type OrderRequest struct {
@@ -163,6 +169,8 @@ type Server struct {
 	router        *chi.Mux
 	db            *sql.DB
 	redis         *redis.Client
+	coreConn      *grpc.ClientConn
+	coreClient    exchangev1.TradingCoreServiceClient
 	state         *state
 	upgrader      websocket.Upgrader
 	tracer        trace.Tracer
@@ -194,6 +202,12 @@ func New(cfg Config) (*Server, error) {
 	if cfg.OTelSampleRatio <= 0 {
 		cfg.OTelSampleRatio = 1.0
 	}
+	if cfg.CoreAddr == "" {
+		cfg.CoreAddr = "localhost:50051"
+	}
+	if cfg.CoreTimeout <= 0 {
+		cfg.CoreTimeout = 3 * time.Second
+	}
 
 	var db *sql.DB
 	var err error
@@ -218,10 +232,24 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 
+	coreCtx, cancel := context.WithTimeout(context.Background(), cfg.CoreTimeout)
+	defer cancel()
+	coreConn, err := grpc.DialContext(
+		coreCtx,
+		cfg.CoreAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("dial core: %w", err)
+	}
+
 	s := &Server{
-		cfg:   cfg,
-		db:    db,
-		redis: rdb,
+		cfg:        cfg,
+		db:         db,
+		redis:      rdb,
+		coreConn:   coreConn,
+		coreClient: exchangev1.NewTradingCoreServiceClient(coreConn),
 		state: &state{
 			nextSeq:            1,
 			nextOrderID:        1,
@@ -279,6 +307,9 @@ func (s *Server) Close() error {
 	}
 	if s.redis != nil {
 		_ = s.redis.Close()
+	}
+	if s.coreConn != nil {
+		_ = s.coreConn.Close()
 	}
 	if s.traceShutdown != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -446,31 +477,80 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "symbol/side/type/qty required"})
 		return
 	}
+	orderID := fmt.Sprintf("ord_%s", idemKey)
+	commandID := uuid.NewString()
+	correlationID := uuid.NewString()
+	traceID := trace.SpanFromContext(r.Context()).SpanContext().TraceID().String()
+	if traceID == "" || traceID == "00000000000000000000000000000000" {
+		traceID = uuid.NewString()
+	}
+	side, ok := mapSide(req.Side)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid side"})
+		return
+	}
+	orderType, ok := mapOrderType(req.Type)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid type"})
+		return
+	}
+	tif, ok := mapTimeInForce(req.TimeInForce)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid timeInForce"})
+		return
+	}
 
-	s.state.mu.Lock()
-	seq := s.state.nextSeq
-	s.state.nextSeq++
-	orderID := fmt.Sprintf("ord_%d", s.state.nextOrderID)
-	s.state.nextOrderID++
-	acceptedAt := time.Now().UnixMilli()
+	coreReq := &exchangev1.PlaceOrderRequest{
+		Meta: &exchangev1.CommandMetadata{
+			CommandId:      commandID,
+			IdempotencyKey: idemKey,
+			UserId:         apiKey,
+			Symbol:         req.Symbol,
+			TsServer:       timestamppb.Now(),
+			TraceId:        traceID,
+			CorrelationId:  correlationID,
+		},
+		OrderId:     orderID,
+		Side:        side,
+		OrderType:   orderType,
+		Price:       req.Price,
+		Quantity:    req.Qty,
+		TimeInForce: tif,
+	}
+
+	coreCtx, cancel := context.WithTimeout(r.Context(), s.cfg.CoreTimeout)
+	defer cancel()
+	coreResp, err := s.coreClient.PlaceOrder(coreCtx, coreReq)
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "core_unavailable"})
+		return
+	}
+
+	acceptedAt := int64(0)
+	if coreResp.GetAcceptedAt() != nil {
+		acceptedAt = coreResp.AcceptedAt.AsTime().UnixMilli()
+	}
 
 	record := OrderRecord{
-		OrderID:    orderID,
-		Status:     "ACCEPTED",
-		Symbol:     req.Symbol,
-		Seq:        seq,
+		OrderID:    coreResp.OrderId,
+		Status:     coreResp.Status,
+		Symbol:     coreResp.Symbol,
+		Seq:        coreResp.Seq,
 		AcceptedAt: acceptedAt,
 	}
-	s.state.orders[orderID] = record
+	s.state.mu.Lock()
+	s.state.orders[coreResp.OrderId] = record
 	s.state.ordersTotal++
 	s.state.mu.Unlock()
 
 	resp := OrderResponse{
-		OrderID:    orderID,
-		Status:     record.Status,
-		Symbol:     record.Symbol,
-		Seq:        record.Seq,
-		AcceptedAt: acceptedAt,
+		OrderID:     coreResp.OrderId,
+		Status:      coreResp.Status,
+		Symbol:      coreResp.Symbol,
+		Seq:         coreResp.Seq,
+		AcceptedAt:  acceptedAt,
+		RejectCode:  coreResp.RejectCode,
+		Correlation: coreResp.CorrelationId,
 	}
 	status, body := marshalResponse(http.StatusOK, resp)
 	s.idempotencySet(apiKey, idemKey, r.Method, r.URL.Path, status, body)
@@ -610,6 +690,41 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 	s.broadcast(candleMsg)
 	s.broadcast(tickerMsg)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "settled", "seq": seq})
+}
+
+func mapSide(value string) (exchangev1.Side, bool) {
+	switch strings.ToUpper(value) {
+	case "BUY":
+		return exchangev1.Side_SIDE_BUY, true
+	case "SELL":
+		return exchangev1.Side_SIDE_SELL, true
+	default:
+		return exchangev1.Side_SIDE_UNSPECIFIED, false
+	}
+}
+
+func mapOrderType(value string) (exchangev1.OrderType, bool) {
+	switch strings.ToUpper(value) {
+	case "LIMIT":
+		return exchangev1.OrderType_ORDER_TYPE_LIMIT, true
+	case "MARKET":
+		return exchangev1.OrderType_ORDER_TYPE_MARKET, true
+	default:
+		return exchangev1.OrderType_ORDER_TYPE_UNSPECIFIED, false
+	}
+}
+
+func mapTimeInForce(value string) (exchangev1.TimeInForce, bool) {
+	switch strings.ToUpper(value) {
+	case "GTC", "":
+		return exchangev1.TimeInForce_TIME_IN_FORCE_GTC, true
+	case "IOC":
+		return exchangev1.TimeInForce_TIME_IN_FORCE_IOC, true
+	case "FOK":
+		return exchangev1.TimeInForce_TIME_IN_FORCE_FOK, true
+	default:
+		return exchangev1.TimeInForce_TIME_IN_FORCE_UNSPECIFIED, false
+	}
 }
 
 func (s *Server) appendSettlement(ctx context.Context, req SmokeTradeRequest) error {
