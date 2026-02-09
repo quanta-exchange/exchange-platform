@@ -309,6 +309,9 @@ pub fn build_envelope(
 
 pub fn apply_symbol_mode_rules(mode: SymbolMode) -> Result<(), RejectCode> {
     match mode {
-        SymbolMode::HardHalt | SymbolMode::SoftHalt | SymbolMode::CancelOnly | SymbolMode::Normal => Ok(()),
+        SymbolMode::HardHalt
+        | SymbolMode::SoftHalt
+        | SymbolMode::CancelOnly
+        | SymbolMode::Normal => Ok(()),
     }
 }

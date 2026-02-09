@@ -28,6 +28,8 @@ func main() {
 		OTelServiceName:    getenv("EDGE_OTEL_SERVICE_NAME", "edge-gateway"),
 		OTelSampleRatio:    getenvFloat("EDGE_OTEL_SAMPLE_RATIO", 1.0),
 		OTelInsecure:       getenv("EDGE_OTEL_INSECURE", "true") == "true",
+		CoreAddr:           getenv("EDGE_CORE_ADDR", "localhost:50051"),
+		CoreTimeout:        time.Duration(getenvInt("EDGE_CORE_TIMEOUT_MS", 3000)) * time.Millisecond,
 	}
 	srv, err := gateway.New(cfg)
 	if err != nil {

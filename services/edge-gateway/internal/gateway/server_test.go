@@ -5,20 +5,27 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	exchangev1 "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1"
 
 	"github.com/gorilla/websocket"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func newTestServer(t *testing.T) *Server {
+func newTestServer(t *testing.T) (*Server, func()) {
 	t.Helper()
+	coreAddr, shutdownCore := startTestCore(t)
 	s, err := New(Config{
 		DisableDB:          true,
 		WSQueueSize:        8,
@@ -26,11 +33,16 @@ func newTestServer(t *testing.T) *Server {
 		TimestampSkew:      30 * time.Second,
 		ReplayTTL:          2 * time.Minute,
 		RateLimitPerMinute: 100,
+		CoreAddr:           coreAddr,
+		CoreTimeout:        2 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}
-	return s
+	return s, func() {
+		_ = s.Close()
+		shutdownCore()
+	}
 }
 
 func signHeaders(t *testing.T, method, path string, body []byte, tsMs int64) http.Header {
@@ -43,9 +55,51 @@ func signHeaders(t *testing.T, method, path string, body []byte, tsMs int64) htt
 	return h
 }
 
+type stubCore struct {
+	exchangev1.UnimplementedTradingCoreServiceServer
+	mu  sync.Mutex
+	seq uint64
+}
+
+func (s *stubCore) PlaceOrder(
+	_ context.Context,
+	req *exchangev1.PlaceOrderRequest,
+) (*exchangev1.PlaceOrderResponse, error) {
+	s.mu.Lock()
+	s.seq++
+	seq := s.seq
+	s.mu.Unlock()
+	return &exchangev1.PlaceOrderResponse{
+		Accepted:      true,
+		OrderId:       req.OrderId,
+		Status:        "ACCEPTED",
+		Symbol:        req.GetMeta().GetSymbol(),
+		Seq:           seq,
+		AcceptedAt:    timestamppb.Now(),
+		CorrelationId: req.GetMeta().GetCorrelationId(),
+	}, nil
+}
+
+func startTestCore(t *testing.T) (string, func()) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	server := grpc.NewServer()
+	exchangev1.RegisterTradingCoreServiceServer(server, &stubCore{})
+	go func() {
+		_ = server.Serve(listener)
+	}()
+	return listener.Addr().String(), func() {
+		server.Stop()
+		_ = listener.Close()
+	}
+}
+
 func TestCreateOrderRequiresIdempotencyKey(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1","timeInForce":"GTC"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(body))
@@ -61,8 +115,8 @@ func TestCreateOrderRequiresIdempotencyKey(t *testing.T) {
 }
 
 func TestCreateOrderIsIdempotent(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	payload := OrderRequest{Symbol: "BTC-KRW", Side: "BUY", Type: "LIMIT", Price: "100", Qty: "1", TimeInForce: "GTC"}
 	raw, _ := json.Marshal(payload)
@@ -100,8 +154,8 @@ func TestCreateOrderIsIdempotent(t *testing.T) {
 }
 
 func TestRejectsInvalidSignature(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(body))
@@ -118,8 +172,8 @@ func TestRejectsInvalidSignature(t *testing.T) {
 }
 
 func TestRejectsTimestampSkew(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1"}`)
 	oldTs := time.Now().Add(-2 * time.Hour).UnixMilli()
@@ -137,8 +191,8 @@ func TestRejectsTimestampSkew(t *testing.T) {
 }
 
 func TestRejectsReplayRequest(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1"}`)
 	tsMs := time.Now().UnixMilli()
@@ -168,8 +222,8 @@ func TestRejectsReplayRequest(t *testing.T) {
 }
 
 func TestOrderLifecycleCreateGetCancel(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(body))
@@ -211,8 +265,8 @@ func TestOrderLifecycleCreateGetCancel(t *testing.T) {
 }
 
 func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	body := []byte(`{"tradeId":"trade-1","symbol":"BTC-KRW","price":"100","qty":"2"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/smoke/trades", bytes.NewReader(body))
@@ -261,8 +315,8 @@ func TestHealthzIncludesTraceHeader(t *testing.T) {
 		otel.SetTracerProvider(prevProvider)
 	}()
 
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
@@ -282,8 +336,8 @@ func TestHealthzIncludesTraceHeader(t *testing.T) {
 }
 
 func TestWebSocketUpgradeWithTraceMiddleware(t *testing.T) {
-	s := newTestServer(t)
-	defer func() { _ = s.Close() }()
+	s, cleanup := newTestServer(t)
+	defer cleanup()
 
 	httpSrv := httptest.NewServer(s.Router())
 	defer httpSrv.Close()

@@ -90,3 +90,11 @@ data class CorrectionRequest(
     val approver2: String?,
     val status: String,
 )
+
+data class TradeLookup(
+    val tradeId: String,
+    val entryId: String,
+    val symbol: String,
+    val engineSeq: Long,
+    val occurredAt: Instant,
+)

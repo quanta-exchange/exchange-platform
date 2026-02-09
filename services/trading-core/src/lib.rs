@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod determinism;
 pub mod engine;
+pub mod kafka;
 pub mod leader;
 pub mod model;
 pub mod orderbook;
@@ -24,18 +25,9 @@ pub fn health() -> CoreHealth {
 }
 
 pub mod contracts {
-    pub mod google {
-        pub mod protobuf {
-            pub type Timestamp = prost_types::Timestamp;
-        }
-    }
-
     pub mod exchange {
         pub mod v1 {
-            include!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../../contracts/gen/rust/exchange/v1/exchange.v1.rs"
-            ));
+            tonic::include_proto!("exchange.v1");
         }
     }
 }

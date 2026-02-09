@@ -55,13 +55,19 @@ impl FileLease {
     }
 
     pub fn acquire(&self) -> Result<u64, LeaderError> {
-        let current = fs::read_to_string(&self.path)?.trim().parse::<u64>().unwrap_or(0);
+        let current = fs::read_to_string(&self.path)?
+            .trim()
+            .parse::<u64>()
+            .unwrap_or(0);
         let next = current + 1;
         fs::write(&self.path, next.to_string())?;
         Ok(next)
     }
 
     pub fn current(&self) -> Result<u64, LeaderError> {
-        Ok(fs::read_to_string(&self.path)?.trim().parse::<u64>().unwrap_or(0))
+        Ok(fs::read_to_string(&self.path)?
+            .trim()
+            .parse::<u64>()
+            .unwrap_or(0))
     }
 }

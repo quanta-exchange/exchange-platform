@@ -2,10 +2,10 @@ use crate::contracts::exchange::v1 as proto;
 use crate::determinism::state_hash;
 use crate::leader::FencingCoordinator;
 use crate::model::{
-    build_envelope, from_proto_meta, now_timestamp, parse_u64, to_order_type, to_side, to_symbol_mode,
-    to_time_in_force, CancelRejectedEvent, CommandMeta, CoreEvent, EngineCheckpointEvent, EventEnvelope,
-    Order, OrderAcceptedEvent, OrderCanceledEvent, OrderRejectedEvent, OrderType, RejectCode, Side,
-    SymbolMode, TimeInForce, TradeExecutedEvent,
+    build_envelope, from_proto_meta, now_timestamp, parse_u64, to_order_type, to_side,
+    to_symbol_mode, to_time_in_force, CancelRejectedEvent, CommandMeta, CoreEvent,
+    EngineCheckpointEvent, EventEnvelope, Order, OrderAcceptedEvent, OrderCanceledEvent,
+    OrderRejectedEvent, OrderType, RejectCode, Side, SymbolMode, TimeInForce, TradeExecutedEvent,
 };
 use crate::orderbook::OrderBook;
 use crate::outbox::{Outbox, OutboxRecord};
@@ -34,6 +34,7 @@ pub struct CoreConfig {
     pub max_wal_segment_bytes: u64,
     pub idempotency_ttl_ms: i64,
     pub risk: RiskConfig,
+    pub stub_trades: bool,
 }
 
 impl Default for CoreConfig {
@@ -45,6 +46,7 @@ impl Default for CoreConfig {
             max_wal_segment_bytes: 8 * 1024 * 1024,
             idempotency_ttl_ms: 5 * 60 * 1000,
             risk: RiskConfig::default(),
+            stub_trades: false,
         }
     }
 }
@@ -143,6 +145,15 @@ impl TradingCore {
         Ok(self.outbox.pending_records()?)
     }
 
+    pub fn publish_pending<S: crate::outbox::EventSink>(
+        &self,
+        sink: &mut S,
+        retries: usize,
+    ) -> Result<(), EngineError> {
+        self.outbox.publish_pending(sink, retries)?;
+        Ok(())
+    }
+
     pub fn take_snapshot<P: AsRef<Path>>(&self, path: P) -> Result<(), EngineError> {
         Snapshot {
             last_seq: self.seq,
@@ -213,7 +224,10 @@ impl TradingCore {
         }
 
         self.prune_idempotency();
-        if let Some(idem) = self.idempotency.get(&(meta.symbol.clone(), meta.idempotency_key.clone())) {
+        if let Some(idem) = self
+            .idempotency
+            .get(&(meta.symbol.clone(), meta.idempotency_key.clone()))
+        {
             if let IdempotentResponse::Place(existing) = &idem.response {
                 return Ok(existing.clone());
             }
@@ -222,7 +236,8 @@ impl TradingCore {
         let side = match to_side(req.side) {
             Ok(v) => v,
             Err(code) => {
-                let resp = self.make_place_reject_response(&req.order_id, &meta.correlation_id, code);
+                let resp =
+                    self.make_place_reject_response(&req.order_id, &meta.correlation_id, code);
                 self.store_idempotent_place(&meta, &resp);
                 return Ok(resp);
             }
@@ -230,7 +245,8 @@ impl TradingCore {
         let order_type = match to_order_type(req.order_type) {
             Ok(v) => v,
             Err(code) => {
-                let resp = self.make_place_reject_response(&req.order_id, &meta.correlation_id, code);
+                let resp =
+                    self.make_place_reject_response(&req.order_id, &meta.correlation_id, code);
                 self.store_idempotent_place(&meta, &resp);
                 return Ok(resp);
             }
@@ -238,7 +254,8 @@ impl TradingCore {
         let tif = match to_time_in_force(req.time_in_force) {
             Ok(v) => v,
             Err(code) => {
-                let resp = self.make_place_reject_response(&req.order_id, &meta.correlation_id, code);
+                let resp =
+                    self.make_place_reject_response(&req.order_id, &meta.correlation_id, code);
                 self.store_idempotent_place(&meta, &resp);
                 return Ok(resp);
             }
@@ -286,17 +303,20 @@ impl TradingCore {
         };
 
         let reserve_ref = match order.order_type {
-            OrderType::Market => self.ref_price.or_else(|| self.order_book.best_opposite(order.side)),
+            OrderType::Market => self
+                .ref_price
+                .or_else(|| self.order_book.best_opposite(order.side)),
             OrderType::Limit => self.ref_price,
         };
-        if let Err(code) = self
-            .risk
-            .validate_and_reserve(&order, reserve_ref, self.symbol_mode, &self.cfg.symbol)
+        if let Err(code) =
+            self.risk
+                .validate_and_reserve(&order, reserve_ref, self.symbol_mode, &self.cfg.symbol)
         {
             if self.risk.volatility_violations >= self.risk.cfg.volatility_violation_threshold {
                 self.transition_mode(SymbolMode::CancelOnly, "auto-volatility-guard");
             }
-            let mut events = vec![self.event_order_rejected(&order, &meta, code.clone(), "risk reject")];
+            let mut events =
+                vec![self.event_order_rejected(&order, &meta, code.clone(), "risk reject")];
             self.append_checkpoint(&meta, &mut events);
             self.persist_command(&meta.command_id, events)?;
             let resp = self.make_place_reject_response(&req.order_id, &meta.correlation_id, code);
@@ -320,14 +340,20 @@ impl TradingCore {
             };
 
             let quote_amount = fill.price.saturating_mul(fill.quantity);
-            self.risk
-                .on_trade(&buyer_user_id, &seller_user_id, &self.cfg.symbol, fill.price, fill.quantity);
+            self.risk.on_trade(
+                &buyer_user_id,
+                &seller_user_id,
+                &self.cfg.symbol,
+                fill.price,
+                fill.quantity,
+            );
 
             let taker_consumed = match order.side {
                 Side::Buy => i128::from(quote_amount),
                 Side::Sell => i128::from(fill.quantity),
             };
-            self.risk.settle_reservation_consumed(&order, taker_consumed);
+            self.risk
+                .settle_reservation_consumed(&order, taker_consumed);
 
             let maker_order = Order {
                 order_id: fill.maker_order_id.clone(),
@@ -345,7 +371,8 @@ impl TradingCore {
                 Side::Buy => i128::from(quote_amount),
                 Side::Sell => i128::from(fill.quantity),
             };
-            self.risk.settle_reservation_consumed(&maker_order, maker_consumed);
+            self.risk
+                .settle_reservation_consumed(&maker_order, maker_consumed);
             if fill.maker_remaining_after == 0 {
                 self.risk.release_reservation(&maker_order);
             }
@@ -363,6 +390,42 @@ impl TradingCore {
             ));
         }
 
+        let stub_trade = self.cfg.stub_trades
+            && events
+                .iter()
+                .all(|e| !matches!(e, CoreEvent::TradeExecuted(_)));
+        if stub_trade {
+            let price = order.price.unwrap_or(1);
+            let quantity = order.remaining_qty.max(1);
+            let (buyer_user_id, seller_user_id) = match order.side {
+                Side::Buy => (order.user_id.clone(), "stub-mm".to_string()),
+                Side::Sell => ("stub-mm".to_string(), order.user_id.clone()),
+            };
+            order.remaining_qty = 0;
+            events.push(self.event_trade_executed(
+                &meta,
+                "stub-maker",
+                &order.order_id,
+                &buyer_user_id,
+                &seller_user_id,
+                price,
+                quantity,
+                0,
+            ));
+            self.risk.on_trade(
+                &buyer_user_id,
+                &seller_user_id,
+                &self.cfg.symbol,
+                price,
+                quantity,
+            );
+            let consumed = match order.side {
+                Side::Buy => i128::from(price.saturating_mul(quantity)),
+                Side::Sell => i128::from(quantity),
+            };
+            self.risk.settle_reservation_consumed(&order, consumed);
+        }
+
         if order.remaining_qty > 0 {
             let can_rest = order.order_type == OrderType::Limit && order.tif == TimeInForce::Gtc;
             if can_rest {
@@ -372,13 +435,19 @@ impl TradingCore {
                 self.risk.release_reservation(&order);
             }
         } else {
-            self.risk.release_reservation(&order);
+            if !stub_trade {
+                self.risk.release_reservation(&order);
+            }
         }
 
         let response = proto::PlaceOrderResponse {
             accepted: true,
             order_id: order.order_id.clone(),
-            status: if order.remaining_qty > 0 { "PARTIAL".to_string() } else { "FILLED".to_string() },
+            status: if order.remaining_qty > 0 {
+                "PARTIAL".to_string()
+            } else {
+                "FILLED".to_string()
+            },
             symbol: self.cfg.symbol.clone(),
             seq: self.seq,
             accepted_at: now_timestamp(),
@@ -402,7 +471,10 @@ impl TradingCore {
         };
 
         self.prune_idempotency();
-        if let Some(idem) = self.idempotency.get(&(meta.symbol.clone(), meta.idempotency_key.clone())) {
+        if let Some(idem) = self
+            .idempotency
+            .get(&(meta.symbol.clone(), meta.idempotency_key.clone()))
+        {
             if let IdempotentResponse::Cancel(existing) = &idem.response {
                 return Ok(existing.clone());
             }
@@ -506,7 +578,11 @@ impl TradingCore {
         })
     }
 
-    fn persist_command(&mut self, command_id: &str, mut events: Vec<CoreEvent>) -> Result<(), EngineError> {
+    fn persist_command(
+        &mut self,
+        command_id: &str,
+        mut events: Vec<CoreEvent>,
+    ) -> Result<(), EngineError> {
         let mut highest_seq = self.seq;
         for event in &events {
             highest_seq = highest_seq.max(event.envelope().seq);
@@ -515,8 +591,13 @@ impl TradingCore {
         self.last_state_hash = state_hash(highest_seq, self.mode_label(), &self.order_book);
         let checkpoint_seq = self.next_seq();
         let symbol = self.cfg.symbol.clone();
-        let checkpoint_envelope =
-            build_envelope(&symbol, checkpoint_seq, "EngineCheckpoint", "system", command_id);
+        let checkpoint_envelope = build_envelope(
+            &symbol,
+            checkpoint_seq,
+            "EngineCheckpoint",
+            "system",
+            command_id,
+        );
         events.push(CoreEvent::EngineCheckpoint(EngineCheckpointEvent {
             envelope: checkpoint_envelope,
             state_hash: self.last_state_hash.clone(),
@@ -543,7 +624,13 @@ impl TradingCore {
 
     fn event_order_accepted(&mut self, order: &Order, meta: &CommandMeta) -> CoreEvent {
         let seq = self.next_seq();
-        let envelope = build_envelope(&self.cfg.symbol, seq, "OrderAccepted", &meta.correlation_id, &meta.command_id);
+        let envelope = build_envelope(
+            &self.cfg.symbol,
+            seq,
+            "OrderAccepted",
+            &meta.correlation_id,
+            &meta.command_id,
+        );
         CoreEvent::OrderAccepted(OrderAcceptedEvent {
             envelope,
             order_id: order.order_id.clone(),
@@ -563,7 +650,13 @@ impl TradingCore {
         detail: &str,
     ) -> CoreEvent {
         let seq = self.next_seq();
-        let envelope = build_envelope(&self.cfg.symbol, seq, "OrderRejected", &meta.correlation_id, &meta.command_id);
+        let envelope = build_envelope(
+            &self.cfg.symbol,
+            seq,
+            "OrderRejected",
+            &meta.correlation_id,
+            &meta.command_id,
+        );
         CoreEvent::OrderRejected(OrderRejectedEvent {
             envelope,
             order_id: order.order_id.clone(),
@@ -575,7 +668,13 @@ impl TradingCore {
 
     fn event_order_canceled(&mut self, order: &Order, meta: &CommandMeta) -> CoreEvent {
         let seq = self.next_seq();
-        let envelope = build_envelope(&self.cfg.symbol, seq, "OrderCanceled", &meta.correlation_id, &meta.command_id);
+        let envelope = build_envelope(
+            &self.cfg.symbol,
+            seq,
+            "OrderCanceled",
+            &meta.correlation_id,
+            &meta.command_id,
+        );
         CoreEvent::OrderCanceled(OrderCanceledEvent {
             envelope,
             order_id: order.order_id.clone(),
@@ -620,7 +719,13 @@ impl TradingCore {
         trade_idx: u64,
     ) -> CoreEvent {
         let seq = self.next_seq();
-        let envelope = build_envelope(&self.cfg.symbol, seq, "TradeExecuted", &meta.correlation_id, &meta.command_id);
+        let envelope = build_envelope(
+            &self.cfg.symbol,
+            seq,
+            "TradeExecuted",
+            &meta.correlation_id,
+            &meta.command_id,
+        );
         let quote_amount = price.saturating_mul(quantity);
         CoreEvent::TradeExecuted(TradeExecutedEvent {
             envelope,
@@ -683,7 +788,11 @@ impl TradingCore {
         );
     }
 
-    fn store_idempotent_cancel(&mut self, meta: &CommandMeta, response: &proto::CancelOrderResponse) {
+    fn store_idempotent_cancel(
+        &mut self,
+        meta: &CommandMeta,
+        response: &proto::CancelOrderResponse,
+    ) {
         self.idempotency.insert(
             (meta.symbol.clone(), meta.idempotency_key.clone()),
             IdempotencyEntry {
@@ -758,7 +867,9 @@ impl TradingCore {
             CoreEvent::EngineCheckpoint(e) => {
                 self.last_state_hash = e.state_hash.clone();
             }
-            CoreEvent::OrderRejected(_) | CoreEvent::CancelRejected(_) | CoreEvent::BookDelta(_) => {}
+            CoreEvent::OrderRejected(_)
+            | CoreEvent::CancelRejected(_)
+            | CoreEvent::BookDelta(_) => {}
         }
     }
 }

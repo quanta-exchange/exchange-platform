@@ -29,9 +29,21 @@ infra/
 scripts/
   smoke_g0.sh             # gate G0 local smoke
   smoke_g3.sh             # gate G3 ledger safety smoke
+  smoke_e2e.sh            # minimal E2E: Edge -> Core -> Kafka -> Ledger
   load_smoke.sh           # I-0105 load smoke harness
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
   safety_case.sh          # I-0108 evidence bundle generator
+```
+
+## Local Quickstart (E2E happy path)
+1) Bring up infra dependencies:
+```bash
+docker compose -f infra/compose/docker-compose.yml up -d
+```
+
+2) Run the minimal E2E smoke (starts core/edge/ledger locally):
+```bash
+./scripts/smoke_e2e.sh
 ```
 
 ## Gate G0 commands
@@ -80,10 +92,15 @@ This script verifies:
 ```bash
 ./scripts/smoke_g3.sh
 ```
+
+### 6) Smoke (E2E wiring)
+```bash
+./scripts/smoke_e2e.sh
+```
 This script verifies:
-- order creation on edge
-- ledger reserve + trade settlement append into `ledger_entries`
-- WebSocket `TradeExecuted` and `CandleUpdated` fan-out observed
+- order creation on edge with accepted response
+- `TradeExecuted` publish to `core.trade-events.v1`
+- ledger append lookup for the trade via REST
 
 ## Gate G1 status
 - Trading Core implements:

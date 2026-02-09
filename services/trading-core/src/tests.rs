@@ -1,13 +1,19 @@
 use crate::contracts::exchange::v1 as proto;
 use crate::engine::{CoreConfig, TradingCore};
+use crate::health;
 use crate::leader::FencingCoordinator;
 use crate::model::{RejectCode, SymbolMode};
-use crate::health;
 use crate::outbox::EventSink;
 use crate::risk::RiskConfig;
 use tempfile::TempDir;
 
-fn meta(command_id: &str, idem: &str, user: &str, symbol: &str, correlation: &str) -> Option<proto::CommandMetadata> {
+fn meta(
+    command_id: &str,
+    idem: &str,
+    user: &str,
+    symbol: &str,
+    correlation: &str,
+) -> Option<proto::CommandMetadata> {
     Some(proto::CommandMetadata {
         command_id: command_id.to_string(),
         idempotency_key: idem.to_string(),
@@ -401,10 +407,14 @@ fn cancel_removes_order_and_rejects_second_cancel() {
         ))
         .unwrap();
 
-    let first = core.cancel_order(cancel_req("c1", "idem-c1", "u1", "o1")).unwrap();
+    let first = core
+        .cancel_order(cancel_req("c1", "idem-c1", "u1", "o1"))
+        .unwrap();
     assert!(first.accepted);
 
-    let second = core.cancel_order(cancel_req("c2", "idem-c2", "u1", "o1")).unwrap();
+    let second = core
+        .cancel_order(cancel_req("c2", "idem-c2", "u1", "o1"))
+        .unwrap();
     assert!(!second.accepted);
     assert_eq!(second.reject_code, RejectCode::UnknownOrder.as_str());
 }
@@ -765,10 +775,26 @@ fn golden_vectors_cover_20_cases() {
     let mut core = make_engine(&tmp, FencingCoordinator::new());
 
     let vectors = vec![
-        ("100", "1"), ("101", "1"), ("102", "1"), ("103", "1"), ("104", "1"),
-        ("105", "1"), ("106", "1"), ("107", "1"), ("108", "1"), ("109", "1"),
-        ("110", "1"), ("111", "1"), ("112", "1"), ("113", "1"), ("114", "1"),
-        ("115", "1"), ("116", "1"), ("117", "1"), ("118", "1"), ("119", "1"),
+        ("100", "1"),
+        ("101", "1"),
+        ("102", "1"),
+        ("103", "1"),
+        ("104", "1"),
+        ("105", "1"),
+        ("106", "1"),
+        ("107", "1"),
+        ("108", "1"),
+        ("109", "1"),
+        ("110", "1"),
+        ("111", "1"),
+        ("112", "1"),
+        ("113", "1"),
+        ("114", "1"),
+        ("115", "1"),
+        ("116", "1"),
+        ("117", "1"),
+        ("118", "1"),
+        ("119", "1"),
     ];
 
     for (idx, (price, qty)) in vectors.into_iter().enumerate() {

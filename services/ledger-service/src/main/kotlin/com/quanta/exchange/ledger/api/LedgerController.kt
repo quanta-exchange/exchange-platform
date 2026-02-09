@@ -118,6 +118,20 @@ class LedgerController(
         )
     }
 
+    @GetMapping("/admin/trades/{tradeId}")
+    fun tradeLookup(@PathVariable tradeId: String): ResponseEntity<Map<String, Any>> {
+        val trade = ledgerService.findTrade(tradeId) ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok(
+            mapOf(
+                "tradeId" to trade.tradeId,
+                "entryId" to trade.entryId,
+                "symbol" to trade.symbol,
+                "engineSeq" to trade.engineSeq,
+                "occurredAt" to trade.occurredAt,
+            ),
+        )
+    }
+
     @PostMapping("/admin/corrections/requests")
     fun createCorrection(@RequestBody req: CreateCorrectionDto): Map<String, Any> {
         ledgerService.createCorrection(
