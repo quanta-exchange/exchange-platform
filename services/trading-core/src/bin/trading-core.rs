@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let symbol = getenv("CORE_SYMBOL", "BTC-KRW");
     let wal_dir = getenv("CORE_WAL_DIR", "/tmp/trading-core/wal");
     let outbox_dir = getenv("CORE_OUTBOX_DIR", "/tmp/trading-core/outbox");
-    let kafka_brokers = getenv("CORE_KAFKA_BROKERS", "localhost:19092");
+    let kafka_brokers = getenv("CORE_KAFKA_BROKERS", "localhost:29092");
     let kafka_topic = getenv("CORE_KAFKA_TRADE_TOPIC", "core.trade-events.v1");
     let publish_retries = getenv_usize("CORE_PUBLISH_RETRIES", 3);
     let stub_trades = getenv_bool("CORE_STUB_TRADES", true);

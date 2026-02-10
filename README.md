@@ -171,6 +171,12 @@ Market order liquidity policy (v1):
   - `GET /healthz`
   - `GET /readyz`
   - `GET /metrics`
+  - `POST /v1/auth/signup`
+  - `POST /v1/auth/login`
+  - `GET /v1/auth/me`
+  - `POST /v1/auth/logout`
+  - `GET /v1/account/balances`
+  - `GET /v1/account/portfolio`
   - `POST /v1/orders`
   - `DELETE /v1/orders/{orderId}`
   - `GET /v1/orders/{orderId}`
@@ -218,6 +224,12 @@ Configure auth in env:
 - `EDGE_AUTH_SKEW_SEC=30`
 - `EDGE_REPLAY_TTL_SEC=120`
 - `EDGE_RATE_LIMIT_PER_MINUTE=1000`
+- `EDGE_DISABLE_CORE=true` (optional: 코어 없이 마켓 조회/WS만 실행)
+- `EDGE_SEED_MARKET_DATA=true` (default: server boot 시 샘플 마켓 데이터 자동 주입)
+- `EDGE_SESSION_TTL_HOURS=24`
+
+`EDGE_DISABLE_CORE=true`일 때도 세션 로그인 기반 주문은 로컬 모드(`ACCEPTED`)로 수락되어
+웹 사용자 잔고/주문 플로우를 테스트할 수 있습니다.
 
 Request headers for trading endpoints:
 - `X-API-KEY`

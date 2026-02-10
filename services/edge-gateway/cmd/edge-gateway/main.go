@@ -12,11 +12,14 @@ import (
 
 func main() {
 	cfg := gateway.Config{
-		Addr:        getenv("EDGE_ADDR", ":8080"),
-		DBDsn:       getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
-		WSQueueSize: getenvInt("EDGE_WS_QUEUE_SIZE", 128),
-		DisableDB:   getenv("EDGE_DISABLE_DB", "false") == "true",
-		APISecrets:  parseSecrets(getenv("EDGE_API_SECRETS", "")),
+		Addr:           getenv("EDGE_ADDR", ":8080"),
+		DBDsn:          getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
+		WSQueueSize:    getenvInt("EDGE_WS_QUEUE_SIZE", 128),
+		DisableDB:      getenv("EDGE_DISABLE_DB", "false") == "true",
+		DisableCore:    getenv("EDGE_DISABLE_CORE", "false") == "true",
+		SeedMarketData: getenv("EDGE_SEED_MARKET_DATA", "true") == "true",
+		SessionTTL:     time.Duration(getenvInt("EDGE_SESSION_TTL_HOURS", 24)) * time.Hour,
+		APISecrets:     parseSecrets(getenv("EDGE_API_SECRETS", "")),
 		TimestampSkew: time.Duration(getenvInt("EDGE_AUTH_SKEW_SEC", 30)) *
 			time.Second,
 		ReplayTTL:          time.Duration(getenvInt("EDGE_REPLAY_TTL_SEC", 120)) * time.Second,

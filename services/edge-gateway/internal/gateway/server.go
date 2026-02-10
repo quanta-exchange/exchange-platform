@@ -7,11 +7,11 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,6 +31,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -47,6 +48,9 @@ type Config struct {
 	Addr               string
 	DBDsn              string
 	DisableDB          bool
+	DisableCore        bool
+	SeedMarketData     bool
+	SessionTTL         time.Duration
 	WSQueueSize        int
 	APISecrets         map[string]string
 	TimestampSkew      time.Duration
@@ -83,6 +87,31 @@ type OrderResponse struct {
 	Correlation string `json:"correlationId,omitempty"`
 }
 
+type AuthCredentialsRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type AuthUserResponse struct {
+	UserID string `json:"userId"`
+	Email  string `json:"email"`
+}
+
+type AuthSessionResponse struct {
+	User         AuthUserResponse `json:"user"`
+	SessionToken string           `json:"sessionToken"`
+	ExpiresAt    int64            `json:"expiresAt"`
+}
+
+type BalanceView struct {
+	Currency  string  `json:"currency"`
+	Available float64 `json:"available"`
+	Hold      float64 `json:"hold"`
+	Total     float64 `json:"total"`
+	PriceKRW  float64 `json:"priceKrw,omitempty"`
+	ValueKRW  float64 `json:"valueKrw,omitempty"`
+}
+
 type OrderRecord struct {
 	OrderID    string `json:"orderId"`
 	Status     string `json:"status"`
@@ -90,6 +119,10 @@ type OrderRecord struct {
 	Seq        uint64 `json:"seq"`
 	AcceptedAt int64  `json:"acceptedAt"`
 	CanceledAt int64  `json:"canceledAt,omitempty"`
+
+	OwnerUserID     string  `json:"-"`
+	ReserveCurrency string  `json:"-"`
+	ReserveAmount   float64 `json:"-"`
 }
 
 type SmokeTradeRequest struct {
@@ -128,6 +161,25 @@ type idempotencyRecord struct {
 	tsMs   int64
 }
 
+type userRecord struct {
+	UserID       string
+	Email        string
+	PasswordHash string
+	CreatedAtMs  int64
+}
+
+type sessionRecord struct {
+	Token       string `json:"token"`
+	UserID      string `json:"userId"`
+	Email       string `json:"email"`
+	ExpiresAtMs int64  `json:"expiresAt"`
+}
+
+type walletBalance struct {
+	Available float64 `json:"available"`
+	Hold      float64 `json:"hold"`
+}
+
 type state struct {
 	mu sync.Mutex
 
@@ -145,6 +197,10 @@ type state struct {
 	historyBySymbol map[string][]WSMessage
 	tradeTape       map[string][]tradePoint
 	cacheMemory     map[string][]byte
+	usersByEmail    map[string]userRecord
+	usersByID       map[string]userRecord
+	sessionsMemory  map[string]sessionRecord
+	wallets         map[string]map[string]walletBalance
 
 	ordersTotal        uint64
 	tradesTotal        uint64
@@ -202,6 +258,9 @@ func New(cfg Config) (*Server, error) {
 	if cfg.OTelSampleRatio <= 0 {
 		cfg.OTelSampleRatio = 1.0
 	}
+	if cfg.SessionTTL <= 0 {
+		cfg.SessionTTL = 24 * time.Hour
+	}
 	if cfg.CoreAddr == "" {
 		cfg.CoreAddr = "localhost:50051"
 	}
@@ -232,16 +291,21 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 
-	coreCtx, cancel := context.WithTimeout(context.Background(), cfg.CoreTimeout)
-	defer cancel()
-	coreConn, err := grpc.DialContext(
-		coreCtx,
-		cfg.CoreAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("dial core: %w", err)
+	var coreConn *grpc.ClientConn
+	var coreClient exchangev1.TradingCoreServiceClient
+	if !cfg.DisableCore {
+		coreCtx, cancel := context.WithTimeout(context.Background(), cfg.CoreTimeout)
+		defer cancel()
+		coreConn, err = grpc.DialContext(
+			coreCtx,
+			cfg.CoreAddr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithBlock(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("dial core: %w", err)
+		}
+		coreClient = exchangev1.NewTradingCoreServiceClient(coreConn)
 	}
 
 	s := &Server{
@@ -249,7 +313,7 @@ func New(cfg Config) (*Server, error) {
 		db:         db,
 		redis:      rdb,
 		coreConn:   coreConn,
-		coreClient: exchangev1.NewTradingCoreServiceClient(coreConn),
+		coreClient: coreClient,
 		state: &state{
 			nextSeq:            1,
 			nextOrderID:        1,
@@ -262,6 +326,10 @@ func New(cfg Config) (*Server, error) {
 			historyBySymbol:    map[string][]WSMessage{},
 			tradeTape:          map[string][]tradePoint{},
 			cacheMemory:        map[string][]byte{},
+			usersByEmail:       map[string]userRecord{},
+			usersByID:          map[string]userRecord{},
+			sessionsMemory:     map[string]sessionRecord{},
+			wallets:            map[string]map[string]walletBalance{},
 		},
 		upgrader:      websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }},
 		tracer:        otelTracer,
@@ -284,6 +352,16 @@ func New(cfg Config) (*Server, error) {
 	r.Get("/v1/markets/{symbol}/orderbook", s.handleGetOrderbook)
 	r.Get("/v1/markets/{symbol}/candles", s.handleGetCandles)
 	r.Get("/v1/markets/{symbol}/ticker", s.handleGetTicker)
+	r.Post("/v1/auth/signup", s.handleSignUp)
+	r.Post("/v1/auth/login", s.handleLogin)
+
+	r.Group(func(session chi.Router) {
+		session.Use(s.sessionMiddleware)
+		session.Get("/v1/auth/me", s.handleMe)
+		session.Post("/v1/auth/logout", s.handleLogout)
+		session.Get("/v1/account/balances", s.handleGetBalances)
+		session.Get("/v1/account/portfolio", s.handleGetPortfolio)
+	})
 
 	r.Group(func(protected chi.Router) {
 		protected.Use(s.authMiddleware)
@@ -295,6 +373,12 @@ func New(cfg Config) (*Server, error) {
 
 	r.Get("/ws", s.handleWS)
 	s.router = r
+
+	if cfg.SeedMarketData {
+		if err := s.seedSampleMarketData(context.Background()); err != nil {
+			return nil, fmt.Errorf("seed sample market data: %w", err)
+		}
+	}
 
 	return s, nil
 }
@@ -337,6 +421,32 @@ func (s *Server) initSchema(ctx context.Context) error {
 	`)
 	if err != nil {
 		return fmt.Errorf("init schema: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS web_users (
+			user_id TEXT PRIMARY KEY,
+			email TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("init users schema: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS web_wallet_balances (
+			user_id TEXT NOT NULL,
+			currency TEXT NOT NULL,
+			available DOUBLE PRECISION NOT NULL DEFAULT 0,
+			hold DOUBLE PRECISION NOT NULL DEFAULT 0,
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+			PRIMARY KEY (user_id, currency)
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("init wallet schema: %w", err)
 	}
 	return nil
 }
@@ -389,9 +499,21 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if token, ok := bearerToken(r); ok {
+			session, valid := s.getSession(r.Context(), token)
+			if !valid {
+				s.authFail("invalid_session")
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid session"})
+				return
+			}
+			ctx := context.WithValue(r.Context(), apiKeyContextKey, session.UserID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
 		// Local development: if no secrets configured, allow requests.
 		if len(s.cfg.APISecrets) == 0 {
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), apiKeyContextKey, "")))
 			return
 		}
 
@@ -455,8 +577,654 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func (s *Server) sessionMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, ok := bearerToken(r)
+		if !ok {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Authorization Bearer token required"})
+			return
+		}
+		session, valid := s.getSession(r.Context(), token)
+		if !valid {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid session"})
+			return
+		}
+		ctx := context.WithValue(r.Context(), apiKeyContextKey, session.UserID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (s *Server) handleSignUp(w http.ResponseWriter, r *http.Request) {
+	var req AuthCredentialsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+	email := normalizeEmail(req.Email)
+	if !isValidEmail(email) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid email"})
+		return
+	}
+	if len(strings.TrimSpace(req.Password)) < 8 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "password must be at least 8 characters"})
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to hash password"})
+		return
+	}
+
+	user, err := s.createUser(r.Context(), email, string(hash))
+	if err != nil {
+		if strings.Contains(err.Error(), "already_exists") {
+			writeJSON(w, http.StatusConflict, map[string]string{"error": "email already exists"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	session, err := s.createSession(r.Context(), user)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, AuthSessionResponse{
+		User: AuthUserResponse{
+			UserID: user.UserID,
+			Email:  user.Email,
+		},
+		SessionToken: session.Token,
+		ExpiresAt:    session.ExpiresAtMs,
+	})
+}
+
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var req AuthCredentialsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+	email := normalizeEmail(req.Email)
+	if !isValidEmail(email) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid email"})
+		return
+	}
+
+	user, ok := s.getUserByEmail(r.Context(), email)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
+		return
+	}
+
+	session, err := s.createSession(r.Context(), user)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, AuthSessionResponse{
+		User: AuthUserResponse{
+			UserID: user.UserID,
+			Email:  user.Email,
+		},
+		SessionToken: session.Token,
+		ExpiresAt:    session.ExpiresAtMs,
+	})
+}
+
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	userID := s.apiKeyFromContext(r.Context())
+	if userID == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	user, ok := s.getUserByID(r.Context(), userID)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "user_not_found"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"user": AuthUserResponse{
+			UserID: user.UserID,
+			Email:  user.Email,
+		},
+	})
+}
+
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	token, ok := bearerToken(r)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Authorization Bearer token required"})
+		return
+	}
+	s.deleteSession(r.Context(), token)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "logged_out"})
+}
+
+func (s *Server) handleGetBalances(w http.ResponseWriter, r *http.Request) {
+	userID := s.apiKeyFromContext(r.Context())
+	if userID == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	balances := s.snapshotWallet(userID)
+	out := make([]BalanceView, 0, len(balances))
+	for currency, bal := range balances {
+		total := bal.Available + bal.Hold
+		out = append(out, BalanceView{
+			Currency:  currency,
+			Available: bal.Available,
+			Hold:      bal.Hold,
+			Total:     total,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Currency < out[j].Currency })
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"userId":   userID,
+		"balances": out,
+	})
+}
+
+func (s *Server) handleGetPortfolio(w http.ResponseWriter, r *http.Request) {
+	userID := s.apiKeyFromContext(r.Context())
+	if userID == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	balances := s.snapshotWallet(userID)
+	assets := make([]BalanceView, 0, len(balances))
+	totalValue := 0.0
+	for currency, bal := range balances {
+		total := bal.Available + bal.Hold
+		price := 1.0
+		if currency != "KRW" {
+			if latest, ok := s.latestPriceKRW(currency); ok && latest > 0 {
+				price = latest
+			} else {
+				price = 0
+			}
+		}
+		value := total * price
+		totalValue += value
+		assets = append(assets, BalanceView{
+			Currency:  currency,
+			Available: bal.Available,
+			Hold:      bal.Hold,
+			Total:     total,
+			PriceKRW:  price,
+			ValueKRW:  value,
+		})
+	}
+	sort.Slice(assets, func(i, j int) bool { return assets[i].ValueKRW > assets[j].ValueKRW })
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"userId":          userID,
+		"assets":          assets,
+		"totalAssetValue": totalValue,
+		"updatedAt":       time.Now().UnixMilli(),
+	})
+}
+
+func (s *Server) createUser(ctx context.Context, email, passwordHash string) (userRecord, error) {
+	if existing, ok := s.getUserByEmail(ctx, email); ok {
+		return existing, fmt.Errorf("already_exists")
+	}
+
+	user := userRecord{
+		UserID:       "usr_" + uuid.NewString(),
+		Email:        email,
+		PasswordHash: passwordHash,
+		CreatedAtMs:  time.Now().UnixMilli(),
+	}
+	defaults := defaultWalletBalances()
+
+	if s.db != nil {
+		tx, err := s.db.BeginTx(ctx, nil)
+		if err != nil {
+			return userRecord{}, fmt.Errorf("begin tx: %w", err)
+		}
+		committed := false
+		defer func() {
+			if !committed {
+				_ = tx.Rollback()
+			}
+		}()
+
+		_, err = tx.ExecContext(
+			ctx,
+			`INSERT INTO web_users(user_id, email, password_hash, created_at) VALUES ($1, $2, $3, to_timestamp($4 / 1000.0))`,
+			user.UserID,
+			user.Email,
+			user.PasswordHash,
+			user.CreatedAtMs,
+		)
+		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+				return userRecord{}, fmt.Errorf("already_exists")
+			}
+			return userRecord{}, fmt.Errorf("insert user: %w", err)
+		}
+
+		for currency, bal := range defaults {
+			_, err = tx.ExecContext(
+				ctx,
+				`INSERT INTO web_wallet_balances(user_id, currency, available, hold) VALUES ($1, $2, $3, $4)
+				 ON CONFLICT (user_id, currency) DO UPDATE SET
+				 available = EXCLUDED.available,
+				 hold = EXCLUDED.hold,
+				 updated_at = now()`,
+				user.UserID,
+				currency,
+				bal.Available,
+				bal.Hold,
+			)
+			if err != nil {
+				return userRecord{}, fmt.Errorf("insert wallet: %w", err)
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			return userRecord{}, fmt.Errorf("commit tx: %w", err)
+		}
+		committed = true
+	}
+
+	s.state.mu.Lock()
+	s.state.usersByEmail[user.Email] = user
+	s.state.usersByID[user.UserID] = user
+	s.state.wallets[user.UserID] = defaults
+	s.state.mu.Unlock()
+
+	return user, nil
+}
+
+func (s *Server) getUserByEmail(ctx context.Context, email string) (userRecord, bool) {
+	s.state.mu.Lock()
+	if user, ok := s.state.usersByEmail[email]; ok {
+		s.state.mu.Unlock()
+		return user, true
+	}
+	s.state.mu.Unlock()
+
+	if s.db == nil {
+		return userRecord{}, false
+	}
+
+	var user userRecord
+	var createdAt time.Time
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT user_id, email, password_hash, created_at FROM web_users WHERE email = $1`,
+		email,
+	).Scan(&user.UserID, &user.Email, &user.PasswordHash, &createdAt)
+	if err != nil {
+		return userRecord{}, false
+	}
+	user.CreatedAtMs = createdAt.UnixMilli()
+
+	wallet := s.loadWalletFromDB(ctx, user.UserID)
+
+	s.state.mu.Lock()
+	s.state.usersByEmail[user.Email] = user
+	s.state.usersByID[user.UserID] = user
+	if _, ok := s.state.wallets[user.UserID]; !ok {
+		s.state.wallets[user.UserID] = wallet
+	}
+	s.state.mu.Unlock()
+	return user, true
+}
+
+func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bool) {
+	s.state.mu.Lock()
+	if user, ok := s.state.usersByID[userID]; ok {
+		s.state.mu.Unlock()
+		return user, true
+	}
+	s.state.mu.Unlock()
+
+	if s.db == nil {
+		return userRecord{}, false
+	}
+
+	var user userRecord
+	var createdAt time.Time
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT user_id, email, password_hash, created_at FROM web_users WHERE user_id = $1`,
+		userID,
+	).Scan(&user.UserID, &user.Email, &user.PasswordHash, &createdAt)
+	if err != nil {
+		return userRecord{}, false
+	}
+	user.CreatedAtMs = createdAt.UnixMilli()
+
+	wallet := s.loadWalletFromDB(ctx, user.UserID)
+
+	s.state.mu.Lock()
+	s.state.usersByEmail[user.Email] = user
+	s.state.usersByID[user.UserID] = user
+	if _, ok := s.state.wallets[user.UserID]; !ok {
+		s.state.wallets[user.UserID] = wallet
+	}
+	s.state.mu.Unlock()
+	return user, true
+}
+
+func (s *Server) createSession(ctx context.Context, user userRecord) (sessionRecord, error) {
+	token := uuid.NewString() + uuid.NewString()
+	session := sessionRecord{
+		Token:       token,
+		UserID:      user.UserID,
+		Email:       user.Email,
+		ExpiresAtMs: time.Now().Add(s.cfg.SessionTTL).UnixMilli(),
+	}
+
+	if s.redis != nil {
+		raw, err := json.Marshal(session)
+		if err != nil {
+			return sessionRecord{}, fmt.Errorf("marshal session: %w", err)
+		}
+		if err := s.redis.Set(ctx, sessionKey(token), raw, s.cfg.SessionTTL).Err(); err != nil {
+			return sessionRecord{}, fmt.Errorf("persist session: %w", err)
+		}
+	}
+
+	s.state.mu.Lock()
+	s.state.sessionsMemory[token] = session
+	s.state.mu.Unlock()
+	return session, nil
+}
+
+func (s *Server) getSession(ctx context.Context, token string) (sessionRecord, bool) {
+	now := time.Now().UnixMilli()
+	if s.redis != nil {
+		raw, err := s.redis.Get(ctx, sessionKey(token)).Bytes()
+		if err == nil {
+			var session sessionRecord
+			if err := json.Unmarshal(raw, &session); err == nil && session.ExpiresAtMs > now {
+				return session, true
+			}
+			_ = s.redis.Del(ctx, sessionKey(token)).Err()
+		}
+	}
+
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	session, ok := s.state.sessionsMemory[token]
+	if !ok {
+		return sessionRecord{}, false
+	}
+	if session.ExpiresAtMs <= now {
+		delete(s.state.sessionsMemory, token)
+		return sessionRecord{}, false
+	}
+	return session, true
+}
+
+func (s *Server) deleteSession(ctx context.Context, token string) {
+	if s.redis != nil {
+		_ = s.redis.Del(ctx, sessionKey(token)).Err()
+	}
+	s.state.mu.Lock()
+	delete(s.state.sessionsMemory, token)
+	s.state.mu.Unlock()
+}
+
+func (s *Server) snapshotWallet(userID string) map[string]walletBalance {
+	s.state.mu.Lock()
+	wallet, ok := s.state.wallets[userID]
+	s.state.mu.Unlock()
+	if !ok {
+		if s.db != nil {
+			wallet = s.loadWalletFromDB(context.Background(), userID)
+		}
+		if len(wallet) == 0 {
+			wallet = defaultWalletBalances()
+		}
+		s.state.mu.Lock()
+		s.state.wallets[userID] = cloneWallet(wallet)
+		s.state.mu.Unlock()
+	}
+	return cloneWallet(wallet)
+}
+
+func (s *Server) applyReserve(userID string, currency string, amount float64) (walletBalance, error) {
+	if amount <= 0 {
+		return walletBalance{}, fmt.Errorf("amount must be > 0")
+	}
+	currency = strings.ToUpper(strings.TrimSpace(currency))
+
+	s.state.mu.Lock()
+	wallet, ok := s.state.wallets[userID]
+	if !ok {
+		wallet = defaultWalletBalances()
+	}
+	current := wallet[currency]
+	if current.Available+1e-9 < amount {
+		s.state.mu.Unlock()
+		return walletBalance{}, fmt.Errorf("insufficient_balance")
+	}
+	current.Available -= amount
+	current.Hold += amount
+	wallet[currency] = current
+	s.state.wallets[userID] = wallet
+	s.state.mu.Unlock()
+
+	s.persistWalletBalance(context.Background(), userID, currency, current)
+	return current, nil
+}
+
+func (s *Server) releaseReserve(userID, currency string, amount float64) walletBalance {
+	if amount <= 0 {
+		return walletBalance{}
+	}
+	currency = strings.ToUpper(strings.TrimSpace(currency))
+	s.state.mu.Lock()
+	wallet, ok := s.state.wallets[userID]
+	if !ok {
+		wallet = defaultWalletBalances()
+	}
+	current := wallet[currency]
+	if current.Hold >= amount {
+		current.Hold -= amount
+		current.Available += amount
+	} else {
+		current.Available += current.Hold
+		current.Hold = 0
+	}
+	wallet[currency] = current
+	s.state.wallets[userID] = wallet
+	s.state.mu.Unlock()
+
+	s.persistWalletBalance(context.Background(), userID, currency, current)
+	return current
+}
+
+func (s *Server) tryReserveForOrder(userID string, req OrderRequest) (string, float64, error) {
+	base, quote, ok := parseSymbol(req.Symbol)
+	if !ok {
+		return "", 0, fmt.Errorf("invalid symbol")
+	}
+
+	qty, err := strconv.ParseFloat(strings.TrimSpace(req.Qty), 64)
+	if err != nil || qty <= 0 {
+		return "", 0, fmt.Errorf("invalid qty")
+	}
+
+	switch strings.ToUpper(req.Side) {
+	case "BUY":
+		price := 0.0
+		if strings.ToUpper(req.Type) == "MARKET" {
+			if latest, found := s.latestPriceKRW(base); found {
+				price = latest
+			}
+		} else {
+			price, err = strconv.ParseFloat(strings.TrimSpace(req.Price), 64)
+			if err != nil || price <= 0 {
+				return "", 0, fmt.Errorf("invalid price")
+			}
+		}
+		if price <= 0 {
+			return "", 0, fmt.Errorf("price_unavailable")
+		}
+		amount := qty * price
+		if _, err := s.applyReserve(userID, quote, amount); err != nil {
+			return "", 0, err
+		}
+		return quote, amount, nil
+	case "SELL":
+		if _, err := s.applyReserve(userID, base, qty); err != nil {
+			return "", 0, err
+		}
+		return base, qty, nil
+	default:
+		return "", 0, fmt.Errorf("invalid side")
+	}
+}
+
+func (s *Server) latestPriceKRW(base string) (float64, bool) {
+	symbol := strings.ToUpper(strings.TrimSpace(base)) + "-KRW"
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	tape := s.state.tradeTape[symbol]
+	if len(tape) == 0 {
+		return 0, false
+	}
+	return float64(tape[len(tape)-1].price), true
+}
+
+func (s *Server) loadWalletFromDB(ctx context.Context, userID string) map[string]walletBalance {
+	if s.db == nil {
+		return map[string]walletBalance{}
+	}
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT currency, available, hold FROM web_wallet_balances WHERE user_id = $1`,
+		userID,
+	)
+	if err != nil {
+		return map[string]walletBalance{}
+	}
+	defer rows.Close()
+
+	out := map[string]walletBalance{}
+	for rows.Next() {
+		var currency string
+		var available float64
+		var hold float64
+		if err := rows.Scan(&currency, &available, &hold); err != nil {
+			continue
+		}
+		out[strings.ToUpper(currency)] = walletBalance{
+			Available: available,
+			Hold:      hold,
+		}
+	}
+	if len(out) == 0 {
+		return defaultWalletBalances()
+	}
+	return out
+}
+
+func (s *Server) persistWalletBalance(ctx context.Context, userID, currency string, bal walletBalance) {
+	if s.db == nil {
+		return
+	}
+	_, _ = s.db.ExecContext(
+		ctx,
+		`INSERT INTO web_wallet_balances(user_id, currency, available, hold) VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (user_id, currency) DO UPDATE SET
+		 available = EXCLUDED.available,
+		 hold = EXCLUDED.hold,
+		 updated_at = now()`,
+		userID,
+		strings.ToUpper(currency),
+		bal.Available,
+		bal.Hold,
+	)
+}
+
+func defaultWalletBalances() map[string]walletBalance {
+	return map[string]walletBalance{
+		"KRW": {Available: 50_000_000, Hold: 0},
+		"BTC": {Available: 0.7, Hold: 0},
+		"ETH": {Available: 8, Hold: 0},
+		"SOL": {Available: 240, Hold: 0},
+		"XRP": {Available: 15000, Hold: 0},
+		"BNB": {Available: 34, Hold: 0},
+	}
+}
+
+func cloneWallet(in map[string]walletBalance) map[string]walletBalance {
+	out := make(map[string]walletBalance, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func parseSymbol(symbol string) (string, string, bool) {
+	parts := strings.Split(strings.TrimSpace(symbol), "-")
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	base := strings.ToUpper(strings.TrimSpace(parts[0]))
+	quote := strings.ToUpper(strings.TrimSpace(parts[1]))
+	if base == "" || quote == "" {
+		return "", "", false
+	}
+	return base, quote, true
+}
+
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func isValidEmail(email string) bool {
+	if len(email) < 5 {
+		return false
+	}
+	at := strings.Index(email, "@")
+	dot := strings.LastIndex(email, ".")
+	return at > 0 && dot > at+1 && dot < len(email)-1
+}
+
+func bearerToken(r *http.Request) (string, bool) {
+	raw := strings.TrimSpace(r.Header.Get("Authorization"))
+	if raw == "" {
+		return "", false
+	}
+	parts := strings.SplitN(raw, " ", 2)
+	if len(parts) != 2 {
+		return "", false
+	}
+	if !strings.EqualFold(parts[0], "Bearer") {
+		return "", false
+	}
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		return "", false
+	}
+	return token, true
+}
+
+func sessionKey(token string) string {
+	return "session:" + token
+}
+
 func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	apiKey := s.apiKeyFromContext(r.Context())
+	if apiKey == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login required"})
+		return
+	}
 	idemKey := r.Header.Get("Idempotency-Key")
 	if idemKey == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Idempotency-Key required"})
@@ -477,6 +1245,17 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "symbol/side/type/qty required"})
 		return
 	}
+
+	reserveCurrency, reserveAmount, reserveErr := s.tryReserveForOrder(apiKey, req)
+	if reserveErr != nil {
+		if reserveErr.Error() == "insufficient_balance" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "insufficient_balance"})
+			return
+		}
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": reserveErr.Error()})
+		return
+	}
+
 	orderID := fmt.Sprintf("ord_%s", idemKey)
 	commandID := uuid.NewString()
 	correlationID := uuid.NewString()
@@ -497,6 +1276,41 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	tif, ok := mapTimeInForce(req.TimeInForce)
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid timeInForce"})
+		return
+	}
+
+	if s.coreClient == nil {
+		s.state.mu.Lock()
+		seq := s.state.nextSeq
+		s.state.nextSeq++
+		s.state.ordersTotal++
+		s.state.mu.Unlock()
+
+		acceptedAt := time.Now().UnixMilli()
+		record := OrderRecord{
+			OrderID:         orderID,
+			Status:          "ACCEPTED",
+			Symbol:          req.Symbol,
+			Seq:             seq,
+			AcceptedAt:      acceptedAt,
+			OwnerUserID:     apiKey,
+			ReserveCurrency: reserveCurrency,
+			ReserveAmount:   reserveAmount,
+		}
+		s.state.mu.Lock()
+		s.state.orders[orderID] = record
+		s.state.mu.Unlock()
+
+		resp := OrderResponse{
+			OrderID:    orderID,
+			Status:     "ACCEPTED",
+			Symbol:     req.Symbol,
+			Seq:        seq,
+			AcceptedAt: acceptedAt,
+		}
+		status, body := marshalResponse(http.StatusOK, resp)
+		s.idempotencySet(apiKey, idemKey, r.Method, r.URL.Path, status, body)
+		writeRaw(w, status, body)
 		return
 	}
 
@@ -522,6 +1336,9 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	coreResp, err := s.coreClient.PlaceOrder(coreCtx, coreReq)
 	if err != nil {
+		if reserveCurrency != "" && reserveAmount > 0 {
+			s.releaseReserve(apiKey, reserveCurrency, reserveAmount)
+		}
 		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "core_unavailable"})
 		return
 	}
@@ -530,13 +1347,22 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	if coreResp.GetAcceptedAt() != nil {
 		acceptedAt = coreResp.AcceptedAt.AsTime().UnixMilli()
 	}
+	statusUpper := strings.ToUpper(coreResp.Status)
+	if statusUpper != "ACCEPTED" && reserveCurrency != "" && reserveAmount > 0 {
+		s.releaseReserve(apiKey, reserveCurrency, reserveAmount)
+		reserveCurrency = ""
+		reserveAmount = 0
+	}
 
 	record := OrderRecord{
-		OrderID:    coreResp.OrderId,
-		Status:     coreResp.Status,
-		Symbol:     coreResp.Symbol,
-		Seq:        coreResp.Seq,
-		AcceptedAt: acceptedAt,
+		OrderID:         coreResp.OrderId,
+		Status:          coreResp.Status,
+		Symbol:          coreResp.Symbol,
+		Seq:             coreResp.Seq,
+		AcceptedAt:      acceptedAt,
+		OwnerUserID:     apiKey,
+		ReserveCurrency: reserveCurrency,
+		ReserveAmount:   reserveAmount,
 	}
 	s.state.mu.Lock()
 	s.state.orders[coreResp.OrderId] = record
@@ -559,6 +1385,10 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 	apiKey := s.apiKeyFromContext(r.Context())
+	if apiKey == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login required"})
+		return
+	}
 	idemKey := r.Header.Get("Idempotency-Key")
 	if idemKey == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Idempotency-Key required"})
@@ -581,6 +1411,11 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		writeRaw(w, status, body)
 		return
 	}
+	if record.OwnerUserID != "" && record.OwnerUserID != apiKey {
+		s.state.mu.Unlock()
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "FORBIDDEN"})
+		return
+	}
 	seq := s.state.nextSeq
 	s.state.nextSeq++
 	record.Status = "CANCELED"
@@ -588,6 +1423,10 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 	record.CanceledAt = time.Now().UnixMilli()
 	s.state.orders[orderID] = record
 	s.state.mu.Unlock()
+
+	if record.ReserveCurrency != "" && record.ReserveAmount > 0 {
+		s.releaseReserve(record.OwnerUserID, record.ReserveCurrency, record.ReserveAmount)
+	}
 
 	resp := OrderResponse{
 		OrderID:    record.OrderID,
@@ -602,12 +1441,21 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
+	apiKey := s.apiKeyFromContext(r.Context())
+	if apiKey == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login required"})
+		return
+	}
 	orderID := chi.URLParam(r, "orderId")
 	s.state.mu.Lock()
 	record, ok := s.state.orders[orderID]
 	s.state.mu.Unlock()
 	if !ok {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "UNKNOWN_ORDER"})
+		return
+	}
+	if record.OwnerUserID != "" && record.OwnerUserID != apiKey {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "FORBIDDEN"})
 		return
 	}
 	writeJSON(w, http.StatusOK, record)
@@ -624,13 +1472,19 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.appendSettlement(r.Context(), req); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeJSON(w, http.StatusConflict, map[string]string{"error": "duplicate trade"})
-			return
-		}
+	seq, err := s.ingestSmokeTrade(r.Context(), req, time.Now().UnixMilli(), true)
+	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "settled", "seq": seq})
+}
+
+func (s *Server) ingestSmokeTrade(ctx context.Context, req SmokeTradeRequest, tsMs int64, persist bool) (uint64, error) {
+	if persist {
+		if err := s.appendSettlement(ctx, req); err != nil {
+			return 0, err
+		}
 	}
 
 	s.state.mu.Lock()
@@ -639,13 +1493,12 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 	s.state.tradesTotal++
 	s.state.mu.Unlock()
 
-	ts := time.Now().UnixMilli()
 	tradeMsg := WSMessage{
 		Type:    "TradeExecuted",
 		Channel: "trades",
 		Symbol:  req.Symbol,
 		Seq:     seq,
-		Ts:      ts,
+		Ts:      tsMs,
 		Data: map[string]string{
 			"tradeId": req.TradeID,
 			"price":   req.Price,
@@ -657,7 +1510,7 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 		Channel: "candles",
 		Symbol:  req.Symbol,
 		Seq:     seq,
-		Ts:      ts,
+		Ts:      tsMs,
 		Data: map[string]interface{}{
 			"interval":   "1m",
 			"open":       req.Price,
@@ -669,27 +1522,38 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 			"isFinal":    false,
 		},
 	}
-	tickerData := s.recordTicker(req.Symbol, req.Price, req.Qty, ts)
+	tickerData := s.recordTicker(req.Symbol, req.Price, req.Qty, tsMs)
 	tickerMsg := WSMessage{
 		Type:    "TickerUpdated",
 		Channel: "ticker",
 		Symbol:  req.Symbol,
 		Seq:     seq,
-		Ts:      ts,
+		Ts:      tsMs,
 		Data:    tickerData,
+	}
+	bookMsg := WSMessage{
+		Type:    "OrderbookUpdated",
+		Channel: "book",
+		Symbol:  req.Symbol,
+		Seq:     seq,
+		Ts:      tsMs,
+		Data:    buildOrderbookData(req.Price, req.Qty),
 	}
 
 	s.appendHistory(req.Symbol, tradeMsg)
 	s.appendHistory(req.Symbol, candleMsg)
 	s.appendHistory(req.Symbol, tickerMsg)
-	_ = s.cacheSet(r.Context(), cacheKey("trades", req.Symbol), tradeMsg)
-	_ = s.cacheSet(r.Context(), cacheKey("candles", req.Symbol), candleMsg)
-	_ = s.cacheSet(r.Context(), cacheKey("ticker", req.Symbol), tickerMsg)
+	s.appendHistory(req.Symbol, bookMsg)
+	_ = s.cacheSet(ctx, cacheKey("trades", req.Symbol), tradeMsg)
+	_ = s.cacheSet(ctx, cacheKey("candles", req.Symbol), candleMsg)
+	_ = s.cacheSet(ctx, cacheKey("ticker", req.Symbol), tickerMsg)
+	_ = s.cacheSet(ctx, cacheKey("book", req.Symbol), bookMsg)
 
 	s.broadcast(tradeMsg)
 	s.broadcast(candleMsg)
 	s.broadcast(tickerMsg)
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "settled", "seq": seq})
+	s.broadcast(bookMsg)
+	return seq, nil
 }
 
 func mapSide(value string) (exchangev1.Side, bool) {
@@ -738,6 +1602,53 @@ func (s *Server) appendSettlement(ctx context.Context, req SmokeTradeRequest) er
 	`, req.TradeID, req.Symbol, req.Price, req.Qty)
 	if err != nil {
 		return fmt.Errorf("append settlement: %w", err)
+	}
+	return nil
+}
+
+func (s *Server) seedSampleMarketData(ctx context.Context) error {
+	type seedSpec struct {
+		symbol    string
+		basePrice int64
+		baseQty   int64
+	}
+
+	specs := []seedSpec{
+		{symbol: "BTC-KRW", basePrice: 96400000, baseQty: 2100},
+		{symbol: "ETH-KRW", basePrice: 5250000, baseQty: 4300},
+		{symbol: "SOL-KRW", basePrice: 173000, baseQty: 9700},
+		{symbol: "XRP-KRW", basePrice: 920, baseQty: 77000},
+		{symbol: "BNB-KRW", basePrice: 987000, baseQty: 6400},
+	}
+
+	const samplePoints = 120
+	const stepMs = int64(time.Minute / time.Millisecond)
+	nowMs := time.Now().UnixMilli()
+
+	for idx, spec := range specs {
+		for i := 0; i < samplePoints; i++ {
+			tsMs := nowMs - int64(samplePoints-i)*stepMs
+			trendUnit := maxInt64(1, spec.basePrice/20000)
+			swingUnit := maxInt64(1, spec.basePrice/4000)
+			trend := int64(i-samplePoints/2) * trendUnit
+			swing := int64(((i*17)+(idx*11))%15-7) * swingUnit
+			price := maxInt64(1, spec.basePrice+trend+swing)
+			qty := maxInt64(1, spec.baseQty+int64((i*37+idx*19)%4000))
+			tradeID := fmt.Sprintf(
+				"seed-%s-%03d",
+				strings.ToLower(strings.ReplaceAll(spec.symbol, "-", "")),
+				i,
+			)
+
+			if _, err := s.ingestSmokeTrade(ctx, SmokeTradeRequest{
+				TradeID: tradeID,
+				Symbol:  spec.symbol,
+				Price:   strconv.FormatInt(price, 10),
+				Qty:     strconv.FormatInt(qty, 10),
+			}, tsMs, false); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -957,6 +1868,27 @@ func (s *Server) handleGetTrades(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleGetOrderbook(w http.ResponseWriter, r *http.Request) {
 	symbol := chi.URLParam(r, "symbol")
 	depth := parseLimit(r.URL.Query().Get("depth"), 20)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	payload, ok := s.cacheGet(ctx, cacheKey("book", symbol))
+	if ok {
+		var msg WSMessage
+		if err := json.Unmarshal(payload, &msg); err == nil {
+			if data, castOK := msg.Data.(map[string]interface{}); castOK {
+				bids := trimBookLevels(data["bids"], depth)
+				asks := trimBookLevels(data["asks"], depth)
+				writeJSON(w, http.StatusOK, map[string]interface{}{
+					"symbol": symbol,
+					"depth":  depth,
+					"bids":   bids,
+					"asks":   asks,
+				})
+				return
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"symbol": symbol,
 		"depth":  depth,
@@ -967,19 +1899,18 @@ func (s *Server) handleGetOrderbook(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetCandles(w http.ResponseWriter, r *http.Request) {
 	symbol := chi.URLParam(r, "symbol")
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	payload, ok := s.cacheGet(ctx, cacheKey("candles", symbol))
-	if !ok {
-		writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "candles": []interface{}{}})
-		return
+	limit := parseLimit(r.URL.Query().Get("limit"), 120)
+	history := s.history(symbol)
+	candles := make([]WSMessage, 0, len(history))
+	for _, evt := range history {
+		if evt.Channel == "candles" {
+			candles = append(candles, evt)
+		}
 	}
-	var msg WSMessage
-	if err := json.Unmarshal(payload, &msg); err != nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "candles": []interface{}{}})
-		return
+	if len(candles) > limit {
+		candles = candles[len(candles)-limit:]
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "candles": []WSMessage{msg}})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "candles": candles})
 }
 
 func (s *Server) handleGetTicker(w http.ResponseWriter, r *http.Request) {
@@ -997,6 +1928,56 @@ func (s *Server) handleGetTicker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"symbol": symbol, "ticker": msg})
+}
+
+func trimBookLevels(raw interface{}, depth int) []interface{} {
+	levels, ok := raw.([]interface{})
+	if !ok || len(levels) == 0 {
+		return []interface{}{}
+	}
+	if depth <= 0 || depth > len(levels) {
+		depth = len(levels)
+	}
+	out := make([]interface{}, depth)
+	copy(out, levels[:depth])
+	return out
+}
+
+func buildOrderbookData(priceRaw, qtyRaw string) map[string]interface{} {
+	price, err := strconv.ParseInt(priceRaw, 10, 64)
+	if err != nil || price <= 0 {
+		price = 1
+	}
+	baseQty, err := strconv.ParseInt(qtyRaw, 10, 64)
+	if err != nil || baseQty <= 0 {
+		baseQty = 1
+	}
+
+	depth := 20
+	tick := maxInt64(1, price/2000)
+	bids := make([][]string, 0, depth)
+	asks := make([][]string, 0, depth)
+	for i := 0; i < depth; i++ {
+		spread := int64(i+1) * tick
+		bidPrice := maxInt64(1, price-spread)
+		askPrice := price + spread
+		bidQty := maxInt64(1, baseQty+int64((depth-i)*17))
+		askQty := maxInt64(1, baseQty+int64((i+1)*19))
+		bids = append(bids, []string{
+			strconv.FormatInt(bidPrice, 10),
+			strconv.FormatInt(bidQty, 10),
+		})
+		asks = append(asks, []string{
+			strconv.FormatInt(askPrice, 10),
+			strconv.FormatInt(askQty, 10),
+		})
+	}
+
+	return map[string]interface{}{
+		"depth": depth,
+		"bids":  bids,
+		"asks":  asks,
+	}
 }
 
 func (s *Server) cacheSet(ctx context.Context, key string, value interface{}) error {
@@ -1141,6 +2122,13 @@ func abs64(v int64) int64 {
 		return -v
 	}
 	return v
+}
+
+func maxInt64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (s *Server) recordTicker(symbol, priceRaw, qtyRaw string, tsMs int64) map[string]string {

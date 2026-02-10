@@ -1,14 +1,27 @@
 import type {
+  AuthMeResponse,
+  AuthSessionResponse,
+  BalancesResponse,
   CandlesResponse,
   OrderRequest,
   OrderResponse,
   OrderbookResponse,
+  PortfolioResponse,
   TickerResponse,
   TradesResponse,
 } from "../types";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 const WS_URL = import.meta.env.VITE_WS_URL;
+let sessionToken = "";
+
+export function setSessionToken(token: string): void {
+  sessionToken = token.trim();
+}
+
+export function clearSessionToken(): void {
+  sessionToken = "";
+}
 
 function toUrl(path: string): string {
   if (!API_BASE_URL) {
@@ -37,12 +50,17 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (sessionToken !== "") {
+    headers.Authorization = `Bearer ${sessionToken}`;
+  }
+
   const response = await fetch(toUrl(path), {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -106,6 +124,38 @@ export async function cancelOrder(orderId: string): Promise<OrderResponse> {
 
 export async function fetchOrder(orderId: string): Promise<OrderResponse> {
   return requestJson<OrderResponse>(`/v1/orders/${orderId}`);
+}
+
+export async function signUp(email: string, password: string): Promise<AuthSessionResponse> {
+  return requestJson<AuthSessionResponse>("/v1/auth/signup", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function signIn(email: string, password: string): Promise<AuthSessionResponse> {
+  return requestJson<AuthSessionResponse>("/v1/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function fetchMe(): Promise<AuthMeResponse> {
+  return requestJson<AuthMeResponse>("/v1/auth/me");
+}
+
+export async function logout(): Promise<void> {
+  await requestJson<{ status: string }>("/v1/auth/logout", {
+    method: "POST",
+  });
+}
+
+export async function fetchBalances(): Promise<BalancesResponse> {
+  return requestJson<BalancesResponse>("/v1/account/balances");
+}
+
+export async function fetchPortfolio(): Promise<PortfolioResponse> {
+  return requestJson<PortfolioResponse>("/v1/account/portfolio");
 }
 
 export async function postSmokeTrade(symbol: string, price: string, qty: string): Promise<void> {

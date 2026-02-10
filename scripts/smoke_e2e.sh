@@ -8,6 +8,14 @@ core_log="/tmp/trading-core-e2e.log"
 edge_log="/tmp/edge-gateway-e2e.log"
 ledger_log="/tmp/ledger-service-e2e.log"
 
+CORE_CFLAGS=""
+CORE_CXXFLAGS=""
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  SDKROOT="$(xcrun --show-sdk-path)"
+  CORE_CFLAGS="-isysroot ${SDKROOT}"
+  CORE_CXXFLAGS="-isysroot ${SDKROOT} -I${SDKROOT}/usr/include/c++/v1"
+fi
+
 cleanup() {
   if [[ -n "${CORE_PID:-}" ]]; then
     kill "${CORE_PID}" >/dev/null 2>&1 || true
@@ -32,8 +40,10 @@ for _ in {1..30}; do
 done
 
 echo "Starting trading-core..."
+CFLAGS="${CORE_CFLAGS}" \
+CXXFLAGS="${CORE_CXXFLAGS}" \
 CORE_GRPC_ADDR="0.0.0.0:50051" \
-CORE_KAFKA_BROKERS="localhost:19092" \
+CORE_KAFKA_BROKERS="localhost:29092" \
 CORE_KAFKA_TRADE_TOPIC="core.trade-events.v1" \
 CORE_STUB_TRADES="true" \
 cargo run -p trading-core --bin trading-core >"${core_log}" 2>&1 &
@@ -49,8 +59,8 @@ EDGE_PID=$!
 
 echo "Starting ledger-service..."
 LEDGER_KAFKA_ENABLED="true" \
-LEDGER_KAFKA_BOOTSTRAP="localhost:19092" \
-LEDGER_DB_URL="jdbc:postgresql://localhost:5432/exchange" \
+LEDGER_KAFKA_BOOTSTRAP="localhost:29092" \
+LEDGER_DB_URL="jdbc:postgresql://localhost:25432/exchange" \
 LEDGER_DB_USER="exchange" \
 LEDGER_DB_PASSWORD="exchange" \
 ./gradlew :services:ledger-service:bootRun >"${ledger_log}" 2>&1 &

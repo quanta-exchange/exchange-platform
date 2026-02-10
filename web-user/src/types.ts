@@ -56,3 +56,39 @@ export type OrderResponse = {
   rejectCode?: string;
   correlationId?: string;
 };
+
+export type AuthUser = {
+  userId: string;
+  email: string;
+};
+
+export type AuthSessionResponse = {
+  user: AuthUser;
+  sessionToken: string;
+  expiresAt: number;
+};
+
+export type AuthMeResponse = {
+  user: AuthUser;
+};
+
+export type BalanceItem = {
+  currency: string;
+  available: number;
+  hold: number;
+  total: number;
+  priceKrw?: number;
+  valueKrw?: number;
+};
+
+export type BalancesResponse = {
+  userId: string;
+  balances: BalanceItem[];
+};
+
+export type PortfolioResponse = {
+  userId: string;
+  assets: BalanceItem[];
+  totalAssetValue: number;
+  updatedAt: number;
+};

@@ -1,13 +1,12 @@
 use crate::model::{CoreEvent, EventEnvelope, TradeExecutedEvent};
 use crate::outbox::EventSink;
 use rdkafka::config::ClientConfig;
-use rdkafka::producer::{BaseProducer, BaseRecord};
+use rdkafka::producer::{BaseProducer, BaseRecord, Producer};
 use rdkafka::util::Timeout;
 use serde::Serialize;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
-#[derive(Debug)]
 pub struct KafkaTradePublisher {
     producer: BaseProducer,
     topic: String,
@@ -49,7 +48,9 @@ impl EventSink for KafkaTradePublisher {
                     .key(&payload.trade_id),
             )
             .map_err(|(e, _)| e.to_string())?;
-        self.producer.flush(Timeout::After(self.flush_timeout));
+        self.producer
+            .flush(Timeout::After(self.flush_timeout))
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 }
@@ -99,7 +100,9 @@ impl TradeExecutedPayload {
 
 impl EventEnvelopePayload {
     fn from(event: &EventEnvelope) -> Result<Self, String> {
-        let occurred_at = OffsetDateTime::from_unix_timestamp_millis(event.occurred_at_ms)
+        let occurred_at = OffsetDateTime::from_unix_timestamp_nanos(
+            i128::from(event.occurred_at_ms) * 1_000_000,
+        )
             .map_err(|e| e.to_string())?
             .format(&Rfc3339)
             .map_err(|e| e.to_string())?;

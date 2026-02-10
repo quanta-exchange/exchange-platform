@@ -306,6 +306,220 @@ func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
 	}
 }
 
+func TestSeededMarketEndpoints(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:      true,
+		WSQueueSize:    8,
+		SeedMarketData: true,
+		CoreAddr:       coreAddr,
+		CoreTimeout:    2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer func() { _ = s.Close() }()
+
+	tickerReq := httptest.NewRequest(http.MethodGet, "/v1/markets/BTC-KRW/ticker", nil)
+	tickerW := httptest.NewRecorder()
+	s.Router().ServeHTTP(tickerW, tickerReq)
+	if tickerW.Code != http.StatusOK {
+		t.Fatalf("ticker get failed: %d", tickerW.Code)
+	}
+
+	var tickerResp map[string]interface{}
+	if err := json.Unmarshal(tickerW.Body.Bytes(), &tickerResp); err != nil {
+		t.Fatalf("decode ticker response: %v", err)
+	}
+	tickerObj, ok := tickerResp["ticker"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing ticker object in response: %v", tickerResp)
+	}
+	tickerData, ok := tickerObj["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing ticker data payload: %v", tickerObj)
+	}
+	lastPrice, _ := tickerData["lastPrice"].(string)
+	if strings.TrimSpace(lastPrice) == "" {
+		t.Fatalf("expected seeded ticker lastPrice, got: %v", tickerData["lastPrice"])
+	}
+
+	tradesReq := httptest.NewRequest(http.MethodGet, "/v1/markets/BTC-KRW/trades?limit=20", nil)
+	tradesW := httptest.NewRecorder()
+	s.Router().ServeHTTP(tradesW, tradesReq)
+	if tradesW.Code != http.StatusOK {
+		t.Fatalf("trades get failed: %d", tradesW.Code)
+	}
+	var tradesResp map[string]interface{}
+	if err := json.Unmarshal(tradesW.Body.Bytes(), &tradesResp); err != nil {
+		t.Fatalf("decode trades response: %v", err)
+	}
+	trades, ok := tradesResp["trades"].([]interface{})
+	if !ok || len(trades) == 0 {
+		t.Fatalf("expected seeded trades, got: %v", tradesResp["trades"])
+	}
+
+	candlesReq := httptest.NewRequest(http.MethodGet, "/v1/markets/BTC-KRW/candles?limit=20", nil)
+	candlesW := httptest.NewRecorder()
+	s.Router().ServeHTTP(candlesW, candlesReq)
+	if candlesW.Code != http.StatusOK {
+		t.Fatalf("candles get failed: %d", candlesW.Code)
+	}
+	var candlesResp map[string]interface{}
+	if err := json.Unmarshal(candlesW.Body.Bytes(), &candlesResp); err != nil {
+		t.Fatalf("decode candles response: %v", err)
+	}
+	candles, ok := candlesResp["candles"].([]interface{})
+	if !ok || len(candles) == 0 {
+		t.Fatalf("expected seeded candles, got: %v", candlesResp["candles"])
+	}
+
+	orderbookReq := httptest.NewRequest(http.MethodGet, "/v1/markets/BTC-KRW/orderbook?depth=10", nil)
+	orderbookW := httptest.NewRecorder()
+	s.Router().ServeHTTP(orderbookW, orderbookReq)
+	if orderbookW.Code != http.StatusOK {
+		t.Fatalf("orderbook get failed: %d", orderbookW.Code)
+	}
+	var orderbookResp map[string]interface{}
+	if err := json.Unmarshal(orderbookW.Body.Bytes(), &orderbookResp); err != nil {
+		t.Fatalf("decode orderbook response: %v", err)
+	}
+	bids, ok := orderbookResp["bids"].([]interface{})
+	if !ok || len(bids) != 10 {
+		t.Fatalf("expected 10 bids at depth=10, got: %v", orderbookResp["bids"])
+	}
+	asks, ok := orderbookResp["asks"].([]interface{})
+	if !ok || len(asks) != 10 {
+		t.Fatalf("expected 10 asks at depth=10, got: %v", orderbookResp["asks"])
+	}
+}
+
+func TestSessionAuthAndPortfolioFlow(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:      true,
+		WSQueueSize:    8,
+		SeedMarketData: true,
+		SessionTTL:     2 * time.Hour,
+		CoreAddr:       coreAddr,
+		CoreTimeout:    2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer func() { _ = s.Close() }()
+
+	signupBody := []byte(`{"email":"alice@example.com","password":"password1234"}`)
+	signupReq := httptest.NewRequest(http.MethodPost, "/v1/auth/signup", bytes.NewReader(signupBody))
+	signupW := httptest.NewRecorder()
+	s.Router().ServeHTTP(signupW, signupReq)
+	if signupW.Code != http.StatusOK {
+		t.Fatalf("signup failed: %d body=%s", signupW.Code, signupW.Body.String())
+	}
+
+	var signupResp AuthSessionResponse
+	if err := json.Unmarshal(signupW.Body.Bytes(), &signupResp); err != nil {
+		t.Fatalf("decode signup response: %v", err)
+	}
+	if signupResp.SessionToken == "" {
+		t.Fatalf("missing session token")
+	}
+
+	meReq := httptest.NewRequest(http.MethodGet, "/v1/auth/me", nil)
+	meReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	meW := httptest.NewRecorder()
+	s.Router().ServeHTTP(meW, meReq)
+	if meW.Code != http.StatusOK {
+		t.Fatalf("me failed: %d body=%s", meW.Code, meW.Body.String())
+	}
+
+	portfolioReq := httptest.NewRequest(http.MethodGet, "/v1/account/portfolio", nil)
+	portfolioReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	portfolioW := httptest.NewRecorder()
+	s.Router().ServeHTTP(portfolioW, portfolioReq)
+	if portfolioW.Code != http.StatusOK {
+		t.Fatalf("portfolio failed: %d body=%s", portfolioW.Code, portfolioW.Body.String())
+	}
+	var portfolio map[string]interface{}
+	if err := json.Unmarshal(portfolioW.Body.Bytes(), &portfolio); err != nil {
+		t.Fatalf("decode portfolio response: %v", err)
+	}
+	if assets, ok := portfolio["assets"].([]interface{}); !ok || len(assets) == 0 {
+		t.Fatalf("expected non-empty assets: %v", portfolio["assets"])
+	}
+
+	orderBody := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"1000000","qty":"0.01","timeInForce":"GTC"}`)
+	orderReq := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(orderBody))
+	orderReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	orderReq.Header.Set("Idempotency-Key", "sess-order-1")
+	orderW := httptest.NewRecorder()
+	s.Router().ServeHTTP(orderW, orderReq)
+	if orderW.Code != http.StatusOK {
+		t.Fatalf("session order failed: %d body=%s", orderW.Code, orderW.Body.String())
+	}
+
+	logoutReq := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	logoutReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	logoutW := httptest.NewRecorder()
+	s.Router().ServeHTTP(logoutW, logoutReq)
+	if logoutW.Code != http.StatusOK {
+		t.Fatalf("logout failed: %d body=%s", logoutW.Code, logoutW.Body.String())
+	}
+
+	meAfterReq := httptest.NewRequest(http.MethodGet, "/v1/auth/me", nil)
+	meAfterReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	meAfterW := httptest.NewRecorder()
+	s.Router().ServeHTTP(meAfterW, meAfterReq)
+	if meAfterW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthorized after logout, got %d", meAfterW.Code)
+	}
+}
+
+func TestSessionOrderRejectsInsufficientBalance(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:      true,
+		WSQueueSize:    8,
+		SeedMarketData: true,
+		SessionTTL:     2 * time.Hour,
+		CoreAddr:       coreAddr,
+		CoreTimeout:    2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer func() { _ = s.Close() }()
+
+	signupBody := []byte(`{"email":"bob@example.com","password":"password1234"}`)
+	signupReq := httptest.NewRequest(http.MethodPost, "/v1/auth/signup", bytes.NewReader(signupBody))
+	signupW := httptest.NewRecorder()
+	s.Router().ServeHTTP(signupW, signupReq)
+	if signupW.Code != http.StatusOK {
+		t.Fatalf("signup failed: %d body=%s", signupW.Code, signupW.Body.String())
+	}
+
+	var signupResp AuthSessionResponse
+	if err := json.Unmarshal(signupW.Body.Bytes(), &signupResp); err != nil {
+		t.Fatalf("decode signup response: %v", err)
+	}
+
+	orderBody := []byte(`{"symbol":"BTC-KRW","side":"SELL","type":"LIMIT","price":"100000000","qty":"10000","timeInForce":"GTC"}`)
+	orderReq := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(orderBody))
+	orderReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	orderReq.Header.Set("Idempotency-Key", "sess-order-insufficient")
+	orderW := httptest.NewRecorder()
+	s.Router().ServeHTTP(orderW, orderReq)
+	if orderW.Code != http.StatusBadRequest {
+		t.Fatalf("expected insufficient balance 400, got %d body=%s", orderW.Code, orderW.Body.String())
+	}
+}
+
 func TestHealthzIncludesTraceHeader(t *testing.T) {
 	prevProvider := otel.GetTracerProvider()
 	tp := sdktrace.NewTracerProvider()
