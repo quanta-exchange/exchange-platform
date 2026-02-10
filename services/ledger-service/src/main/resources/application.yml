@@ -2,7 +2,7 @@ spring:
   application:
     name: ledger-service
   datasource:
-    url: ${LEDGER_DB_URL:jdbc:postgresql://localhost:5432/exchange}
+    url: ${LEDGER_DB_URL:jdbc:postgresql://localhost:25432/exchange}
     username: ${LEDGER_DB_USER:exchange}
     password: ${LEDGER_DB_PASSWORD:exchange}
     driver-class-name: org.postgresql.Driver
@@ -10,7 +10,7 @@ spring:
     enabled: true
     baseline-on-migrate: ${LEDGER_FLYWAY_BASELINE_ON_MIGRATE:false}
   kafka:
-    bootstrap-servers: ${LEDGER_KAFKA_BOOTSTRAP:localhost:19092}
+    bootstrap-servers: ${LEDGER_KAFKA_BOOTSTRAP:localhost:29092}
     consumer:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -29,7 +29,7 @@ management:
       probability: ${LEDGER_OTEL_SAMPLE_PROB:1.0}
   otlp:
     tracing:
-      endpoint: ${LEDGER_OTEL_ENDPOINT:http://localhost:14318/v1/traces}
+      endpoint: ${LEDGER_OTEL_ENDPOINT:http://localhost:24318/v1/traces}
 
 ledger:
   kafka:

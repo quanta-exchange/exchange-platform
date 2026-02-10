@@ -33,6 +33,8 @@ scripts/
   load_smoke.sh           # I-0105 load smoke harness
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
   safety_case.sh          # I-0108 evidence bundle generator
+web-user/
+  src/                    # web-user frontend (Vite + React)
 ```
 
 ## Local Quickstart (E2E happy path)
@@ -45,6 +47,16 @@ docker compose -f infra/compose/docker-compose.yml up -d
 ```bash
 ./scripts/smoke_e2e.sh
 ```
+
+## Web user frontend (alpha)
+```bash
+cd web-user
+npm install
+npm run dev
+```
+
+- default dev URL: `http://localhost:5173`
+- default proxy target: `http://localhost:8081` (override: `VITE_PROXY_TARGET`)
 
 ## Gate G0 commands
 ### 1) Contracts
@@ -184,14 +196,14 @@ Market order liquidity policy (v1):
   - `POST /v1/admin/corrections/requests`
   - `POST /v1/admin/corrections/{correctionId}/approve`
   - `POST /v1/admin/corrections/{correctionId}/apply`
-- Postgres: `localhost:5432`
-- Redpanda Kafka: `localhost:19092`
-- Redpanda HTTP proxy: `localhost:18082`
-- Redis: `localhost:6380`
-- ClickHouse HTTP/TCP: `localhost:18123` / `localhost:19000`
-- MinIO API/Console: `localhost:19002` / `localhost:19001`
-- OTel collector OTLP gRPC/HTTP: `localhost:14317` / `localhost:14318`
-- Prometheus: `localhost:19090`
+- Postgres: `localhost:25432`
+- Redpanda Kafka: `localhost:29092`
+- Redpanda HTTP proxy: `localhost:28082`
+- Redis: `localhost:26380`
+- ClickHouse HTTP/TCP: `localhost:28123` / `localhost:29000`
+- MinIO API/Console: `localhost:29002` / `localhost:29001`
+- OTel collector OTLP gRPC/HTTP: `localhost:24317` / `localhost:24318`
+- Prometheus: `localhost:29090`
 
 ## Non-negotiable constraints
 - Trading Core hot-path must not make synchronous DB calls.
@@ -215,11 +227,11 @@ Request headers for trading endpoints:
 
 ## OTel config (I-0102)
 Edge env:
-- `EDGE_OTEL_ENDPOINT=localhost:14317`
+- `EDGE_OTEL_ENDPOINT=localhost:24317`
 - `EDGE_OTEL_INSECURE=true`
 - `EDGE_OTEL_SERVICE_NAME=edge-gateway`
 - `EDGE_OTEL_SAMPLE_RATIO=1.0`
 
 Ledger env:
-- `LEDGER_OTEL_ENDPOINT=http://localhost:14318/v1/traces`
+- `LEDGER_OTEL_ENDPOINT=http://localhost:24318/v1/traces`
 - `LEDGER_OTEL_SAMPLE_PROB=1.0`

@@ -1,0 +1,28 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Ledger Service (Spring Boot)" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" folderName="Services">
+    <module name="exchange-monorepo" />
+    <option name="MAIN_CLASS_NAME" value="com.quanta.exchange.ledger.LedgerApplication" />
+    <option name="springBootMainClass" value="com.quanta.exchange.ledger.LedgerApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="activeProfiles" value="" />
+    <option name="isIncludeProvidedScope" value="true" />
+    <option name="enableLaunchOptimization" value="true" />
+    <option name="hideBanner" value="false" />
+    <option name="enableJmxAgent" value="true" />
+    <option name="enableScheduledDebugger" value="false" />
+    <envs>
+      <env name="LEDGER_PORT" value="8082" />
+      <env name="LEDGER_DB_URL" value="jdbc:postgresql://localhost:25432/exchange" />
+      <env name="LEDGER_DB_USER" value="exchange" />
+      <env name="LEDGER_DB_PASSWORD" value="exchange" />
+      <env name="LEDGER_KAFKA_ENABLED" value="false" />
+      <env name="LEDGER_GUARD_ENABLED" value="true" />
+      <env name="LEDGER_KAFKA_BOOTSTRAP" value="localhost:29092" />
+      <env name="LEDGER_OTEL_ENDPOINT" value="http://localhost:24318/v1/traces" />
+      <env name="LEDGER_OTEL_SAMPLE_PROB" value="1.0" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

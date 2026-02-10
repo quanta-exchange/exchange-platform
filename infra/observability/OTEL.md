@@ -7,15 +7,15 @@ Provide trace continuity for request lifecycle with shared correlation fields:
 - ledger settlement span
 
 ## Local Collector
-- Compose collector receives OTLP gRPC/HTTP on `14317` / `14318`.
+- Compose collector receives OTLP gRPC/HTTP on `24317` / `24318`.
 - Collector exports:
   - debug logs
-  - prometheus metrics (`18889`)
-  - self metrics (`18888`)
+  - prometheus metrics (`28889`)
+  - self metrics (`28888`)
 
 ## Edge Gateway
 - Env:
-  - `EDGE_OTEL_ENDPOINT` (example: `localhost:14317`)
+  - `EDGE_OTEL_ENDPOINT` (example: `localhost:24317`)
   - `EDGE_OTEL_INSECURE=true`
   - `EDGE_OTEL_SERVICE_NAME=edge-gateway`
   - `EDGE_OTEL_SAMPLE_RATIO=1.0`
@@ -26,7 +26,7 @@ Provide trace continuity for request lifecycle with shared correlation fields:
 
 ## Ledger Service
 - Env:
-  - `LEDGER_OTEL_ENDPOINT=http://localhost:14318/v1/traces`
+  - `LEDGER_OTEL_ENDPOINT=http://localhost:24318/v1/traces`
   - `LEDGER_OTEL_SAMPLE_PROB=1.0`
 - Behavior:
   - Spring/Micrometer OTel bridge emits traces and metrics.

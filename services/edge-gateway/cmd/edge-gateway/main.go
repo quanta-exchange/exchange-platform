@@ -13,7 +13,7 @@ import (
 func main() {
 	cfg := gateway.Config{
 		Addr:        getenv("EDGE_ADDR", ":8080"),
-		DBDsn:       getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:5432/exchange?sslmode=disable"),
+		DBDsn:       getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
 		WSQueueSize: getenvInt("EDGE_WS_QUEUE_SIZE", 128),
 		DisableDB:   getenv("EDGE_DISABLE_DB", "false") == "true",
 		APISecrets:  parseSecrets(getenv("EDGE_API_SECRETS", "")),

@@ -1,0 +1,28 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Edge Gateway (Go)" type="GoApplicationRunConfiguration" factoryName="Go Application" folderName="Services">
+    <module name="exchange-monorepo" />
+    <option name="working_directory" value="$PROJECT_DIR$" />
+    <option name="root_directory" value="$PROJECT_DIR$" />
+    <option name="kind" value="PACKAGE" />
+    <option name="package" value="github.com/quanta-exchange/exchange-platform/services/edge-gateway/cmd/edge-gateway" />
+    <option name="directory" value="$PROJECT_DIR$/services/edge-gateway/cmd/edge-gateway" />
+    <option name="filePath" value="$PROJECT_DIR$/services/edge-gateway/cmd/edge-gateway/main.go" />
+    <option name="run" value="true" />
+    <option name="pty_enabled" value="true" />
+    <option name="redirect_input" value="false" />
+    <option name="build_on_remote_target" value="false" />
+    <option name="pass_parent_env" value="true" />
+    <envs>
+      <env name="EDGE_ADDR" value=":8081" />
+      <env name="EDGE_DB_DSN" value="postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable" />
+      <env name="EDGE_DISABLE_DB" value="false" />
+      <env name="EDGE_REDIS_ADDR" value="localhost:26380" />
+      <env name="EDGE_REDIS_DB" value="0" />
+      <env name="EDGE_OTEL_ENDPOINT" value="localhost:24317" />
+      <env name="EDGE_OTEL_INSECURE" value="true" />
+      <env name="EDGE_OTEL_SERVICE_NAME" value="edge-gateway" />
+      <env name="EDGE_OTEL_SAMPLE_RATIO" value="1.0" />
+    </envs>
+    <method v="2" />
+  </configuration>
+</component>

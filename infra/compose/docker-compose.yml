@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: exchange
       POSTGRES_DB: exchange
     ports:
-      - "5432:5432"
+      - "25432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U exchange -d exchange"]
       interval: 5s
@@ -33,20 +33,20 @@ services:
       - --node-id
       - "0"
       - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092,OUTSIDE://0.0.0.0:19092
+      - PLAINTEXT://0.0.0.0:9092,OUTSIDE://0.0.0.0:29092
       - --advertise-kafka-addr
-      - PLAINTEXT://redpanda:9092,OUTSIDE://localhost:19092
+      - PLAINTEXT://redpanda:9092,OUTSIDE://localhost:29092
       - --pandaproxy-addr
       - PLAINTEXT://0.0.0.0:8082
       - --advertise-pandaproxy-addr
-      - PLAINTEXT://localhost:18082
+      - PLAINTEXT://localhost:28082
       - --rpc-addr
       - redpanda:33145
       - --advertise-rpc-addr
       - redpanda:33145
     ports:
-      - "19092:19092"
-      - "18082:8082"
+      - "29092:29092"
+      - "28082:8082"
     healthcheck:
       test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true' || rpk cluster info"]
       interval: 10s
@@ -73,7 +73,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6380:6379"
+      - "26380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -90,8 +90,8 @@ services:
       CLICKHOUSE_PASSWORD: exchange
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     ports:
-      - "18123:8123"
-      - "19000:9000"
+      - "28123:8123"
+      - "29000:9000"
     healthcheck:
       test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' --user exchange --password exchange"]
       interval: 10s
@@ -108,8 +108,8 @@ services:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
     ports:
-      - "19001:9001"
-      - "19002:9000"
+      - "29001:9001"
+      - "29002:9000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -135,11 +135,11 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
-      - "14317:4317"
-      - "14318:4318"
-      - "18889:8889"
-      - "18888:8888"
-      - "13133:13133"
+      - "24317:4317"
+      - "24318:4318"
+      - "28889:8889"
+      - "28888:8888"
+      - "23133:13133"
     depends_on:
       redpanda:
         condition: service_started
@@ -153,7 +153,7 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "19090:9090"
+      - "29090:9090"
     depends_on:
       otel-collector:
         condition: service_started

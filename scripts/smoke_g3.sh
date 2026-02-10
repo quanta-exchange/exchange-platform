@@ -25,7 +25,7 @@ docker compose -f infra/compose/docker-compose.yml exec -T postgres \
 docker compose -f infra/compose/docker-compose.yml exec -T postgres \
   psql -U exchange -d postgres -c "CREATE DATABASE exchange_ledger;" >/dev/null
 
-LEDGER_DB_URL="jdbc:postgresql://localhost:5432/exchange_ledger" \
+LEDGER_DB_URL="jdbc:postgresql://localhost:25432/exchange_ledger" \
 LEDGER_DB_USER="exchange" \
 LEDGER_DB_PASSWORD="exchange" \
 LEDGER_KAFKA_ENABLED="false" \
@@ -35,7 +35,7 @@ LEDGER_PORT="8082" \
 LEDGER_PID=$!
 
 EDGE_ADDR=":8081" \
-EDGE_DB_DSN="postgres://exchange:exchange@localhost:5432/exchange?sslmode=disable" \
+EDGE_DB_DSN="postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable" \
 go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
 EDGE_PID=$!
 

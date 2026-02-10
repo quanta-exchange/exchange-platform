@@ -182,7 +182,7 @@ func New(cfg Config) (*Server, error) {
 		cfg.Addr = ":8080"
 	}
 	if cfg.DBDsn == "" {
-		cfg.DBDsn = "postgres://exchange:exchange@localhost:5432/exchange?sslmode=disable"
+		cfg.DBDsn = "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"
 	}
 	if cfg.WSQueueSize <= 0 {
 		cfg.WSQueueSize = 128

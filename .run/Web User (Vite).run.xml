@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Web User (Vite)" type="ShConfigurationType" factoryName="Shell Script" folderName="Services">
+    <option name="SCRIPT_TEXT" value="cd web-user &amp;&amp; npm run dev" />
+    <option name="SCRIPT_PATH" value="" />
+    <option name="SCRIPT_OPTIONS" value="" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="INTERPRETER_PATH" value="/bin/zsh" />
+    <option name="INTERPRETER_OPTIONS" value="-lc" />
+    <option name="EXECUTE_IN_TERMINAL" value="true" />
+    <option name="EXECUTE_SCRIPT_FILE" value="false" />
+    <envs>
+      <env name="VITE_PROXY_TARGET" value="http://localhost:8081" />
+    </envs>
+    <method v="2" />
+  </configuration>
+</component>
