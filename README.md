@@ -30,6 +30,7 @@ scripts/
   smoke_g0.sh             # gate G0 local smoke
   smoke_g3.sh             # gate G3 ledger safety smoke
   smoke_e2e.sh            # minimal E2E: Edge -> Core -> Kafka -> Ledger
+  smoke_match.sh          # Gate G1 real match smoke (BUY+SELL crossing)
   load_smoke.sh           # I-0105 load smoke harness
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
   safety_case.sh          # I-0108 evidence bundle generator
@@ -114,6 +115,15 @@ This script verifies:
 - `TradeExecuted` publish to `core.trade-events.v1`
 - ledger append lookup for the trade via REST
 
+### 7) Smoke (real matching path)
+```bash
+./scripts/smoke_match.sh
+```
+This script verifies:
+- BUY then SELL crossing order path produces at least one `FILLED`
+- `TradeExecuted` emitted to `core.trade-events.v1`
+- ledger Kafka consumer applies the trade idempotently
+
 ## Gate G1 status
 - Trading Core implements:
   - command contract handling (`PlaceOrder`, `CancelOrder`, `SetSymbolMode`, `CancelAll`)
@@ -125,6 +135,10 @@ This script verifies:
   - determinism state hashing and replay checks
   - fencing token checks for split-brain defense
   - durable outbox with retry-safe publish cursor
+- Edge Gateway implements:
+  - `/v1/orders` routed to Trading Core gRPC `PlaceOrder` (no local accepted fallback)
+  - Kafka `TradeExecuted` consume path for WS market stream updates
+  - local order status cache updated from core responses + trade events (`ACCEPTED/PARTIALLY_FILLED/FILLED`)
 
 Market order liquidity policy (v1):
 - partial fills are allowed
@@ -227,9 +241,12 @@ Configure auth in env:
 - `EDGE_DISABLE_CORE=true` (optional: 코어 없이 마켓 조회/WS만 실행)
 - `EDGE_SEED_MARKET_DATA=true` (default: server boot 시 샘플 마켓 데이터 자동 주입)
 - `EDGE_SESSION_TTL_HOURS=24`
+- `EDGE_KAFKA_BROKERS=localhost:29092` (core trade event consume)
+- `EDGE_KAFKA_TRADE_TOPIC=core.trade-events.v1`
+- `EDGE_KAFKA_GROUP_ID=edge-trades-v1`
 
-`EDGE_DISABLE_CORE=true`일 때도 세션 로그인 기반 주문은 로컬 모드(`ACCEPTED`)로 수락되어
-웹 사용자 잔고/주문 플로우를 테스트할 수 있습니다.
+`EDGE_DISABLE_CORE=true`에서는 주문 API가 `core_unavailable`로 거절됩니다.
+주문/체결 플로우 테스트는 Trading Core 실행이 필요합니다.
 
 Request headers for trading endpoints:
 - `X-API-KEY`

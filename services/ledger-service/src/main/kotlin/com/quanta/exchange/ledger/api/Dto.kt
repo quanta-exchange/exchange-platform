@@ -1,11 +1,13 @@
 package com.quanta.exchange.ledger.api
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.quanta.exchange.ledger.core.BalanceAdjustmentCommand
 import com.quanta.exchange.ledger.core.EventEnvelope
 import com.quanta.exchange.ledger.core.ReserveCommand
 import com.quanta.exchange.ledger.core.TradeExecuted
 import java.time.Instant
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class EventEnvelopeDto(
     val eventId: String,
     val eventVersion: Int = 1,
@@ -28,6 +30,7 @@ data class EventEnvelopeDto(
     }
 }
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class TradeExecutedDto(
     val envelope: EventEnvelopeDto,
     val tradeId: String,

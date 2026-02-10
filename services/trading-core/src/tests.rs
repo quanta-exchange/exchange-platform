@@ -67,6 +67,7 @@ fn core_config(tmp: &TempDir) -> CoreConfig {
             dynamic_collar_bps: 1_500,
             volatility_violation_threshold: 3,
         },
+        stub_trades: false,
     }
 }
 
@@ -305,6 +306,66 @@ fn best_price_priority() {
         })
         .unwrap();
     assert_eq!(trade.price, "100");
+}
+
+#[test]
+fn place_order_status_progression_is_consistent() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let accepted = core
+        .place_order(place_req(
+            "accept-1",
+            "idem-accept-1",
+            "maker",
+            "buy-resting",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "10",
+        ))
+        .unwrap();
+    assert_eq!(accepted.status, "ACCEPTED");
+
+    let filled = core
+        .place_order(place_req(
+            "fill-1",
+            "idem-fill-1",
+            "taker",
+            "sell-fill",
+            proto::Side::Sell,
+            proto::OrderType::Limit,
+            "100",
+            "10",
+        ))
+        .unwrap();
+    assert_eq!(filled.status, "FILLED");
+
+    let _ = core
+        .place_order(place_req(
+            "maker-ask",
+            "idem-maker-ask",
+            "maker",
+            "ask-resting",
+            proto::Side::Sell,
+            proto::OrderType::Limit,
+            "105",
+            "10",
+        ))
+        .unwrap();
+    let partial = core
+        .place_order(place_req(
+            "partial-1",
+            "idem-partial-1",
+            "taker",
+            "buy-partial",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "105",
+            "15",
+        ))
+        .unwrap();
+    assert_eq!(partial.status, "PARTIALLY_FILLED");
 }
 
 #[test]

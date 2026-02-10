@@ -80,6 +80,25 @@ func (s *stubCore) PlaceOrder(
 	}, nil
 }
 
+func (s *stubCore) CancelOrder(
+	_ context.Context,
+	req *exchangev1.CancelOrderRequest,
+) (*exchangev1.CancelOrderResponse, error) {
+	s.mu.Lock()
+	s.seq++
+	seq := s.seq
+	s.mu.Unlock()
+	return &exchangev1.CancelOrderResponse{
+		Accepted:      true,
+		OrderId:       req.OrderId,
+		Status:        "CANCELED",
+		Symbol:        req.GetMeta().GetSymbol(),
+		Seq:           seq,
+		CanceledAt:    timestamppb.Now(),
+		CorrelationId: req.GetMeta().GetCorrelationId(),
+	}, nil
+}
+
 func startTestCore(t *testing.T) (string, func()) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

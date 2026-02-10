@@ -2,8 +2,8 @@ use crate::contracts::exchange::v1 as proto;
 use crate::determinism::state_hash;
 use crate::leader::FencingCoordinator;
 use crate::model::{
-    build_envelope, from_proto_meta, now_timestamp, parse_u64, to_order_type, to_side,
-    to_symbol_mode, to_time_in_force, CancelRejectedEvent, CommandMeta, CoreEvent,
+    build_envelope, from_proto_meta, now_timestamp, parse_u64, split_symbol, to_order_type,
+    to_side, to_symbol_mode, to_time_in_force, CancelRejectedEvent, CommandMeta, CoreEvent,
     EngineCheckpointEvent, EventEnvelope, Order, OrderAcceptedEvent, OrderCanceledEvent,
     OrderRejectedEvent, OrderType, RejectCode, Side, SymbolMode, TimeInForce, TradeExecutedEvent,
 };
@@ -302,6 +302,9 @@ impl TradingCore {
             accepted_seq: 0,
         };
 
+        // G1 minimal path: seed deterministic demo balances for unseen users.
+        self.bootstrap_user_balances(&meta.user_id);
+
         let reserve_ref = match order.order_type {
             OrderType::Market => self
                 .ref_price
@@ -332,6 +335,7 @@ impl TradingCore {
         let mut events = vec![self.event_order_accepted(&order, &meta)];
 
         let fills = self.order_book.match_order(&mut order);
+        let had_fill = !fills.is_empty();
         for (idx, fill) in fills.into_iter().enumerate() {
             let maker_side = opposite(order.side);
             let (buyer_user_id, seller_user_id) = match order.side {
@@ -440,14 +444,20 @@ impl TradingCore {
             }
         }
 
+        let status = if order.remaining_qty == 0 {
+            "FILLED".to_string()
+        } else if had_fill {
+            "PARTIALLY_FILLED".to_string()
+        } else if order.order_type == OrderType::Limit && order.tif == TimeInForce::Gtc {
+            "ACCEPTED".to_string()
+        } else {
+            "CANCELED".to_string()
+        };
+
         let response = proto::PlaceOrderResponse {
             accepted: true,
             order_id: order.order_id.clone(),
-            status: if order.remaining_qty > 0 {
-                "PARTIAL".to_string()
-            } else {
-                "FILLED".to_string()
-            },
+            status,
             symbol: self.cfg.symbol.clone(),
             seq: self.seq,
             accepted_at: now_timestamp(),
@@ -729,7 +739,7 @@ impl TradingCore {
         let quote_amount = price.saturating_mul(quantity);
         CoreEvent::TradeExecuted(TradeExecutedEvent {
             envelope,
-            trade_id: format!("trd-{seq}-{trade_idx}"),
+            trade_id: format!("trd-{seq}-{trade_idx}-{}", meta.command_id),
             maker_order_id: maker_order_id.to_string(),
             taker_order_id: taker_order_id.to_string(),
             buyer_user_id: buyer_user_id.to_string(),
@@ -870,6 +880,24 @@ impl TradingCore {
             CoreEvent::OrderRejected(_)
             | CoreEvent::CancelRejected(_)
             | CoreEvent::BookDelta(_) => {}
+        }
+    }
+}
+
+impl TradingCore {
+    fn bootstrap_user_balances(&mut self, user_id: &str) {
+        let (base, quote) = match split_symbol(&self.cfg.symbol) {
+            Ok(parts) => parts,
+            Err(_) => return,
+        };
+
+        let quote_balance = self.risk.get_balance(user_id, &quote);
+        if quote_balance.available == 0 && quote_balance.hold == 0 {
+            self.risk.set_balance(user_id, &quote, 1_000_000_000_000, 0);
+        }
+        let base_balance = self.risk.get_balance(user_id, &base);
+        if base_balance.available == 0 && base_balance.hold == 0 {
+            self.risk.set_balance(user_id, &base, 1_000_000_000, 0);
         }
     }
 }

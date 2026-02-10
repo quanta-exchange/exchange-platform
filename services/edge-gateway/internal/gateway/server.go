@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,6 +24,7 @@ import (
 	_ "github.com/lib/pq"
 	exchangev1 "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1"
 	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -65,6 +67,9 @@ type Config struct {
 	OTelInsecure       bool
 	CoreAddr           string
 	CoreTimeout        time.Duration
+	KafkaBrokers       string
+	KafkaTradeTopic    string
+	KafkaGroupID       string
 }
 
 type OrderRequest struct {
@@ -123,6 +128,35 @@ type OrderRecord struct {
 	OwnerUserID     string  `json:"-"`
 	ReserveCurrency string  `json:"-"`
 	ReserveAmount   float64 `json:"-"`
+	ReserveConsumed float64 `json:"-"`
+	Side            string  `json:"-"`
+	Qty             float64 `json:"-"`
+	FilledQty       float64 `json:"filledQty,omitempty"`
+}
+
+type tradeEventEnvelope struct {
+	EventID       string `json:"eventId"`
+	EventVersion  int    `json:"eventVersion"`
+	Symbol        string `json:"symbol"`
+	Seq           uint64 `json:"seq"`
+	OccurredAtRaw string `json:"occurredAt"`
+	CorrelationID string `json:"correlationId"`
+	CausationID   string `json:"causationId"`
+}
+
+type tradeEventPayload struct {
+	Envelope     tradeEventEnvelope `json:"envelope"`
+	TradeID      string             `json:"tradeId"`
+	MakerOrderID string             `json:"makerOrderId"`
+	TakerOrderID string             `json:"takerOrderId"`
+	BuyerUserID  string             `json:"buyerUserId"`
+	SellerUserID string             `json:"sellerUserId"`
+	Price        interface{}        `json:"price"`
+	Quantity     interface{}        `json:"quantity"`
+	QuoteAmount  interface{}        `json:"quoteAmount"`
+	Symbol       string             `json:"symbol"`
+	Seq          uint64             `json:"seq"`
+	TsMs         int64              `json:"ts"`
 }
 
 type SmokeTradeRequest struct {
@@ -201,6 +235,7 @@ type state struct {
 	usersByID       map[string]userRecord
 	sessionsMemory  map[string]sessionRecord
 	wallets         map[string]map[string]walletBalance
+	appliedTrades   map[string]int64
 
 	ordersTotal        uint64
 	tradesTotal        uint64
@@ -231,6 +266,9 @@ type Server struct {
 	upgrader      websocket.Upgrader
 	tracer        trace.Tracer
 	traceShutdown func(context.Context) error
+	tradeConsumer *kafka.Reader
+	tradeCancel   context.CancelFunc
+	tradeWG       sync.WaitGroup
 }
 
 func New(cfg Config) (*Server, error) {
@@ -266,6 +304,12 @@ func New(cfg Config) (*Server, error) {
 	}
 	if cfg.CoreTimeout <= 0 {
 		cfg.CoreTimeout = 3 * time.Second
+	}
+	if cfg.KafkaTradeTopic == "" {
+		cfg.KafkaTradeTopic = "core.trade-events.v1"
+	}
+	if cfg.KafkaGroupID == "" {
+		cfg.KafkaGroupID = "edge-trades-v1"
 	}
 
 	var db *sql.DB
@@ -330,6 +374,7 @@ func New(cfg Config) (*Server, error) {
 			usersByID:          map[string]userRecord{},
 			sessionsMemory:     map[string]sessionRecord{},
 			wallets:            map[string]map[string]walletBalance{},
+			appliedTrades:      map[string]int64{},
 		},
 		upgrader:      websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }},
 		tracer:        otelTracer,
@@ -380,12 +425,21 @@ func New(cfg Config) (*Server, error) {
 		}
 	}
 
+	s.startTradeConsumer()
+
 	return s, nil
 }
 
 func (s *Server) Router() http.Handler { return s.router }
 
 func (s *Server) Close() error {
+	if s.tradeCancel != nil {
+		s.tradeCancel()
+	}
+	if s.tradeConsumer != nil {
+		_ = s.tradeConsumer.Close()
+	}
+	s.tradeWG.Wait()
 	if s.db != nil {
 		_ = s.db.Close()
 	}
@@ -1154,7 +1208,7 @@ func (s *Server) persistWalletBalance(ctx context.Context, userID, currency stri
 func defaultWalletBalances() map[string]walletBalance {
 	return map[string]walletBalance{
 		"KRW": {Available: 50_000_000, Hold: 0},
-		"BTC": {Available: 0.7, Hold: 0},
+		"BTC": {Available: 2, Hold: 0},
 		"ETH": {Available: 8, Hold: 0},
 		"SOL": {Available: 240, Hold: 0},
 		"XRP": {Available: 15000, Hold: 0},
@@ -1245,24 +1299,6 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "symbol/side/type/qty required"})
 		return
 	}
-
-	reserveCurrency, reserveAmount, reserveErr := s.tryReserveForOrder(apiKey, req)
-	if reserveErr != nil {
-		if reserveErr.Error() == "insufficient_balance" {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "insufficient_balance"})
-			return
-		}
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": reserveErr.Error()})
-		return
-	}
-
-	orderID := fmt.Sprintf("ord_%s", idemKey)
-	commandID := uuid.NewString()
-	correlationID := uuid.NewString()
-	traceID := trace.SpanFromContext(r.Context()).SpanContext().TraceID().String()
-	if traceID == "" || traceID == "00000000000000000000000000000000" {
-		traceID = uuid.NewString()
-	}
 	side, ok := mapSide(req.Side)
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid side"})
@@ -1280,38 +1316,25 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.coreClient == nil {
-		s.state.mu.Lock()
-		seq := s.state.nextSeq
-		s.state.nextSeq++
-		s.state.ordersTotal++
-		s.state.mu.Unlock()
-
-		acceptedAt := time.Now().UnixMilli()
-		record := OrderRecord{
-			OrderID:         orderID,
-			Status:          "ACCEPTED",
-			Symbol:          req.Symbol,
-			Seq:             seq,
-			AcceptedAt:      acceptedAt,
-			OwnerUserID:     apiKey,
-			ReserveCurrency: reserveCurrency,
-			ReserveAmount:   reserveAmount,
-		}
-		s.state.mu.Lock()
-		s.state.orders[orderID] = record
-		s.state.mu.Unlock()
-
-		resp := OrderResponse{
-			OrderID:    orderID,
-			Status:     "ACCEPTED",
-			Symbol:     req.Symbol,
-			Seq:        seq,
-			AcceptedAt: acceptedAt,
-		}
-		status, body := marshalResponse(http.StatusOK, resp)
-		s.idempotencySet(apiKey, idemKey, r.Method, r.URL.Path, status, body)
-		writeRaw(w, status, body)
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "core_unavailable"})
 		return
+	}
+	reserveCurrency, reserveAmount, reserveErr := s.tryReserveForOrder(apiKey, req)
+	if reserveErr != nil {
+		if reserveErr.Error() == "insufficient_balance" {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "insufficient_balance"})
+			return
+		}
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": reserveErr.Error()})
+		return
+	}
+
+	orderID := fmt.Sprintf("ord_%s", idemKey)
+	commandID := uuid.NewString()
+	correlationID := uuid.NewString()
+	traceID := trace.SpanFromContext(r.Context()).SpanContext().TraceID().String()
+	if traceID == "" || traceID == "00000000000000000000000000000000" {
+		traceID = uuid.NewString()
 	}
 
 	coreReq := &exchangev1.PlaceOrderRequest{
@@ -1348,21 +1371,27 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		acceptedAt = coreResp.AcceptedAt.AsTime().UnixMilli()
 	}
 	statusUpper := strings.ToUpper(coreResp.Status)
-	if statusUpper != "ACCEPTED" && reserveCurrency != "" && reserveAmount > 0 {
+	if statusUpper == "PARTIAL" {
+		statusUpper = "PARTIALLY_FILLED"
+	}
+	if (!coreResp.Accepted || statusUpper == "REJECTED" || statusUpper == "CANCELED") && reserveCurrency != "" && reserveAmount > 0 {
 		s.releaseReserve(apiKey, reserveCurrency, reserveAmount)
 		reserveCurrency = ""
 		reserveAmount = 0
 	}
 
+	qty, _ := strconv.ParseFloat(strings.TrimSpace(req.Qty), 64)
 	record := OrderRecord{
 		OrderID:         coreResp.OrderId,
-		Status:          coreResp.Status,
+		Status:          statusUpper,
 		Symbol:          coreResp.Symbol,
 		Seq:             coreResp.Seq,
 		AcceptedAt:      acceptedAt,
 		OwnerUserID:     apiKey,
 		ReserveCurrency: reserveCurrency,
 		ReserveAmount:   reserveAmount,
+		Side:            strings.ToUpper(strings.TrimSpace(req.Side)),
+		Qty:             qty,
 	}
 	s.state.mu.Lock()
 	s.state.orders[coreResp.OrderId] = record
@@ -1371,7 +1400,7 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	resp := OrderResponse{
 		OrderID:     coreResp.OrderId,
-		Status:      coreResp.Status,
+		Status:      statusUpper,
 		Symbol:      coreResp.Symbol,
 		Seq:         coreResp.Seq,
 		AcceptedAt:  acceptedAt,
@@ -1401,6 +1430,10 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		writeRaw(w, status, body)
 		return
 	}
+	if s.coreClient == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "core_unavailable"})
+		return
+	}
 
 	s.state.mu.Lock()
 	record, ok := s.state.orders[orderID]
@@ -1416,24 +1449,79 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "FORBIDDEN"})
 		return
 	}
-	seq := s.state.nextSeq
-	s.state.nextSeq++
-	record.Status = "CANCELED"
-	record.Seq = seq
-	record.CanceledAt = time.Now().UnixMilli()
-	s.state.orders[orderID] = record
 	s.state.mu.Unlock()
 
-	if record.ReserveCurrency != "" && record.ReserveAmount > 0 {
-		s.releaseReserve(record.OwnerUserID, record.ReserveCurrency, record.ReserveAmount)
+	symbol := record.Symbol
+	if strings.TrimSpace(symbol) == "" {
+		symbol = "BTC-KRW"
+	}
+	commandID := uuid.NewString()
+	correlationID := uuid.NewString()
+	traceID := trace.SpanFromContext(r.Context()).SpanContext().TraceID().String()
+	if traceID == "" || traceID == "00000000000000000000000000000000" {
+		traceID = uuid.NewString()
+	}
+	coreReq := &exchangev1.CancelOrderRequest{
+		Meta: &exchangev1.CommandMetadata{
+			CommandId:      commandID,
+			IdempotencyKey: idemKey,
+			UserId:         apiKey,
+			Symbol:         symbol,
+			TsServer:       timestamppb.Now(),
+			TraceId:        traceID,
+			CorrelationId:  correlationID,
+		},
+		OrderId: orderID,
+	}
+
+	coreCtx, cancel := context.WithTimeout(r.Context(), s.cfg.CoreTimeout)
+	defer cancel()
+	coreResp, err := s.coreClient.CancelOrder(coreCtx, coreReq)
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "core_unavailable"})
+		return
+	}
+
+	canceledAt := int64(0)
+	if coreResp.GetCanceledAt() != nil {
+		canceledAt = coreResp.CanceledAt.AsTime().UnixMilli()
+	}
+
+	statusUpper := strings.ToUpper(coreResp.Status)
+	if statusUpper == "ACCEPTED" {
+		statusUpper = "CANCELED"
+	}
+	if statusUpper == "PARTIAL" {
+		statusUpper = "PARTIALLY_FILLED"
+	}
+
+	if coreResp.Accepted && statusUpper == "CANCELED" {
+		s.state.mu.Lock()
+		record = s.state.orders[orderID]
+		record.Status = "CANCELED"
+		record.Seq = coreResp.Seq
+		record.CanceledAt = canceledAt
+		releaseAmount := record.ReserveAmount - record.ReserveConsumed
+		if releaseAmount < 0 {
+			releaseAmount = 0
+		}
+		record.ReserveAmount -= releaseAmount
+		s.state.orders[orderID] = record
+		s.state.mu.Unlock()
+
+		if releaseAmount > 0 && record.ReserveCurrency != "" && record.OwnerUserID != "" {
+			s.releaseReserve(record.OwnerUserID, record.ReserveCurrency, releaseAmount)
+		}
 	}
 
 	resp := OrderResponse{
-		OrderID:    record.OrderID,
-		Status:     record.Status,
-		Symbol:     record.Symbol,
-		Seq:        record.Seq,
-		CanceledAt: record.CanceledAt,
+		OrderID:     coreResp.OrderId,
+		Status:      statusUpper,
+		Symbol:      coreResp.Symbol,
+		Seq:         coreResp.Seq,
+		CanceledAt:  canceledAt,
+		RejectCode:  coreResp.RejectCode,
+		Correlation: coreResp.CorrelationId,
 	}
 	status, body := marshalResponse(http.StatusOK, resp)
 	s.idempotencySet(apiKey, idemKey, r.Method, pathKey, status, body)
@@ -1472,7 +1560,7 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	seq, err := s.ingestSmokeTrade(r.Context(), req, time.Now().UnixMilli(), true)
+	seq, err := s.ingestSmokeTrade(r.Context(), req, time.Now().UnixMilli(), true, 0)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -1480,7 +1568,13 @@ func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "settled", "seq": seq})
 }
 
-func (s *Server) ingestSmokeTrade(ctx context.Context, req SmokeTradeRequest, tsMs int64, persist bool) (uint64, error) {
+func (s *Server) ingestSmokeTrade(
+	ctx context.Context,
+	req SmokeTradeRequest,
+	tsMs int64,
+	persist bool,
+	seqOverride uint64,
+) (uint64, error) {
 	if persist {
 		if err := s.appendSettlement(ctx, req); err != nil {
 			return 0, err
@@ -1488,8 +1582,13 @@ func (s *Server) ingestSmokeTrade(ctx context.Context, req SmokeTradeRequest, ts
 	}
 
 	s.state.mu.Lock()
-	seq := s.state.nextSeq
-	s.state.nextSeq++
+	seq := seqOverride
+	if seq == 0 {
+		seq = s.state.nextSeq
+		s.state.nextSeq++
+	} else if seq >= s.state.nextSeq {
+		s.state.nextSeq = seq + 1
+	}
 	s.state.tradesTotal++
 	s.state.mu.Unlock()
 
@@ -1645,12 +1744,302 @@ func (s *Server) seedSampleMarketData(ctx context.Context) error {
 				Symbol:  spec.symbol,
 				Price:   strconv.FormatInt(price, 10),
 				Qty:     strconv.FormatInt(qty, 10),
-			}, tsMs, false); err != nil {
+			}, tsMs, false, 0); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (s *Server) startTradeConsumer() {
+	if strings.TrimSpace(s.cfg.KafkaBrokers) == "" {
+		return
+	}
+	brokers := make([]string, 0, 3)
+	for _, raw := range strings.Split(s.cfg.KafkaBrokers, ",") {
+		v := strings.TrimSpace(raw)
+		if v != "" {
+			brokers = append(brokers, v)
+		}
+	}
+	if len(brokers) == 0 {
+		return
+	}
+
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:     brokers,
+		GroupID:     s.cfg.KafkaGroupID,
+		Topic:       s.cfg.KafkaTradeTopic,
+		StartOffset: kafka.LastOffset,
+		MinBytes:    1,
+		MaxBytes:    10e6,
+		MaxWait:     1 * time.Second,
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+
+	s.tradeConsumer = reader
+	s.tradeCancel = cancel
+	s.tradeWG.Add(1)
+	go func() {
+		defer s.tradeWG.Done()
+		for {
+			msg, err := reader.ReadMessage(ctx)
+			if err != nil {
+				if errors.Is(err, context.Canceled) || errors.Is(err, kafka.ErrGroupClosed) {
+					return
+				}
+				log.Printf("service=edge-gateway msg=trade_consume_failed topic=%s reason=%v", s.cfg.KafkaTradeTopic, err)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(500 * time.Millisecond):
+				}
+				continue
+			}
+			if err := s.consumeTradeMessage(ctx, msg.Value); err != nil {
+				log.Printf("service=edge-gateway msg=trade_apply_failed reason=%v payload=%s", err, string(msg.Value))
+			}
+		}
+	}()
+}
+
+func (s *Server) consumeTradeMessage(ctx context.Context, raw []byte) error {
+	var payload tradeEventPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return fmt.Errorf("decode trade payload: %w", err)
+	}
+	if strings.TrimSpace(payload.TradeID) == "" {
+		return fmt.Errorf("missing tradeId")
+	}
+
+	symbol := strings.ToUpper(strings.TrimSpace(payload.Envelope.Symbol))
+	if symbol == "" {
+		symbol = strings.ToUpper(strings.TrimSpace(payload.Symbol))
+	}
+	if symbol == "" {
+		return fmt.Errorf("missing symbol")
+	}
+
+	price, ok := parseInt64Any(payload.Price)
+	if !ok || price <= 0 {
+		return fmt.Errorf("invalid price: %v", payload.Price)
+	}
+	qty, ok := parseInt64Any(payload.Quantity)
+	if !ok || qty <= 0 {
+		return fmt.Errorf("invalid quantity: %v", payload.Quantity)
+	}
+	quoteAmount := price * qty
+	if parsed, ok := parseInt64Any(payload.QuoteAmount); ok && parsed > 0 {
+		quoteAmount = parsed
+	}
+
+	seq := payload.Envelope.Seq
+	if seq == 0 {
+		seq = payload.Seq
+	}
+	if seq == 0 {
+		seq = uint64(time.Now().UnixMilli())
+	}
+
+	tsMs := payload.TsMs
+	if tsMs <= 0 {
+		if t, err := time.Parse(time.RFC3339Nano, payload.Envelope.OccurredAtRaw); err == nil {
+			tsMs = t.UnixMilli()
+		}
+	}
+	if tsMs <= 0 {
+		tsMs = time.Now().UnixMilli()
+	}
+
+	if !s.markTradeApplied(payload.TradeID, tsMs) {
+		return nil
+	}
+
+	s.applyTradeSettlement(payload.BuyerUserID, payload.SellerUserID, symbol, qty, quoteAmount)
+	s.applyOrderFill(payload.MakerOrderID, qty, price, seq)
+	s.applyOrderFill(payload.TakerOrderID, qty, price, seq)
+
+	_, err := s.ingestSmokeTrade(ctx, SmokeTradeRequest{
+		TradeID: payload.TradeID,
+		Symbol:  symbol,
+		Price:   strconv.FormatInt(price, 10),
+		Qty:     strconv.FormatInt(qty, 10),
+	}, tsMs, false, seq)
+	if err != nil {
+		return fmt.Errorf("ingest trade message: %w", err)
+	}
+	return nil
+}
+
+func (s *Server) markTradeApplied(tradeID string, tsMs int64) bool {
+	now := time.Now().UnixMilli()
+	cutoff := now - 24*60*60*1000
+
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	for id, seenAt := range s.state.appliedTrades {
+		if seenAt < cutoff {
+			delete(s.state.appliedTrades, id)
+		}
+	}
+	if _, exists := s.state.appliedTrades[tradeID]; exists {
+		return false
+	}
+	s.state.appliedTrades[tradeID] = tsMs
+	return true
+}
+
+type walletPersistUpdate struct {
+	userID   string
+	currency string
+	balance  walletBalance
+}
+
+func (s *Server) applyTradeSettlement(buyerUserID, sellerUserID, symbol string, qty, quoteAmount int64) {
+	base, quote, ok := parseSymbol(symbol)
+	if !ok {
+		return
+	}
+	qtyF := float64(qty)
+	quoteF := float64(quoteAmount)
+
+	updates := make([]walletPersistUpdate, 0, 4)
+	s.state.mu.Lock()
+	if buyerUserID != "" {
+		updates = append(updates, s.settleBuyerLocked(buyerUserID, base, quote, qtyF, quoteF)...)
+	}
+	if sellerUserID != "" {
+		updates = append(updates, s.settleSellerLocked(sellerUserID, base, quote, qtyF, quoteF)...)
+	}
+	s.state.mu.Unlock()
+
+	for _, update := range updates {
+		s.persistWalletBalance(context.Background(), update.userID, update.currency, update.balance)
+	}
+}
+
+func (s *Server) settleBuyerLocked(userID, base, quote string, qty, quoteAmount float64) []walletPersistUpdate {
+	wallet := s.state.wallets[userID]
+	if wallet == nil {
+		wallet = map[string]walletBalance{}
+	}
+
+	quoteBal := wallet[quote]
+	remaining := quoteAmount
+	if quoteBal.Hold >= remaining {
+		quoteBal.Hold -= remaining
+		remaining = 0
+	} else {
+		remaining -= quoteBal.Hold
+		quoteBal.Hold = 0
+	}
+	if remaining > 0 {
+		quoteBal.Available -= remaining
+		if quoteBal.Available < 0 {
+			quoteBal.Available = 0
+		}
+	}
+	wallet[quote] = quoteBal
+
+	baseBal := wallet[base]
+	baseBal.Available += qty
+	wallet[base] = baseBal
+
+	s.state.wallets[userID] = wallet
+	return []walletPersistUpdate{
+		{userID: userID, currency: quote, balance: quoteBal},
+		{userID: userID, currency: base, balance: baseBal},
+	}
+}
+
+func (s *Server) settleSellerLocked(userID, base, quote string, qty, quoteAmount float64) []walletPersistUpdate {
+	wallet := s.state.wallets[userID]
+	if wallet == nil {
+		wallet = map[string]walletBalance{}
+	}
+
+	baseBal := wallet[base]
+	remaining := qty
+	if baseBal.Hold >= remaining {
+		baseBal.Hold -= remaining
+		remaining = 0
+	} else {
+		remaining -= baseBal.Hold
+		baseBal.Hold = 0
+	}
+	if remaining > 0 {
+		baseBal.Available -= remaining
+		if baseBal.Available < 0 {
+			baseBal.Available = 0
+		}
+	}
+	wallet[base] = baseBal
+
+	quoteBal := wallet[quote]
+	quoteBal.Available += quoteAmount
+	wallet[quote] = quoteBal
+
+	s.state.wallets[userID] = wallet
+	return []walletPersistUpdate{
+		{userID: userID, currency: base, balance: baseBal},
+		{userID: userID, currency: quote, balance: quoteBal},
+	}
+}
+
+type reserveRelease struct {
+	userID   string
+	currency string
+	amount   float64
+}
+
+func (s *Server) applyOrderFill(orderID string, fillQty, fillPrice int64, seq uint64) {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return
+	}
+
+	var release *reserveRelease
+	fillQtyF := float64(fillQty)
+	fillQuoteF := float64(fillQty) * float64(fillPrice)
+
+	s.state.mu.Lock()
+	record, ok := s.state.orders[orderID]
+	if ok {
+		record.FilledQty += fillQtyF
+		switch strings.ToUpper(record.Side) {
+		case "BUY":
+			record.ReserveConsumed += fillQuoteF
+		case "SELL":
+			record.ReserveConsumed += fillQtyF
+		}
+
+		if record.Qty > 0 && record.FilledQty >= record.Qty-1e-9 {
+			record.FilledQty = record.Qty
+			record.Status = "FILLED"
+			remainingReserve := record.ReserveAmount - record.ReserveConsumed
+			if remainingReserve > 1e-9 && record.OwnerUserID != "" && record.ReserveCurrency != "" {
+				release = &reserveRelease{
+					userID:   record.OwnerUserID,
+					currency: record.ReserveCurrency,
+					amount:   remainingReserve,
+				}
+				record.ReserveAmount -= remainingReserve
+			}
+		} else if record.FilledQty > 0 {
+			record.Status = "PARTIALLY_FILLED"
+		}
+
+		if seq > record.Seq {
+			record.Seq = seq
+		}
+		s.state.orders[orderID] = record
+	}
+	s.state.mu.Unlock()
+
+	if release != nil {
+		s.releaseReserve(release.userID, release.currency, release.amount)
+	}
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -1881,6 +2270,7 @@ func (s *Server) handleGetOrderbook(w http.ResponseWriter, r *http.Request) {
 				writeJSON(w, http.StatusOK, map[string]interface{}{
 					"symbol": symbol,
 					"depth":  depth,
+					"source": "demo-derived-from-last-trade",
 					"bids":   bids,
 					"asks":   asks,
 				})
@@ -1892,6 +2282,7 @@ func (s *Server) handleGetOrderbook(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"symbol": symbol,
 		"depth":  depth,
+		"source": "demo-derived-from-last-trade",
 		"bids":   []interface{}{},
 		"asks":   []interface{}{},
 	})
@@ -2101,6 +2492,45 @@ func sign(secret, canonical string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(canonical))
 	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func parseInt64Any(raw interface{}) (int64, bool) {
+	switch v := raw.(type) {
+	case nil:
+		return 0, false
+	case float64:
+		return int64(v), true
+	case float32:
+		return int64(v), true
+	case int64:
+		return v, true
+	case int32:
+		return int64(v), true
+	case int:
+		return int64(v), true
+	case json.Number:
+		if iv, err := v.Int64(); err == nil {
+			return iv, true
+		}
+		if fv, err := v.Float64(); err == nil {
+			return int64(fv), true
+		}
+		return 0, false
+	case string:
+		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			return 0, false
+		}
+		if iv, err := strconv.ParseInt(trimmed, 10, 64); err == nil {
+			return iv, true
+		}
+		if fv, err := strconv.ParseFloat(trimmed, 64); err == nil {
+			return int64(fv), true
+		}
+		return 0, false
+	default:
+		return 0, false
+	}
 }
 
 func parseLimit(raw string, fallback int) int {

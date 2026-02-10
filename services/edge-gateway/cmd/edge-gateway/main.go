@@ -33,6 +33,9 @@ func main() {
 		OTelInsecure:       getenv("EDGE_OTEL_INSECURE", "true") == "true",
 		CoreAddr:           getenv("EDGE_CORE_ADDR", "localhost:50051"),
 		CoreTimeout:        time.Duration(getenvInt("EDGE_CORE_TIMEOUT_MS", 3000)) * time.Millisecond,
+		KafkaBrokers:       getenv("EDGE_KAFKA_BROKERS", ""),
+		KafkaTradeTopic:    getenv("EDGE_KAFKA_TRADE_TOPIC", "core.trade-events.v1"),
+		KafkaGroupID:       getenv("EDGE_KAFKA_GROUP_ID", "edge-trades-v1"),
 	}
 	srv, err := gateway.New(cfg)
 	if err != nil {

@@ -15,6 +15,7 @@
 - `B-0202` — Edge Gateway WS v1 (subscribe, snapshot+delta, gap recovery)
 - `B-0203` — Market data cache v1 (Redis hot snapshots)
 - `B-0204` — Edge: request authentication & replay protection hardening
+- `B-0205` — Gate G1 real execution path (Edge↔Core↔Kafka↔Ledger)
 - `B-0301` — Ledger schema v1 (double-entry, append-only)
 - `B-0302` — Settlement consumer v1 (TradeExecuted → postings, idempotent)
 - `B-0303` — Reserve model v1 (available vs hold accounts)

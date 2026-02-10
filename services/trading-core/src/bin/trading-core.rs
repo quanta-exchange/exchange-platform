@@ -109,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let kafka_brokers = getenv("CORE_KAFKA_BROKERS", "localhost:29092");
     let kafka_topic = getenv("CORE_KAFKA_TRADE_TOPIC", "core.trade-events.v1");
     let publish_retries = getenv_usize("CORE_PUBLISH_RETRIES", 3);
-    let stub_trades = getenv_bool("CORE_STUB_TRADES", true);
+    let stub_trades = getenv_bool("CORE_STUB_TRADES", false);
 
     let mut cfg = CoreConfig::default();
     cfg.symbol = symbol;

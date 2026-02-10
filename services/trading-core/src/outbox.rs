@@ -101,6 +101,7 @@ impl Outbox {
     ) -> Result<(), OutboxError> {
         let records = self.pending_records()?;
         for record in records {
+            let mut published_all = true;
             for event in &record.events {
                 let mut attempts = 0;
                 loop {
@@ -111,9 +112,18 @@ impl Outbox {
                             let backoff = 2_u64.saturating_pow(attempts as u32).min(64);
                             thread::sleep(Duration::from_millis(backoff));
                         }
-                        Err(_) => break,
+                        Err(_) => {
+                            published_all = false;
+                            break;
+                        }
                     }
                 }
+                if !published_all {
+                    break;
+                }
+            }
+            if !published_all {
+                break;
             }
             self.set_last_published_seq(record.seq)?;
         }

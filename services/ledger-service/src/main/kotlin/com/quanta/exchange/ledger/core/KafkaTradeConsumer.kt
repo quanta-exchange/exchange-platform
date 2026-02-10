@@ -1,6 +1,8 @@
 package com.quanta.exchange.ledger.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.quanta.exchange.ledger.api.TradeExecutedDto
 import org.slf4j.LoggerFactory
@@ -14,7 +16,10 @@ class KafkaTradeConsumer(
     private val ledgerService: LedgerService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
-    private val mapper: ObjectMapper = ObjectMapper().registerKotlinModule()
+    private val mapper: ObjectMapper = ObjectMapper()
+        .registerKotlinModule()
+        .registerModule(JavaTimeModule())
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
     @KafkaListener(
         topics = ["\${ledger.kafka.trade-topic:core.trade-events.v1}"],

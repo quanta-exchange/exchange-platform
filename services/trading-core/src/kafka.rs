@@ -59,7 +59,12 @@ impl EventSink for KafkaTradePublisher {
 #[serde(rename_all = "camelCase")]
 struct TradeExecutedPayload {
     envelope: EventEnvelopePayload,
+    symbol: String,
+    seq: u64,
+    ts: i64,
     trade_id: String,
+    maker_order_id: String,
+    taker_order_id: String,
     buyer_user_id: String,
     seller_user_id: String,
     price: i64,
@@ -85,8 +90,13 @@ impl TradeExecutedPayload {
     fn from(event: &TradeExecutedEvent) -> Result<Self, String> {
         let envelope = EventEnvelopePayload::from(&event.envelope)?;
         Ok(Self {
+            symbol: event.envelope.symbol.clone(),
+            seq: event.envelope.seq,
+            ts: event.envelope.occurred_at_ms,
             envelope,
             trade_id: event.trade_id.clone(),
+            maker_order_id: event.maker_order_id.clone(),
+            taker_order_id: event.taker_order_id.clone(),
             buyer_user_id: event.buyer_user_id.clone(),
             seller_user_id: event.seller_user_id.clone(),
             price: parse_i64(&event.price),
@@ -100,12 +110,11 @@ impl TradeExecutedPayload {
 
 impl EventEnvelopePayload {
     fn from(event: &EventEnvelope) -> Result<Self, String> {
-        let occurred_at = OffsetDateTime::from_unix_timestamp_nanos(
-            i128::from(event.occurred_at_ms) * 1_000_000,
-        )
-            .map_err(|e| e.to_string())?
-            .format(&Rfc3339)
-            .map_err(|e| e.to_string())?;
+        let occurred_at =
+            OffsetDateTime::from_unix_timestamp_nanos(i128::from(event.occurred_at_ms) * 1_000_000)
+                .map_err(|e| e.to_string())?
+                .format(&Rfc3339)
+                .map_err(|e| e.to_string())?;
         Ok(Self {
             event_id: event.event_id.clone(),
             event_version: event.event_version,
