@@ -4,6 +4,7 @@ import com.quanta.exchange.ledger.core.BalanceAdjustmentCommand
 import com.quanta.exchange.ledger.core.EventEnvelope
 import com.quanta.exchange.ledger.core.LedgerService
 import com.quanta.exchange.ledger.core.ReserveCommand
+import com.quanta.exchange.ledger.core.SafetyMode
 import com.quanta.exchange.ledger.core.TradeExecuted
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -28,6 +29,8 @@ class LedgerServiceIntegrationTest {
     @BeforeEach
     fun cleanDb() {
         listOf(
+            "DELETE FROM reconciliation_history",
+            "DELETE FROM reconciliation_safety_state",
             "DELETE FROM correction_requests",
             "DELETE FROM invariant_alerts",
             "DELETE FROM settlement_dlq",
@@ -144,6 +147,33 @@ class LedgerServiceIntegrationTest {
         assertEquals(50L, status.lastEngineSeq)
         assertEquals(40L, status.lastSettledSeq)
         assertEquals(10L, status.gap)
+    }
+
+    @Test
+    fun reconciliationEvaluationRecordsHistoryAndSafetyState() {
+        ledgerService.updateEngineSeq("BTC-KRW", 50)
+        seedBalancesAndReserves()
+        assertTrue(ledgerService.consumeTrade(trade("trade-recon-eval", 40)).applied)
+
+        val run = ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+        )
+
+        assertEquals(1, run.evaluations.size)
+        val evaluation = run.evaluations.first()
+        assertTrue(evaluation.breached)
+        assertFalse(evaluation.safetyActionTaken)
+        assertEquals(10L, evaluation.lag)
+
+        val historyCount = jdbc.queryForObject("SELECT COUNT(*) FROM reconciliation_history WHERE symbol = 'BTC-KRW'", Long::class.java)!!
+        assertEquals(1L, historyCount)
+        val active = jdbc.queryForObject(
+            "SELECT breach_active FROM reconciliation_safety_state WHERE symbol = 'BTC-KRW'",
+            Boolean::class.java,
+        )!!
+        assertTrue(active)
     }
 
     @Test

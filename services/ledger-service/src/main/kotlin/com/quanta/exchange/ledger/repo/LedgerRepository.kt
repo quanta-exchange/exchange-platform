@@ -4,12 +4,16 @@ import com.quanta.exchange.ledger.core.CorrectionRequest
 import com.quanta.exchange.ledger.core.InvariantCheckResult
 import com.quanta.exchange.ledger.core.LedgerEntryCommand
 import com.quanta.exchange.ledger.core.LedgerPostingCommand
+import com.quanta.exchange.ledger.core.ReconciliationEvaluation
+import com.quanta.exchange.ledger.core.ReconciliationHistoryPoint
+import com.quanta.exchange.ledger.core.ReconciliationSafetyState
 import com.quanta.exchange.ledger.core.ReconciliationStatus
 import com.quanta.exchange.ledger.core.TradeLookup
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import java.sql.ResultSet
 import java.time.Instant
 import java.util.UUID
 
@@ -68,7 +72,6 @@ class LedgerRepository(
             applyBalanceDelta(posting.accountId, posting.currency, delta)
         }
 
-        updateSettledSeq(command.symbol, command.engineSeq)
         return true
     }
 
@@ -169,6 +172,215 @@ class LedgerRepository(
             symbol,
         )
         return rows.firstOrNull() ?: ReconciliationStatus(symbol, 0, 0, 0, null)
+    }
+
+    fun reconciliationAll(): List<ReconciliationStatus> {
+        return jdbc.query(
+            """
+            SELECT symbol, last_engine_seq, last_settled_seq, updated_at
+            FROM reconciliation_state
+            ORDER BY symbol ASC
+            """.trimIndent(),
+            { rs, _ ->
+                toReconciliationStatus(rs.getString("symbol"), rs.getLong("last_engine_seq"), rs.getLong("last_settled_seq"), rs.getTimestamp("updated_at"))
+            },
+        )
+    }
+
+    fun recordReconciliationHistory(evaluation: ReconciliationEvaluation) {
+        jdbc.update(
+            """
+            INSERT INTO reconciliation_history(
+                symbol, last_engine_seq, last_settled_seq, lag,
+                mismatch, threshold, breached, safety_mode,
+                safety_action_taken, reason, checked_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            evaluation.symbol,
+            evaluation.lastEngineSeq,
+            evaluation.lastSettledSeq,
+            evaluation.lag,
+            evaluation.mismatch,
+            evaluation.threshold,
+            evaluation.breached,
+            evaluation.safetyMode.name,
+            evaluation.safetyActionTaken,
+            evaluation.reason,
+            java.sql.Timestamp.from(evaluation.checkedAt),
+        )
+    }
+
+    fun reconciliationHistory(limit: Int): List<ReconciliationHistoryPoint> {
+        val clamped = limit.coerceIn(1, 500)
+        return jdbc.query(
+            """
+            SELECT id, symbol, last_engine_seq, last_settled_seq, lag,
+                   mismatch, threshold, breached, safety_mode,
+                   safety_action_taken, reason, checked_at
+            FROM reconciliation_history
+            ORDER BY checked_at DESC, id DESC
+            LIMIT $clamped
+            """.trimIndent(),
+            { rs, _ ->
+                ReconciliationHistoryPoint(
+                    id = rs.getLong("id"),
+                    symbol = rs.getString("symbol"),
+                    lastEngineSeq = rs.getLong("last_engine_seq"),
+                    lastSettledSeq = rs.getLong("last_settled_seq"),
+                    lag = rs.getLong("lag"),
+                    mismatch = rs.getBoolean("mismatch"),
+                    threshold = rs.getLong("threshold"),
+                    breached = rs.getBoolean("breached"),
+                    safetyMode = rs.getString("safety_mode"),
+                    safetyActionTaken = rs.getBoolean("safety_action_taken"),
+                    reason = rs.getString("reason"),
+                    checkedAt = rs.getTimestamp("checked_at").toInstant(),
+                )
+            },
+        )
+    }
+
+    fun reconciliationSafetyState(symbol: String): ReconciliationSafetyState? {
+        val rows = jdbc.query(
+            """
+            SELECT symbol, breach_active, last_lag, last_mismatch, safety_mode,
+                   last_action_taken, reason, updated_at, last_action_at
+            FROM reconciliation_safety_state
+            WHERE symbol = ?
+            """.trimIndent(),
+            { rs, _ -> toSafetyState(rs) },
+            symbol,
+        )
+        return rows.firstOrNull()
+    }
+
+    fun reconciliationSafetyStates(): Map<String, ReconciliationSafetyState> {
+        val rows = jdbc.query(
+            """
+            SELECT symbol, breach_active, last_lag, last_mismatch, safety_mode,
+                   last_action_taken, reason, updated_at, last_action_at
+            FROM reconciliation_safety_state
+            """.trimIndent(),
+            { rs, _ -> toSafetyState(rs) },
+        )
+        return rows.associateBy { it.symbol }
+    }
+
+    fun upsertReconciliationSafetyState(
+        symbol: String,
+        breachActive: Boolean,
+        lag: Long,
+        mismatch: Boolean,
+        safetyMode: String?,
+        actionTaken: Boolean,
+        reason: String?,
+        updatedAt: Instant,
+        lastActionAt: Instant?,
+    ) {
+        val updated = if (lastActionAt == null) {
+            jdbc.update(
+                """
+                UPDATE reconciliation_safety_state
+                SET breach_active = ?,
+                    last_lag = ?,
+                    last_mismatch = ?,
+                    safety_mode = ?,
+                    last_action_taken = ?,
+                    reason = ?,
+                    updated_at = ?
+                WHERE symbol = ?
+                """.trimIndent(),
+                breachActive,
+                lag,
+                mismatch,
+                safetyMode,
+                actionTaken,
+                reason,
+                java.sql.Timestamp.from(updatedAt),
+                symbol,
+            )
+        } else {
+            jdbc.update(
+                """
+                UPDATE reconciliation_safety_state
+                SET breach_active = ?,
+                    last_lag = ?,
+                    last_mismatch = ?,
+                    safety_mode = ?,
+                    last_action_taken = ?,
+                    reason = ?,
+                    updated_at = ?,
+                    last_action_at = ?
+                WHERE symbol = ?
+                """.trimIndent(),
+                breachActive,
+                lag,
+                mismatch,
+                safetyMode,
+                actionTaken,
+                reason,
+                java.sql.Timestamp.from(updatedAt),
+                java.sql.Timestamp.from(lastActionAt),
+                symbol,
+            )
+        }
+        if (updated > 0) {
+            return
+        }
+        try {
+            if (lastActionAt == null) {
+                jdbc.update(
+                    """
+                    INSERT INTO reconciliation_safety_state(
+                        symbol, breach_active, last_lag, last_mismatch, safety_mode,
+                        last_action_taken, reason, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    symbol,
+                    breachActive,
+                    lag,
+                    mismatch,
+                    safetyMode,
+                    actionTaken,
+                    reason,
+                    java.sql.Timestamp.from(updatedAt),
+                )
+            } else {
+                jdbc.update(
+                    """
+                    INSERT INTO reconciliation_safety_state(
+                        symbol, breach_active, last_lag, last_mismatch, safety_mode,
+                        last_action_taken, reason, updated_at, last_action_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    symbol,
+                    breachActive,
+                    lag,
+                    mismatch,
+                    safetyMode,
+                    actionTaken,
+                    reason,
+                    java.sql.Timestamp.from(updatedAt),
+                    java.sql.Timestamp.from(lastActionAt),
+                )
+            }
+        } catch (ex: DataIntegrityViolationException) {
+            if (isUniqueViolation(ex)) {
+                upsertReconciliationSafetyState(
+                    symbol = symbol,
+                    breachActive = breachActive,
+                    lag = lag,
+                    mismatch = mismatch,
+                    safetyMode = safetyMode,
+                    actionTaken = actionTaken,
+                    reason = reason,
+                    updatedAt = updatedAt,
+                    lastActionAt = lastActionAt,
+                )
+            } else {
+                throw ex
+            }
+        }
     }
 
     fun invariantCheck(): InvariantCheckResult {
@@ -396,6 +608,30 @@ class LedgerRepository(
             symbol = row["symbol"].toString(),
             engineSeq = (row["engine_seq"] as Number).toLong(),
             occurredAt = (row["occurred_at"] as java.sql.Timestamp).toInstant(),
+        )
+    }
+
+    private fun toReconciliationStatus(symbol: String, lastEngineSeq: Long, lastSettledSeq: Long, updatedAt: java.sql.Timestamp?): ReconciliationStatus {
+        return ReconciliationStatus(
+            symbol = symbol,
+            lastEngineSeq = lastEngineSeq,
+            lastSettledSeq = lastSettledSeq,
+            gap = lastEngineSeq - lastSettledSeq,
+            updatedAt = updatedAt?.toInstant(),
+        )
+    }
+
+    private fun toSafetyState(rs: ResultSet): ReconciliationSafetyState {
+        return ReconciliationSafetyState(
+            symbol = rs.getString("symbol"),
+            breachActive = rs.getBoolean("breach_active"),
+            lastLag = rs.getLong("last_lag"),
+            lastMismatch = rs.getBoolean("last_mismatch"),
+            safetyMode = rs.getString("safety_mode"),
+            lastActionTaken = rs.getBoolean("last_action_taken"),
+            reason = rs.getString("reason"),
+            updatedAt = rs.getTimestamp("updated_at").toInstant(),
+            lastActionAt = rs.getTimestamp("last_action_at")?.toInstant(),
         )
     }
 

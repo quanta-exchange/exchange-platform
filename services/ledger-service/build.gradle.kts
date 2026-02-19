@@ -21,7 +21,11 @@ dependencies {
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.google.protobuf:protobuf-java:4.33.5")
+    implementation("io.grpc:grpc-protobuf:1.78.0")
+    implementation("io.grpc:grpc-stub:1.78.0")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.grpc:grpc-netty-shaded:1.78.0")
     implementation(kotlin("reflect"))
     implementation(project(":contracts:kotlin-stubs"))
 

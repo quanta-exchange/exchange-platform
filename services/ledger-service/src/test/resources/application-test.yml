@@ -15,3 +15,6 @@ ledger:
     enabled: false
   guard:
     enabled: false
+  reconciliation:
+    enabled: false
+    auto-switch-enabled: false

@@ -10,6 +10,7 @@ import java.time.Instant
 class LedgerService(
     private val repo: LedgerRepository,
     private val metrics: LedgerMetrics,
+    private val symbolModeSwitcher: SymbolModeSwitcher,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -26,6 +27,7 @@ class LedgerService(
                 return SettlementResult(applied = false, entryId = entryId, reason = "duplicate")
             }
 
+            repo.updateSettledSeq(event.envelope.symbol, event.envelope.seq)
             val lagMs = Duration.between(event.envelope.occurredAt, Instant.now()).toMillis()
             metrics.observeSettlementLag(lagMs)
             refreshReserveMetrics()
@@ -144,11 +146,132 @@ class LedgerService(
         reconciliation(symbol)
     }
 
+    fun observeEngineSeq(symbol: String, seq: Long) {
+        repo.updateEngineSeq(symbol, seq)
+    }
+
     fun reconciliation(symbol: String): ReconciliationStatus {
         val status = repo.reconciliation(symbol)
         val ageMs = status.updatedAt?.let { Duration.between(it, Instant.now()).toMillis() } ?: 0L
         metrics.setReconciliation(status.gap, ageMs)
         return status
+    }
+
+    fun reconciliationAll(): List<ReconciliationStatus> {
+        val statuses = repo.reconciliationAll()
+        val maxLag = statuses.maxOfOrNull { it.gap.coerceAtLeast(0) } ?: 0L
+        metrics.setReconciliationSummary(maxLag = maxLag, activeBreaches = 0)
+        return statuses
+    }
+
+    fun runReconciliationEvaluation(
+        lagThreshold: Long,
+        safetyMode: SafetyMode,
+        autoSwitchEnabled: Boolean,
+    ): ReconciliationRunSummary {
+        val checkedAt = Instant.now()
+        val statuses = repo.reconciliationAll()
+        val existingSafety = repo.reconciliationSafetyStates()
+        val evaluations = mutableListOf<ReconciliationEvaluation>()
+        var activeBreaches = 0L
+        var maxLag = 0L
+
+        statuses.forEach { status ->
+            val lag = status.lastEngineSeq - status.lastSettledSeq
+            val mismatch = lag < 0
+            val thresholdBreached = lag > lagThreshold
+            val breached = mismatch || thresholdBreached
+            val reason = reconciliationReason(mismatch, thresholdBreached)
+            if (mismatch) {
+                metrics.incrementReconciliationMismatch()
+            }
+
+            val prev = existingSafety[status.symbol]
+            val shouldTrigger = breached && (prev == null || !prev.breachActive)
+            var safetyActionTaken = false
+            var actionAt: Instant? = prev?.lastActionAt
+
+            if (shouldTrigger) {
+                metrics.incrementReconciliationAlert()
+                if (autoSwitchEnabled) {
+                    safetyActionTaken = symbolModeSwitcher.setSymbolMode(status.symbol, safetyMode, reason)
+                    if (safetyActionTaken) {
+                        actionAt = checkedAt
+                        metrics.incrementReconciliationSafetyTrigger()
+                    } else {
+                        metrics.incrementReconciliationSafetyFailure()
+                    }
+                }
+            }
+
+            if (breached) {
+                activeBreaches += 1
+            }
+            if (lag > maxLag) {
+                maxLag = lag
+            }
+
+            val evaluation = ReconciliationEvaluation(
+                symbol = status.symbol,
+                lastEngineSeq = status.lastEngineSeq,
+                lastSettledSeq = status.lastSettledSeq,
+                lag = lag,
+                mismatch = mismatch,
+                threshold = lagThreshold,
+                breached = breached,
+                reason = reason,
+                safetyMode = safetyMode,
+                safetyActionTaken = safetyActionTaken,
+                checkedAt = checkedAt,
+            )
+            repo.recordReconciliationHistory(evaluation)
+            repo.upsertReconciliationSafetyState(
+                symbol = status.symbol,
+                breachActive = breached,
+                lag = lag,
+                mismatch = mismatch,
+                safetyMode = if (breached) safetyMode.name else prev?.safetyMode,
+                actionTaken = safetyActionTaken,
+                reason = reason,
+                updatedAt = checkedAt,
+                lastActionAt = actionAt,
+            )
+            evaluations += evaluation
+        }
+
+        metrics.setReconciliationSummary(maxLag = maxLag.coerceAtLeast(0), activeBreaches = activeBreaches)
+        return ReconciliationRunSummary(checkedAt = checkedAt, evaluations = evaluations)
+    }
+
+    fun reconciliationStatus(historyLimit: Int, lagThreshold: Long): ReconciliationDashboard {
+        val now = Instant.now()
+        val statuses = repo.reconciliationAll()
+        val safetyStates = repo.reconciliationSafetyStates()
+        val views = statuses.map { status ->
+            val lag = status.lastEngineSeq - status.lastSettledSeq
+            val mismatch = lag < 0
+            val thresholdBreached = lag > lagThreshold
+            val safety = safetyStates[status.symbol]
+            ReconciliationStatusView(
+                symbol = status.symbol,
+                lastEngineSeq = status.lastEngineSeq,
+                lastSettledSeq = status.lastSettledSeq,
+                lag = lag,
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                breached = (mismatch || thresholdBreached),
+                breachActive = safety?.breachActive ?: false,
+                safetyMode = safety?.safetyMode,
+                lastActionAt = safety?.lastActionAt,
+                updatedAt = status.updatedAt,
+            )
+        }
+        val history = repo.reconciliationHistory(historyLimit)
+        return ReconciliationDashboard(
+            checkedAt = now,
+            statuses = views,
+            history = history,
+        )
     }
 
     fun runInvariantCheck(): InvariantCheckResult {
@@ -291,6 +414,14 @@ class LedgerService(
         val oldest = repo.oldestPendingCorrectionCreatedAt()
         val ageMs = oldest?.let { Duration.between(it, Instant.now()).toMillis() } ?: 0L
         metrics.setCorrectionPendingAgeMs(ageMs)
+    }
+
+    private fun reconciliationReason(mismatch: Boolean, thresholdBreached: Boolean): String {
+        return when {
+            mismatch -> "settled_seq_ahead_of_engine_seq"
+            thresholdBreached -> "lag_threshold_exceeded"
+            else -> "within_threshold"
+        }
     }
 
     private fun nanosToMillis(started: Long): Long {

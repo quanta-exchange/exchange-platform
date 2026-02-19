@@ -1,7 +1,7 @@
 package com.quanta.exchange.ledger.core
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.quanta.exchange.ledger.api.TradeExecutedDto
@@ -12,9 +12,8 @@ import org.springframework.stereotype.Component
 
 @Component
 @ConditionalOnProperty(prefix = "ledger.kafka", name = ["enabled"], havingValue = "true")
-class KafkaTradeConsumer(
+class KafkaReconciliationObserver(
     private val ledgerService: LedgerService,
-    private val settlementGate: SettlementConsumerGate,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val mapper: ObjectMapper = ObjectMapper()
@@ -23,29 +22,19 @@ class KafkaTradeConsumer(
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
     @KafkaListener(
-        id = "ledger-settlement-consumer",
+        id = "ledger-reconciliation-observer",
         topics = ["\${ledger.kafka.trade-topic:core.trade-events.v1}"],
-        groupId = "\${ledger.kafka.group-id:ledger-settlement-v1}",
-        autoStartup = "\${ledger.kafka.settlement-enabled:true}",
+        groupId = "\${ledger.kafka.reconciliation-group-id:ledger-reconciliation-v1}",
+        autoStartup = "\${ledger.kafka.reconciliation-observer-enabled:true}",
     )
-    fun onMessage(payload: String) {
+    fun observe(payload: String) {
         try {
             val trade = mapper.readValue(payload, TradeExecutedDto::class.java)
-            if (settlementGate.isPaused()) {
-                log.warn(
-                    "service=ledger msg=settlement_consumer_paused_skip trade_id={} seq={}",
-                    trade.tradeId,
-                    trade.envelope.seq,
-                )
-                return
-            }
-            val result = ledgerService.consumeTrade(trade.toModel())
-            if (!result.applied) {
-                log.warn("service=ledger msg=consumer_not_applied reason={} entry_id={}", result.reason, result.entryId)
-            }
+            ledgerService.observeEngineSeq(trade.envelope.symbol, trade.envelope.seq)
         } catch (ex: Exception) {
-            log.error("service=ledger msg=consumer_parse_failed reason={}", ex.message)
+            log.error("service=ledger msg=reconciliation_observer_parse_failed reason={}", ex.message)
             throw ex
         }
     }
 }
+

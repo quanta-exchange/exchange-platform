@@ -98,3 +98,87 @@ data class TradeLookup(
     val engineSeq: Long,
     val occurredAt: Instant,
 )
+
+enum class SafetyMode {
+    CANCEL_ONLY,
+    SOFT_HALT,
+    HARD_HALT,
+    ;
+
+    companion object {
+        fun parse(value: String): SafetyMode {
+            return when (value.trim().uppercase()) {
+                "CANCEL_ONLY" -> CANCEL_ONLY
+                "SOFT_HALT" -> SOFT_HALT
+                "HARD_HALT", "HALT" -> HARD_HALT
+                else -> CANCEL_ONLY
+            }
+        }
+    }
+}
+
+data class ReconciliationEvaluation(
+    val symbol: String,
+    val lastEngineSeq: Long,
+    val lastSettledSeq: Long,
+    val lag: Long,
+    val mismatch: Boolean,
+    val threshold: Long,
+    val breached: Boolean,
+    val reason: String,
+    val safetyMode: SafetyMode,
+    val safetyActionTaken: Boolean,
+    val checkedAt: Instant,
+)
+
+data class ReconciliationHistoryPoint(
+    val id: Long,
+    val symbol: String,
+    val lastEngineSeq: Long,
+    val lastSettledSeq: Long,
+    val lag: Long,
+    val mismatch: Boolean,
+    val threshold: Long,
+    val breached: Boolean,
+    val safetyMode: String?,
+    val safetyActionTaken: Boolean,
+    val reason: String,
+    val checkedAt: Instant,
+)
+
+data class ReconciliationSafetyState(
+    val symbol: String,
+    val breachActive: Boolean,
+    val lastLag: Long,
+    val lastMismatch: Boolean,
+    val safetyMode: String?,
+    val lastActionTaken: Boolean,
+    val reason: String?,
+    val updatedAt: Instant,
+    val lastActionAt: Instant?,
+)
+
+data class ReconciliationStatusView(
+    val symbol: String,
+    val lastEngineSeq: Long,
+    val lastSettledSeq: Long,
+    val lag: Long,
+    val mismatch: Boolean,
+    val thresholdBreached: Boolean,
+    val breached: Boolean,
+    val breachActive: Boolean,
+    val safetyMode: String?,
+    val lastActionAt: Instant?,
+    val updatedAt: Instant?,
+)
+
+data class ReconciliationRunSummary(
+    val checkedAt: Instant,
+    val evaluations: List<ReconciliationEvaluation>,
+)
+
+data class ReconciliationDashboard(
+    val checkedAt: Instant,
+    val statuses: List<ReconciliationStatusView>,
+    val history: List<ReconciliationHistoryPoint>,
+)

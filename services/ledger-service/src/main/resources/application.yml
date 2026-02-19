@@ -36,8 +36,19 @@ ledger:
     enabled: ${LEDGER_KAFKA_ENABLED:false}
     trade-topic: ${LEDGER_KAFKA_TRADE_TOPIC:core.trade-events.v1}
     group-id: ${LEDGER_KAFKA_GROUP_ID:ledger-settlement-v1}
+    reconciliation-group-id: ${LEDGER_KAFKA_RECON_GROUP_ID:ledger-reconciliation-v1}
+    settlement-enabled: ${LEDGER_KAFKA_SETTLEMENT_ENABLED:true}
+    reconciliation-observer-enabled: ${LEDGER_KAFKA_RECON_OBSERVER_ENABLED:true}
   guard:
     enabled: ${LEDGER_GUARD_ENABLED:true}
     interval-ms: ${LEDGER_GUARD_INTERVAL_MS:30000}
+  reconciliation:
+    enabled: ${LEDGER_RECONCILIATION_ENABLED:true}
+    interval-ms: ${LEDGER_RECONCILIATION_INTERVAL_MS:5000}
+    lag-threshold: ${LEDGER_RECONCILIATION_LAG_THRESHOLD:10}
+    safety-mode: ${LEDGER_RECONCILIATION_SAFETY_MODE:CANCEL_ONLY}
+    auto-switch-enabled: ${LEDGER_RECONCILIATION_AUTO_SWITCH:true}
+    core-grpc-address: ${LEDGER_RECONCILIATION_CORE_GRPC_ADDR:localhost:50051}
+    core-grpc-timeout-ms: ${LEDGER_RECONCILIATION_CORE_GRPC_TIMEOUT_MS:1500}
 server:
   port: ${LEDGER_PORT:8082}

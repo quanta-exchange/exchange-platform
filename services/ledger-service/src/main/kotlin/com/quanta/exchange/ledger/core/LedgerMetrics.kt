@@ -19,6 +19,12 @@ class LedgerMetrics {
     private val gapAgeMs = AtomicLong(0)
     private val correctionsTotal = AtomicLong(0)
     private val correctionPendingAgeMs = AtomicLong(0)
+    private val reconciliationLagMax = AtomicLong(0)
+    private val reconciliationBreachActive = AtomicLong(0)
+    private val reconciliationAlertTotal = AtomicLong(0)
+    private val reconciliationMismatchTotal = AtomicLong(0)
+    private val reconciliationSafetyTriggerTotal = AtomicLong(0)
+    private val reconciliationSafetyFailureTotal = AtomicLong(0)
 
     fun observeLedgerAppendLatency(ms: Long) = ledgerAppendLatencyMs.set(ms.coerceAtLeast(0))
     fun incrementUniqueViolation() = uniqueViolationTotal.incrementAndGet()
@@ -38,6 +44,14 @@ class LedgerMetrics {
     }
     fun incrementCorrections() = correctionsTotal.incrementAndGet()
     fun setCorrectionPendingAgeMs(ms: Long) = correctionPendingAgeMs.set(ms.coerceAtLeast(0))
+    fun setReconciliationSummary(maxLag: Long, activeBreaches: Long) {
+        reconciliationLagMax.set(maxLag.coerceAtLeast(0))
+        reconciliationBreachActive.set(activeBreaches.coerceAtLeast(0))
+    }
+    fun incrementReconciliationAlert() = reconciliationAlertTotal.incrementAndGet()
+    fun incrementReconciliationMismatch() = reconciliationMismatchTotal.incrementAndGet()
+    fun incrementReconciliationSafetyTrigger() = reconciliationSafetyTriggerTotal.incrementAndGet()
+    fun incrementReconciliationSafetyFailure() = reconciliationSafetyFailureTotal.incrementAndGet()
 
     fun renderPrometheus(): String {
         return buildString {
@@ -55,6 +69,12 @@ class LedgerMetrics {
             appendMetric("gap_age_ms", gapAgeMs.get())
             appendMetric("corrections_total", correctionsTotal.get())
             appendMetric("correction_pending_age", correctionPendingAgeMs.get())
+            appendMetric("reconciliation_lag_max", reconciliationLagMax.get())
+            appendMetric("reconciliation_breach_active", reconciliationBreachActive.get())
+            appendMetric("reconciliation_alert_total", reconciliationAlertTotal.get())
+            appendMetric("reconciliation_mismatch_total", reconciliationMismatchTotal.get())
+            appendMetric("reconciliation_safety_trigger_total", reconciliationSafetyTriggerTotal.get())
+            appendMetric("reconciliation_safety_failure_total", reconciliationSafetyFailureTotal.get())
         }
     }
 

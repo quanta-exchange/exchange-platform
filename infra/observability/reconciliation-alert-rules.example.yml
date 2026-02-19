@@ -1,0 +1,33 @@
+groups:
+  - name: ledger-reconciliation
+    rules:
+      - alert: LedgerReconciliationBreachActive
+        expr: reconciliation_breach_active > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ledger-service
+        annotations:
+          summary: "Ledger reconciliation breach is active"
+          description: "At least one symbol has lag above threshold or mismatch."
+
+      - alert: LedgerReconciliationSafetyTriggered
+        expr: increase(reconciliation_safety_trigger_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: ledger-service
+        annotations:
+          summary: "Safety mode auto-triggered by reconciliation"
+          description: "Ledger reconciliation triggered symbol safety mode in the last 5 minutes."
+
+      - alert: LedgerReconciliationSafetyApplyFailed
+        expr: increase(reconciliation_safety_failure_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          service: ledger-service
+        annotations:
+          summary: "Safety mode trigger attempt failed"
+          description: "Ledger reconciliation detected a breach but could not apply safety mode."
+

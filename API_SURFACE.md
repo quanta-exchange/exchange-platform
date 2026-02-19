@@ -231,6 +231,14 @@ Base: `/v1`
   - run invariant guard and return safety recommendation
 - `GET /admin/reconciliation/{symbol}`
   - return engine/settled coverage gap and recommendation
+- `GET /admin/reconciliation/status`
+  - return all symbol reconciliation statuses + recent reconciliation history
+- `POST /admin/consumers/settlement/pause`
+  - pause settlement Kafka listener without stopping reconciliation observer
+- `POST /admin/consumers/settlement/resume`
+  - resume settlement Kafka listener
+- `GET /admin/consumers/settlement/status`
+  - expose settlement listener running/pause state
 
 ### Corrections workflow
 - `POST /admin/corrections/requests`
