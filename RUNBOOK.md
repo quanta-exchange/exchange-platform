@@ -148,6 +148,29 @@ Gate G1 operational check:
 - Monthly:
   - DR exercise, access review (RBAC/MFA/JIT)
 
+### 4.1 Crash recovery drill
+Purpose:
+- verify Trading Core `kill -9` recovery from WAL is deterministic (`state_hash` continuity)
+- verify Ledger `kill -9` recovery resumes Kafka consumption without double-apply
+
+Command:
+- `./scripts/chaos_replay.sh`
+
+Drill flow:
+1) Start local stack (Postgres + Redpanda + Core + Edge + Ledger)
+2) Create orders to generate `TradeExecuted` events
+3) `kill -9` Trading Core, restart with same WAL/outbox
+4) Compare pre-crash WAL hash vs post-restart recovered hash
+5) Continue trading, then `kill -9` Ledger
+6) Produce trades while Ledger is down
+7) Restart Ledger with same consumer group and verify catch-up
+
+Success criteria:
+- output includes `chaos_replay_success=true`
+- `core_recovery_hash` matches pre-crash WAL hash
+- `ledger_duplicate_rows=0`
+- `ledger_trade_rows` equals generated trade count
+
 ---
 
 ## 5) Local smoke (Gate G0)

@@ -53,6 +53,19 @@ fn cancel_req(cmd: &str, idem: &str, user: &str, order_id: &str) -> proto::Cance
     }
 }
 
+fn set_mode_req(
+    cmd: &str,
+    idem: &str,
+    mode: proto::SymbolMode,
+    reason: &str,
+) -> proto::SetSymbolModeRequest {
+    proto::SetSymbolModeRequest {
+        meta: meta(cmd, idem, "admin", "BTC-KRW", &format!("corr-{cmd}")),
+        mode: mode as i32,
+        reason: reason.to_string(),
+    }
+}
+
 fn core_config(tmp: &TempDir) -> CoreConfig {
     CoreConfig {
         symbol: "BTC-KRW".to_string(),
@@ -664,6 +677,44 @@ fn deterministic_replay_same_hash_for_10_runs() {
     for w in hashes.windows(2) {
         assert_eq!(w[0], w[1]);
     }
+}
+
+#[test]
+fn recover_from_wal_keeps_seq_hash_and_mode() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    for i in 0..6 {
+        let _ = core
+            .place_order(place_req(
+                &format!("c{i}"),
+                &format!("idem-{i}"),
+                "u1",
+                &format!("o{i}"),
+                proto::Side::Buy,
+                proto::OrderType::Limit,
+                "100",
+                "1",
+            ))
+            .unwrap();
+    }
+    let _ = core
+        .set_symbol_mode(set_mode_req(
+            "mode-1",
+            "idem-mode-1",
+            proto::SymbolMode::CancelOnly,
+            "recovery-test",
+        ))
+        .unwrap();
+
+    let expected_seq = core.current_seq();
+    let expected_hash = core.last_state_hash().to_string();
+    let expected_mode = core.symbol_mode();
+
+    let recovered = make_engine(&tmp, FencingCoordinator::new());
+    assert_eq!(expected_seq, recovered.current_seq());
+    assert_eq!(expected_hash, recovered.last_state_hash());
+    assert_eq!(expected_mode, recovered.symbol_mode());
 }
 
 #[test]

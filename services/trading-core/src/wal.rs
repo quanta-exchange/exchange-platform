@@ -1,4 +1,4 @@
-use crate::model::CoreEvent;
+use crate::model::{CoreEvent, SymbolMode};
 use crc32fast::Hasher;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
@@ -26,6 +26,8 @@ pub struct WalRecord {
     pub symbol: String,
     pub events: Vec<CoreEvent>,
     pub state_hash: String,
+    #[serde(default)]
+    pub symbol_mode: Option<SymbolMode>,
     pub fencing_token: u64,
 }
 
@@ -208,6 +210,7 @@ mod tests {
                 state_hash: format!("hash-{seq}"),
             })],
             state_hash: format!("hash-{seq}"),
+            symbol_mode: Some(SymbolMode::Normal),
             fencing_token: 1,
         }
     }

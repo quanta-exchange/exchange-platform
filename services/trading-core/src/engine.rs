@@ -87,7 +87,7 @@ impl TradingCore {
         let outbox = Outbox::open(&cfg.outbox_dir)?;
         let leader_token = fencing.acquire();
 
-        Ok(Self {
+        let mut core = Self {
             cfg: cfg.clone(),
             seq: 0,
             symbol_mode: SymbolMode::Normal,
@@ -102,7 +102,9 @@ impl TradingCore {
             last_state_hash: String::new(),
             recent_events: Vec::new(),
             mode_transitions: Vec::new(),
-        })
+        };
+        core.recover_from_wal()?;
+        Ok(core)
     }
 
     pub fn set_balance(&mut self, user: &str, currency: &str, available: i128, hold: i128) {
@@ -181,6 +183,37 @@ impl TradingCore {
             }
             self.seq = record.seq.max(self.seq);
             self.last_state_hash = record.state_hash;
+            if let Some(mode) = record.symbol_mode {
+                self.symbol_mode = mode;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn recover_from_wal(&mut self) -> Result<(), EngineError> {
+        let records = self.wal.replay_all()?;
+        if records.is_empty() {
+            return Ok(());
+        }
+
+        self.seq = 0;
+        self.symbol_mode = SymbolMode::Normal;
+        self.ref_price = None;
+        self.order_book = OrderBook::default();
+        self.risk = RiskManager::new(self.cfg.risk.clone());
+        self.recent_events.clear();
+        self.mode_transitions.clear();
+        self.idempotency.clear();
+
+        for record in records {
+            for event in &record.events {
+                self.apply_replay_event(event);
+            }
+            self.seq = self.seq.max(record.seq);
+            self.last_state_hash = record.state_hash;
+            if let Some(mode) = record.symbol_mode {
+                self.symbol_mode = mode;
+            }
         }
         Ok(())
     }
@@ -619,6 +652,7 @@ impl TradingCore {
             symbol: self.cfg.symbol.clone(),
             events: events.clone(),
             state_hash: self.last_state_hash.clone(),
+            symbol_mode: Some(self.symbol_mode),
             fencing_token: self.leader_token,
         };
 
