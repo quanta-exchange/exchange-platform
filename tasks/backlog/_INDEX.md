@@ -1,5 +1,7 @@
 # tasks/backlog — Index
 
+- `G4_PLUS_OPERATION_TICKETS.md` — G4+ 운영 고도화 티켓 백로그 (현재 구현 반영)
+
 - `B-0002` — Protobuf contracts v1 + buf pipeline
 - `B-0101` — Trading Core: command/event contract integration
 - `B-0102` — Orderbook data structures v1 (correctness-first)
