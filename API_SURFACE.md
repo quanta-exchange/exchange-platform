@@ -135,11 +135,11 @@ Latest rolling 24h ticker snapshot
 ### Gap recovery
 - Client sends last seen seq:
 ```json
-{ "op": "RESUME", "symbol": "BTC-KRW", "lastSeq": 1234500 }
+{ "op": "RESUME", "channel": "trades", "symbol": "BTC-KRW", "lastSeq": 1234500 }
 ```
 - Server responses:
-  - if ok: continue deltas
-  - if gap: send `Snapshot` then deltas
+  - `trades`: if replay range available, stream missed events; if not, send `Snapshot`
+  - `book/candles/ticker`: send latest `Snapshot` (conflation channel)
 
 ### Backpressure policy (must implement)
 - per‑connection queue limit (e.g., 1–5MB)

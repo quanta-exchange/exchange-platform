@@ -2252,31 +2252,61 @@ func (s *Server) wsReader(c *client) {
 			}
 			c.removeSubscription(sub)
 		case "RESUME":
-			s.handleResume(c, cmd.Symbol, cmd.LastSeq)
+			sub, err := parseWSSubscription(cmd)
+			if err != nil {
+				s.sendToClient(c, WSMessage{
+					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": err.Error()},
+				}, false, "")
+				continue
+			}
+			c.upsertSubscription(sub)
+			s.handleResume(c, sub, cmd.LastSeq)
 		default:
 			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "unknown op"}}, false, "")
 		}
 	}
 }
 
-func (s *Server) handleResume(c *client, symbol string, lastSeq uint64) {
-	history := s.history(symbol)
+func (s *Server) handleResume(c *client, sub wsSubscription, lastSeq uint64) {
+	history := s.history(sub.symbol)
 	if len(history) == 0 {
-		s.sendSnapshot(c, defaultSubscription("trades", symbol))
-		s.sendSnapshot(c, defaultSubscription("candles", symbol))
+		s.sendSnapshot(c, sub)
 		return
 	}
 
-	oldest := history[0].Seq
-	if lastSeq+1 < oldest {
-		s.sendSnapshot(c, defaultSubscription("trades", symbol))
-		s.sendSnapshot(c, defaultSubscription("candles", symbol))
+	// For high-volume channels that use conflation semantics, snapshot is the recovery primitive.
+	if sub.channel == "book" || sub.channel == "candles" || sub.channel == "ticker" {
+		s.sendSnapshot(c, sub)
 		return
 	}
+
+	oldest := uint64(0)
+	found := false
 	for _, evt := range history {
-		if evt.Seq > lastSeq {
-			s.sendToClient(c, evt, conflatable(evt.Channel), conflationKeyForMessage(evt))
+		if evt.Channel != sub.channel || evt.Symbol != sub.symbol {
+			continue
 		}
+		oldest = evt.Seq
+		found = true
+		break
+	}
+	if !found || lastSeq+1 < oldest {
+		s.sendSnapshot(c, sub)
+		return
+	}
+
+	replayed := false
+	for _, evt := range history {
+		if evt.Channel != sub.channel || evt.Symbol != sub.symbol {
+			continue
+		}
+		if evt.Seq > lastSeq {
+			s.sendToClient(c, evt, conflatable(evt.Channel), sub.key())
+			replayed = true
+		}
+	}
+	if !replayed {
+		s.sendSnapshot(c, sub)
 	}
 }
 

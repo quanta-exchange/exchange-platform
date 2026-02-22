@@ -642,6 +642,75 @@ func TestParseWSSubscriptionIncludesChannelDimensions(t *testing.T) {
 	}
 }
 
+func TestHandleResumeReplaysTradesOnlyForTradeSubscription(t *testing.T) {
+	s := &Server{
+		state: &state{
+			historyBySymbol: map[string][]WSMessage{
+				"BTC-KRW": {
+					{Type: "TradeExecuted", Channel: "trades", Symbol: "BTC-KRW", Seq: 10, Ts: 1, Data: map[string]string{"tradeId": "t-10"}},
+					{Type: "CandleUpdated", Channel: "candles", Symbol: "BTC-KRW", Seq: 10, Ts: 1, Data: map[string]interface{}{"interval": "1m"}},
+					{Type: "TradeExecuted", Channel: "trades", Symbol: "BTC-KRW", Seq: 11, Ts: 2, Data: map[string]string{"tradeId": "t-11"}},
+				},
+			},
+		},
+	}
+	c := &client{
+		send:        make(chan []byte, 8),
+		conflated:   map[string][]byte{},
+		subscribers: map[string]wsSubscription{},
+	}
+
+	s.handleResume(c, wsSubscription{channel: "trades", symbol: "BTC-KRW"}, 9)
+	if got := len(c.send); got != 2 {
+		t.Fatalf("expected two replayed trade events, got %d", got)
+	}
+	for i := 0; i < 2; i++ {
+		raw := <-c.send
+		var msg WSMessage
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			t.Fatalf("decode replayed message: %v", err)
+		}
+		if msg.Channel != "trades" {
+			t.Fatalf("expected trades channel replay, got %s", msg.Channel)
+		}
+	}
+}
+
+func TestHandleResumeUsesSnapshotForConflatedChannels(t *testing.T) {
+	s := &Server{
+		state: &state{
+			historyBySymbol: map[string][]WSMessage{
+				"BTC-KRW": {
+					{Type: "CandleUpdated", Channel: "candles", Symbol: "BTC-KRW", Seq: 20, Ts: 1, Data: map[string]interface{}{"interval": "1m"}},
+				},
+			},
+			cacheMemory: map[string][]byte{},
+		},
+	}
+	c := &client{
+		send:        make(chan []byte, 8),
+		conflated:   map[string][]byte{},
+		subscribers: map[string]wsSubscription{},
+	}
+	sub := wsSubscription{channel: "candles", symbol: "BTC-KRW", interval: "1m"}
+	s.handleResume(c, sub, 19)
+
+	if got := len(c.send); got != 0 {
+		t.Fatalf("expected no direct queue replay for conflated channel, got %d", got)
+	}
+	payload, ok := c.conflated[sub.key()]
+	if !ok {
+		t.Fatalf("expected conflated snapshot payload for key %s", sub.key())
+	}
+	var msg WSMessage
+	if err := json.Unmarshal(payload, &msg); err != nil {
+		t.Fatalf("decode snapshot payload: %v", err)
+	}
+	if msg.Type != "Snapshot" || msg.Channel != "candles" {
+		t.Fatalf("unexpected snapshot payload: %+v", msg)
+	}
+}
+
 func TestSendToClientConflationDropsPreviousMessage(t *testing.T) {
 	s := &Server{state: &state{}}
 	c := &client{
