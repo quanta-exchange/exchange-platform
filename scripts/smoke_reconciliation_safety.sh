@@ -173,7 +173,9 @@ import json
 import os
 import sys
 payload = json.loads(os.environ["PAUSE_JSON"])
-if payload.get("gatePaused") is True:
+container_paused = payload.get("containerPaused") is True
+fallback_gate_paused = payload.get("available") is False and payload.get("gatePaused") is True
+if container_paused or fallback_gate_paused:
     sys.exit(0)
 sys.exit(1)
 PY
@@ -247,7 +249,9 @@ import json
 import os
 import sys
 payload = json.loads(os.environ["RESUME_JSON"])
-if payload.get("gatePaused") is False:
+gate_resumed = payload.get("gatePaused") is False
+container_resumed = payload.get("available") is False or payload.get("containerPaused") is False
+if gate_resumed and container_resumed:
     sys.exit(0)
 sys.exit(1)
 PY

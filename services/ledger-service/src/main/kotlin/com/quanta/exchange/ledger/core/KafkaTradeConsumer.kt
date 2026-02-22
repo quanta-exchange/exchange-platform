@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component
 @ConditionalOnProperty(prefix = "ledger.kafka", name = ["enabled"], havingValue = "true")
 class KafkaTradeConsumer(
     private val ledgerService: LedgerService,
-    private val settlementGate: SettlementConsumerGate,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val mapper: ObjectMapper = ObjectMapper()
@@ -31,14 +30,6 @@ class KafkaTradeConsumer(
     fun onMessage(payload: String) {
         try {
             val trade = mapper.readValue(payload, TradeExecutedDto::class.java)
-            if (settlementGate.isPaused()) {
-                log.warn(
-                    "service=ledger msg=settlement_consumer_paused_skip trade_id={} seq={}",
-                    trade.tradeId,
-                    trade.envelope.seq,
-                )
-                return
-            }
             val result = ledgerService.consumeTrade(trade.toModel())
             if (!result.applied) {
                 log.warn("service=ledger msg=consumer_not_applied reason={} entry_id={}", result.reason, result.entryId)

@@ -42,8 +42,11 @@ class KafkaConsumerControl(
     }
 
     fun pauseSettlement(): ConsumerControlStatus {
-        settlementGate.pause()
-        val container = registry.getListenerContainer(settlementListenerId) ?: return settlementStatus()
+        val container = registry.getListenerContainer(settlementListenerId) ?: run {
+            settlementGate.pause()
+            return settlementStatus()
+        }
+        settlementGate.resume()
         container.pause()
         val deadline = System.currentTimeMillis() + 5_000
         while (System.currentTimeMillis() < deadline) {
