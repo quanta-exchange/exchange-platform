@@ -30,6 +30,8 @@ scripts/
   smoke_g0.sh             # gate G0 local smoke
   smoke_g3.sh             # gate G3 ledger safety smoke
   smoke_reconciliation_safety.sh # reconciliation lag/safety auto-mode smoke
+  exactly_once_stress.sh  # duplicate trade injection (exactly-once effect proof)
+  chaos/                  # standardized crash drills (core/ledger/redpanda/full)
   smoke_e2e.sh            # minimal E2E: Edge -> Core -> Kafka -> Ledger
   smoke_match.sh          # Gate G1 real match smoke (BUY+SELL crossing)
   load_smoke.sh           # I-0105 load smoke harness
@@ -168,6 +170,20 @@ This script verifies:
 - ledger applies exactly once (`applied=true` only once)
 - all other submissions are blocked as duplicates
 - balances reflect a single settlement effect
+
+### 10) Chaos drills (standardized)
+```bash
+make chaos-full      # core+ledger kill/restart replay drill
+make chaos-core      # core-only kill/restart drill
+make chaos-ledger    # ledger-only kill/restart drill
+make chaos-redpanda  # broker bounce drill
+```
+`chaos-full` success output includes:
+- `chaos_replay_success=true`
+- `core_recovery_hash` continuity proof
+- `ledger_duplicate_rows=0`
+- `invariants_ok=true`  
+  - in stub-trade mode, `invariants_warning=negative_balances_present_under_stub_mode` can appear
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

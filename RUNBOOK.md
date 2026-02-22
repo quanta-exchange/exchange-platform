@@ -156,7 +156,10 @@ Purpose:
 - verify Ledger `kill -9` recovery resumes Kafka consumption without double-apply
 
 Command:
-- `./scripts/chaos_replay.sh`
+- Full drill: `./scripts/chaos_replay.sh`
+- Core only: `./scripts/chaos/core_kill_recover.sh`
+- Ledger only: `./scripts/chaos/ledger_kill_recover.sh`
+- Redpanda bounce: `./scripts/chaos/redpanda_broker_bounce.sh`
 
 Drill flow:
 1) Start local stack (Postgres + Redpanda + Core + Edge + Ledger)
@@ -172,6 +175,8 @@ Success criteria:
 - `core_recovery_hash` matches pre-crash WAL hash
 - `ledger_duplicate_rows=0`
 - `ledger_trade_rows` equals generated trade count
+- post-recovery invariant check returns `ok=true`
+  - stub trade mode에서는 `invariants_warning=negative_balances_present_under_stub_mode`가 함께 출력될 수 있음
 
 ---
 

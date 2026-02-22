@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke dr-rehearsal safety-case safety-case-upload exactly-once-stress
+.PHONY: doctor load-smoke dr-rehearsal safety-case safety-case-upload exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -17,3 +17,15 @@ safety-case-upload:
 
 exactly-once-stress:
 	./scripts/exactly_once_stress.sh
+
+chaos-full:
+	./scripts/chaos/full_replay.sh
+
+chaos-core:
+	./scripts/chaos/core_kill_recover.sh
+
+chaos-ledger:
+	./scripts/chaos/ledger_kill_recover.sh
+
+chaos-redpanda:
+	./scripts/chaos/redpanda_broker_bounce.sh

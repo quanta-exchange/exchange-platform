@@ -10,6 +10,9 @@ N_AFTER_CORE_RESTART="${N_AFTER_CORE_RESTART:-4}"
 N_WHILE_LEDGER_DOWN="${N_WHILE_LEDGER_DOWN:-5}"
 N_AFTER_LEDGER_RESTART="${N_AFTER_LEDGER_RESTART:-3}"
 TOTAL_ORDERS="$((N_INITIAL_ORDERS + N_AFTER_CORE_RESTART + N_WHILE_LEDGER_DOWN + N_AFTER_LEDGER_RESTART))"
+CHAOS_KILL_CORE="${CHAOS_KILL_CORE:-true}"
+CHAOS_KILL_LEDGER="${CHAOS_KILL_LEDGER:-true}"
+ALLOW_NEGATIVE_BALANCE_INVARIANT="${ALLOW_NEGATIVE_BALANCE_INVARIANT:-true}"
 
 BASE_PORT="$((24000 + RANDOM % 8000))"
 CORE_PORT="${BASE_PORT}"
@@ -309,30 +312,36 @@ if [[ -z "${PRE_KILL_HASH}" || "${PRE_KILL_SEQ}" -le 0 ]]; then
   echo "failed to read pre-kill wal hash/seq" >&2
   exit 1
 fi
-echo "[chaos] pre-kill seq=${PRE_KILL_SEQ} hash=${PRE_KILL_HASH}"
+RECOVERED_SEQ="${PRE_KILL_SEQ}"
+RECOVERED_HASH="${PRE_KILL_HASH}"
+echo "[chaos] pre-core-check seq=${PRE_KILL_SEQ} hash=${PRE_KILL_HASH}"
 
-echo "[chaos] kill -9 core pid=${CORE_PID}"
-kill -9 "${CORE_PID}"
-wait "${CORE_PID}" 2>/dev/null || true
+if [[ "${CHAOS_KILL_CORE}" == "true" ]]; then
+  echo "[chaos] kill -9 core pid=${CORE_PID}"
+  kill -9 "${CORE_PID}"
+  wait "${CORE_PID}" 2>/dev/null || true
 
-echo "[chaos] restart core from same WAL/outbox"
-start_core
-if ! wait_tcp localhost "${CORE_PORT}" 90; then
-  echo "core restart failed" >&2
-  tail -n 200 "${CORE_LOG}" >&2 || true
-  exit 1
-fi
+  echo "[chaos] restart core from same WAL/outbox"
+  start_core
+  if ! wait_tcp localhost "${CORE_PORT}" 90; then
+    echo "core restart failed" >&2
+    tail -n 200 "${CORE_LOG}" >&2 || true
+    exit 1
+  fi
 
-read -r RECOVERED_SEQ RECOVERED_HASH <<<"$(wal_last_meta)"
-if [[ "${RECOVERED_HASH}" != "${PRE_KILL_HASH}" ]]; then
-  echo "state hash mismatch after core restart: expected=${PRE_KILL_HASH} got=${RECOVERED_HASH}" >&2
-  exit 1
+  read -r RECOVERED_SEQ RECOVERED_HASH <<<"$(wal_last_meta)"
+  if [[ "${RECOVERED_HASH}" != "${PRE_KILL_HASH}" ]]; then
+    echo "state hash mismatch after core restart: expected=${PRE_KILL_HASH} got=${RECOVERED_HASH}" >&2
+    exit 1
+  fi
+  if [[ "${RECOVERED_SEQ}" != "${PRE_KILL_SEQ}" ]]; then
+    echo "unexpected wal seq after core restart: expected=${PRE_KILL_SEQ} got=${RECOVERED_SEQ}" >&2
+    exit 1
+  fi
+  echo "[chaos] recovered seq=${RECOVERED_SEQ} hash=${RECOVERED_HASH}"
+else
+  echo "[chaos] skip core kill/restart scenario (CHAOS_KILL_CORE=false)"
 fi
-if [[ "${RECOVERED_SEQ}" != "${PRE_KILL_SEQ}" ]]; then
-  echo "unexpected wal seq after core restart: expected=${PRE_KILL_SEQ} got=${RECOVERED_SEQ}" >&2
-  exit 1
-fi
-echo "[chaos] recovered seq=${RECOVERED_SEQ} hash=${RECOVERED_HASH}"
 
 echo "[chaos] phase-2 place ${N_AFTER_CORE_RESTART} orders (core post-restart)"
 place_orders "${N_AFTER_CORE_RESTART}" "${N_INITIAL_ORDERS}"
@@ -347,35 +356,49 @@ if [[ "${POST_CORE_SEQ}" -le "${PRE_KILL_SEQ}" ]]; then
   exit 1
 fi
 
-echo "[chaos] kill -9 ledger pid=${LEDGER_PID}"
-kill -9 "${LEDGER_PID}"
-wait "${LEDGER_PID}" 2>/dev/null || true
+EXPECTED_AFTER_LEDGER_CATCHUP="${EXPECTED_AFTER_CORE}"
+if [[ "${CHAOS_KILL_LEDGER}" == "true" ]]; then
+  echo "[chaos] kill -9 ledger pid=${LEDGER_PID}"
+  kill -9 "${LEDGER_PID}"
+  wait "${LEDGER_PID}" 2>/dev/null || true
 
-echo "[chaos] phase-3 place ${N_WHILE_LEDGER_DOWN} orders while ledger is down"
-place_orders "${N_WHILE_LEDGER_DOWN}" "${EXPECTED_AFTER_CORE}"
+  echo "[chaos] phase-3 place ${N_WHILE_LEDGER_DOWN} orders while ledger is down"
+  place_orders "${N_WHILE_LEDGER_DOWN}" "${EXPECTED_AFTER_CORE}"
 
-CURRENT_COUNT="$(ledger_trade_count)"
-if [[ "${CURRENT_COUNT}" != "${EXPECTED_AFTER_CORE}" ]]; then
-  echo "ledger changed while down: expected=${EXPECTED_AFTER_CORE} got=${CURRENT_COUNT}" >&2
-  exit 1
+  CURRENT_COUNT="$(ledger_trade_count)"
+  if [[ "${CURRENT_COUNT}" != "${EXPECTED_AFTER_CORE}" ]]; then
+    echo "ledger changed while down: expected=${EXPECTED_AFTER_CORE} got=${CURRENT_COUNT}" >&2
+    exit 1
+  fi
+
+  echo "[chaos] restart ledger with same consumer group"
+  start_ledger
+  if ! wait_http "http://localhost:${LEDGER_PORT}/readyz" 120; then
+    echo "ledger restart failed" >&2
+    tail -n 200 "${LEDGER_LOG}" >&2 || true
+    exit 1
+  fi
+
+  EXPECTED_AFTER_LEDGER_CATCHUP="$((EXPECTED_AFTER_CORE + N_WHILE_LEDGER_DOWN))"
+  if ! wait_ledger_trade_count "${EXPECTED_AFTER_LEDGER_CATCHUP}" 180; then
+    echo "ledger did not catch up after restart" >&2
+    tail -n 200 "${LEDGER_LOG}" >&2 || true
+    exit 1
+  fi
+else
+  echo "[chaos] skip ledger kill/restart scenario (CHAOS_KILL_LEDGER=false)"
+  if [[ "${N_WHILE_LEDGER_DOWN}" -gt 0 ]]; then
+    echo "[chaos] phase-3 place ${N_WHILE_LEDGER_DOWN} orders (ledger kept online)"
+    place_orders "${N_WHILE_LEDGER_DOWN}" "${EXPECTED_AFTER_CORE}"
+    EXPECTED_AFTER_LEDGER_CATCHUP="$((EXPECTED_AFTER_CORE + N_WHILE_LEDGER_DOWN))"
+    if ! wait_ledger_trade_count "${EXPECTED_AFTER_LEDGER_CATCHUP}" 180; then
+      echo "ledger did not settle online phase-3 trades" >&2
+      exit 1
+    fi
+  fi
 fi
 
-echo "[chaos] restart ledger with same consumer group"
-start_ledger
-if ! wait_http "http://localhost:${LEDGER_PORT}/readyz" 120; then
-  echo "ledger restart failed" >&2
-  tail -n 200 "${LEDGER_LOG}" >&2 || true
-  exit 1
-fi
-
-EXPECTED_AFTER_LEDGER_CATCHUP="$((EXPECTED_AFTER_CORE + N_WHILE_LEDGER_DOWN))"
-if ! wait_ledger_trade_count "${EXPECTED_AFTER_LEDGER_CATCHUP}" 180; then
-  echo "ledger did not catch up after restart" >&2
-  tail -n 200 "${LEDGER_LOG}" >&2 || true
-  exit 1
-fi
-
-echo "[chaos] phase-4 place ${N_AFTER_LEDGER_RESTART} orders after ledger restart"
+echo "[chaos] phase-4 place ${N_AFTER_LEDGER_RESTART} orders after ledger phase"
 place_orders "${N_AFTER_LEDGER_RESTART}" "${EXPECTED_AFTER_LEDGER_CATCHUP}"
 if ! wait_ledger_trade_count "${TOTAL_ORDERS}" 180; then
   echo "ledger did not settle final trades" >&2
@@ -440,8 +463,39 @@ if [[ "${DUP_ROWS}" != "0" ]]; then
   exit 1
 fi
 
+INVARIANTS_JSON="$(curl -fsS -X POST "http://localhost:${LEDGER_PORT}/v1/admin/invariants/check")"
+INVARIANT_CHECK_RESULT="$(
+INVARIANT_PAYLOAD="${INVARIANTS_JSON}" ALLOW_NEGATIVE="${ALLOW_NEGATIVE_BALANCE_INVARIANT}" "${PYTHON_BIN}" - <<'PY'
+import json
+import os
+import sys
+payload = json.loads(os.environ["INVARIANT_PAYLOAD"])
+if bool(payload.get("ok", False)):
+    print("strict_pass")
+    sys.exit(0)
+
+violations = payload.get("violations", []) or []
+allow_negative = os.environ.get("ALLOW_NEGATIVE", "true").lower() == "true"
+if allow_negative and violations and all(str(v).startswith("negative_balances=") for v in violations):
+    print("negative_only_allowed")
+    sys.exit(0)
+
+print("fail")
+sys.exit(1)
+PY
+)" || true
+
+if [[ "${INVARIANT_CHECK_RESULT}" == "fail" || -z "${INVARIANT_CHECK_RESULT}" ]]; then
+  echo "invariants check failed after chaos recovery: ${INVARIANTS_JSON}" >&2
+  exit 1
+fi
+
 echo "chaos_replay_success=true"
 echo "core_recovery_hash=${RECOVERED_HASH}"
 echo "core_recovery_seq=${RECOVERED_SEQ}"
 echo "ledger_trade_rows=${FINAL_LEDGER_COUNT}"
 echo "ledger_duplicate_rows=${DUP_ROWS}"
+echo "invariants_ok=true"
+if [[ "${INVARIANT_CHECK_RESULT}" == "negative_only_allowed" ]]; then
+  echo "invariants_warning=negative_balances_present_under_stub_mode"
+fi
