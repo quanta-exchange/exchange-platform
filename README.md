@@ -158,6 +158,17 @@ docker compose -f infra/compose/docker-compose.yml up -d
 ./scripts/smoke_match.sh
 ```
 
+### 9) Exactly-once stress (duplicate injection)
+```bash
+# default: 10,000 duplicate submissions, configurable up to 1,000,000+
+REPEATS=1000000 CONCURRENCY=64 ./scripts/exactly_once_stress.sh
+```
+This script verifies:
+- same `tradeId` is injected repeatedly
+- ledger applies exactly once (`applied=true` only once)
+- all other submissions are blocked as duplicates
+- balances reflect a single settlement effect
+
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
 - (b) Edge `POST /v1/orders` reaches Core `PlaceOrder`
