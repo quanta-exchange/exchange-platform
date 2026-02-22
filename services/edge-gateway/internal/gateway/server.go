@@ -39,7 +39,11 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const slowConsumerCloseCode = 4001
+const (
+	slowConsumerCloseCode = 4001
+	defaultBookDepth      = 20
+	defaultCandleInterval = "1m"
+)
 
 type contextKey string
 
@@ -54,6 +58,7 @@ type Config struct {
 	SeedMarketData     bool
 	SessionTTL         time.Duration
 	WSQueueSize        int
+	WSWriteDelay       time.Duration
 	APISecrets         map[string]string
 	TimestampSkew      time.Duration
 	ReplayTTL          time.Duration
@@ -182,11 +187,12 @@ type tradePoint struct {
 }
 
 type WSCommand struct {
-	Op      string `json:"op"`
-	Channel string `json:"channel"`
-	Symbol  string `json:"symbol"`
-	LastSeq uint64 `json:"lastSeq,omitempty"`
-	Depth   int    `json:"depth,omitempty"`
+	Op       string `json:"op"`
+	Channel  string `json:"channel"`
+	Symbol   string `json:"symbol"`
+	LastSeq  uint64 `json:"lastSeq,omitempty"`
+	Depth    int    `json:"depth,omitempty"`
+	Interval string `json:"interval,omitempty"`
 }
 
 type idempotencyRecord struct {
@@ -240,19 +246,109 @@ type state struct {
 	ordersTotal        uint64
 	tradesTotal        uint64
 	slowConsumerCloses uint64
+	wsDroppedMsgs      uint64
 	replayDetected     uint64
+}
+
+type wsSubscription struct {
+	channel  string
+	symbol   string
+	depth    int
+	interval string
+}
+
+func (s wsSubscription) key() string {
+	switch s.channel {
+	case "book":
+		return fmt.Sprintf("%s:%s:depth=%d", s.channel, s.symbol, s.depth)
+	case "candles":
+		return fmt.Sprintf("%s:%s:interval=%s", s.channel, s.symbol, s.interval)
+	default:
+		return s.channel + ":" + s.symbol
+	}
 }
 
 type client struct {
 	conn        *websocket.Conn
 	send        chan []byte
 	mu          sync.Mutex
+	closed      bool
+	closeOnce   sync.Once
 	conflated   map[string][]byte
-	subscribers map[string]struct{}
+	subscribers map[string]wsSubscription
 }
 
-func (c *client) subscribeKey(channel, symbol string) string {
-	return channel + ":" + symbol
+func (c *client) closeSend() {
+	c.closeOnce.Do(func() {
+		c.mu.Lock()
+		c.closed = true
+		c.mu.Unlock()
+		close(c.send)
+	})
+}
+
+func (c *client) enqueue(payload []byte) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return false
+	}
+	select {
+	case c.send <- payload:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c *client) queueLen() int {
+	return len(c.send)
+}
+
+func (c *client) setConflated(key string, payload []byte) (replaced bool, accepted bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return false, false
+	}
+	_, replaced = c.conflated[key]
+	c.conflated[key] = payload
+	return replaced, true
+}
+
+func (c *client) drainConflated() [][]byte {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	pending := make([][]byte, 0, len(c.conflated))
+	for key, payload := range c.conflated {
+		pending = append(pending, payload)
+		delete(c.conflated, key)
+	}
+	return pending
+}
+
+func (c *client) upsertSubscription(sub wsSubscription) {
+	c.mu.Lock()
+	c.subscribers[sub.key()] = sub
+	c.mu.Unlock()
+}
+
+func (c *client) removeSubscription(sub wsSubscription) {
+	c.mu.Lock()
+	delete(c.subscribers, sub.key())
+	c.mu.Unlock()
+}
+
+func (c *client) matchingSubscriptions(channel, symbol string) []wsSubscription {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]wsSubscription, 0, len(c.subscribers))
+	for _, sub := range c.subscribers {
+		if sub.channel == channel && sub.symbol == symbol {
+			out = append(out, sub)
+		}
+	}
+	return out
 }
 
 type Server struct {
@@ -280,6 +376,9 @@ func New(cfg Config) (*Server, error) {
 	}
 	if cfg.WSQueueSize <= 0 {
 		cfg.WSQueueSize = 128
+	}
+	if cfg.WSWriteDelay < 0 {
+		cfg.WSWriteDelay = 0
 	}
 	if cfg.TimestampSkew <= 0 {
 		cfg.TimestampSkew = 30 * time.Second
@@ -535,12 +634,18 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	trades := s.state.tradesTotal
 	clients := len(s.state.clients)
 	slowClose := s.state.slowConsumerCloses
+	droppedMsgs := s.state.wsDroppedMsgs
 	replayDetected := s.state.replayDetected
+	queueLens := make([]int, 0, len(s.state.clients))
+	for c := range s.state.clients {
+		queueLens = append(queueLens, c.queueLen())
+	}
 	authFail := uint64(0)
 	for _, c := range s.state.authFailReason {
 		authFail += c
 	}
 	s.state.mu.Unlock()
+	queueP99 := p99(queueLens)
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	_, _ = w.Write([]byte("edge_orders_total " + strconv.FormatUint(orders, 10) + "\n"))
@@ -549,6 +654,10 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_ws_close_slow_consumer_total " + strconv.FormatUint(slowClose, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_replay_detect_total " + strconv.FormatUint(replayDetected, 10) + "\n"))
+	_, _ = w.Write([]byte("ws_active_conns " + strconv.Itoa(clients) + "\n"))
+	_, _ = w.Write([]byte("ws_send_queue_p99 " + strconv.Itoa(queueP99) + "\n"))
+	_, _ = w.Write([]byte("ws_dropped_msgs " + strconv.FormatUint(droppedMsgs, 10) + "\n"))
+	_, _ = w.Write([]byte("ws_slow_closes " + strconv.FormatUint(slowClose, 10) + "\n"))
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -2051,7 +2160,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		conn:        conn,
 		send:        make(chan []byte, s.cfg.WSQueueSize),
 		conflated:   map[string][]byte{},
-		subscribers: map[string]struct{}{},
+		subscribers: map[string]wsSubscription{},
 	}
 
 	s.state.mu.Lock()
@@ -2067,11 +2176,23 @@ func (s *Server) wsWriter(c *client) {
 		s.state.mu.Lock()
 		delete(s.state.clients, c)
 		s.state.mu.Unlock()
+		c.closeSend()
 		_ = c.conn.Close()
 	}()
 
 	flushTicker := time.NewTicker(100 * time.Millisecond)
 	defer flushTicker.Stop()
+
+	writeJSON := func(payload []byte) error {
+		_ = c.conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+		if err := c.conn.WriteMessage(websocket.TextMessage, payload); err != nil {
+			return err
+		}
+		if s.cfg.WSWriteDelay > 0 {
+			time.Sleep(s.cfg.WSWriteDelay)
+		}
+		return nil
+	}
 
 	for {
 		select {
@@ -2079,19 +2200,13 @@ func (s *Server) wsWriter(c *client) {
 			if !ok {
 				return
 			}
-			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			if err := writeJSON(msg); err != nil {
 				return
 			}
 		case <-flushTicker.C:
-			var pending [][]byte
-			c.mu.Lock()
-			for key, payload := range c.conflated {
-				pending = append(pending, payload)
-				delete(c.conflated, key)
-			}
-			c.mu.Unlock()
+			pending := c.drainConflated()
 			for _, payload := range pending {
-				if err := c.conn.WriteMessage(websocket.TextMessage, payload); err != nil {
+				if err := writeJSON(payload); err != nil {
 					return
 				}
 			}
@@ -2101,7 +2216,7 @@ func (s *Server) wsWriter(c *client) {
 
 func (s *Server) wsReader(c *client) {
 	defer func() {
-		close(c.send)
+		c.closeSend()
 		_ = c.conn.Close()
 	}()
 
@@ -2112,28 +2227,34 @@ func (s *Server) wsReader(c *client) {
 		}
 		var cmd WSCommand
 		if err := json.Unmarshal(raw, &cmd); err != nil {
-			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "invalid command"}}, false)
+			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "invalid command"}}, false, "")
 			continue
 		}
 
 		switch strings.ToUpper(cmd.Op) {
 		case "SUB":
-			if cmd.Channel == "" || cmd.Symbol == "" {
-				s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "channel/symbol required"}}, false)
+			sub, err := parseWSSubscription(cmd)
+			if err != nil {
+				s.sendToClient(c, WSMessage{
+					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": err.Error()},
+				}, false, "")
 				continue
 			}
-			c.mu.Lock()
-			c.subscribers[c.subscribeKey(cmd.Channel, cmd.Symbol)] = struct{}{}
-			c.mu.Unlock()
-			s.sendSnapshot(c, cmd.Channel, cmd.Symbol)
+			c.upsertSubscription(sub)
+			s.sendSnapshot(c, sub)
 		case "UNSUB":
-			c.mu.Lock()
-			delete(c.subscribers, c.subscribeKey(cmd.Channel, cmd.Symbol))
-			c.mu.Unlock()
+			sub, err := parseWSSubscription(cmd)
+			if err != nil {
+				s.sendToClient(c, WSMessage{
+					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": err.Error()},
+				}, false, "")
+				continue
+			}
+			c.removeSubscription(sub)
 		case "RESUME":
 			s.handleResume(c, cmd.Symbol, cmd.LastSeq)
 		default:
-			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "unknown op"}}, false)
+			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "unknown op"}}, false, "")
 		}
 	}
 }
@@ -2141,38 +2262,57 @@ func (s *Server) wsReader(c *client) {
 func (s *Server) handleResume(c *client, symbol string, lastSeq uint64) {
 	history := s.history(symbol)
 	if len(history) == 0 {
-		s.sendSnapshot(c, "trades", symbol)
-		s.sendSnapshot(c, "candles", symbol)
+		s.sendSnapshot(c, defaultSubscription("trades", symbol))
+		s.sendSnapshot(c, defaultSubscription("candles", symbol))
 		return
 	}
 
 	oldest := history[0].Seq
 	if lastSeq+1 < oldest {
-		s.sendSnapshot(c, "trades", symbol)
-		s.sendSnapshot(c, "candles", symbol)
+		s.sendSnapshot(c, defaultSubscription("trades", symbol))
+		s.sendSnapshot(c, defaultSubscription("candles", symbol))
 		return
 	}
 	for _, evt := range history {
 		if evt.Seq > lastSeq {
-			s.sendToClient(c, evt, conflatable(evt.Channel))
+			s.sendToClient(c, evt, conflatable(evt.Channel), conflationKeyForMessage(evt))
 		}
 	}
 }
 
-func (s *Server) sendSnapshot(c *client, channel, symbol string) {
+func (s *Server) sendSnapshot(c *client, sub wsSubscription) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	key := cacheKey(channel, symbol)
+	key := cacheKey(sub.channel, sub.symbol)
 	if payload, ok := s.cacheGet(ctx, key); ok {
 		var msg WSMessage
 		if err := json.Unmarshal(payload, &msg); err == nil {
 			msg.Type = "Snapshot"
-			s.sendToClient(c, msg, conflatable(channel))
+			msg = applySubscriptionView(msg, sub)
+			s.sendToClient(c, msg, conflatable(sub.channel), sub.key())
 			return
 		}
 	}
 
-	s.sendToClient(c, WSMessage{Type: "Snapshot", Channel: channel, Symbol: symbol, Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]interface{}{}}, conflatable(channel))
+	snapshot := WSMessage{
+		Type:    "Snapshot",
+		Channel: sub.channel,
+		Symbol:  sub.symbol,
+		Seq:     0,
+		Ts:      time.Now().UnixMilli(),
+		Data:    map[string]interface{}{},
+	}
+	if sub.channel == "book" {
+		snapshot.Data = map[string]interface{}{
+			"depth": sub.depth,
+			"bids":  []interface{}{},
+			"asks":  []interface{}{},
+		}
+	}
+	if sub.channel == "candles" {
+		snapshot.Data = map[string]interface{}{"interval": sub.interval}
+	}
+	s.sendToClient(c, snapshot, conflatable(sub.channel), sub.key())
 }
 
 func (s *Server) broadcast(msg WSMessage) {
@@ -2184,38 +2324,168 @@ func (s *Server) broadcast(msg WSMessage) {
 	s.state.mu.Unlock()
 
 	for _, c := range clients {
-		key := c.subscribeKey(msg.Channel, msg.Symbol)
-		c.mu.Lock()
-		_, subscribed := c.subscribers[key]
-		c.mu.Unlock()
-		if !subscribed {
-			continue
+		for _, sub := range c.matchingSubscriptions(msg.Channel, msg.Symbol) {
+			view, ok := messageForSubscription(msg, sub)
+			if !ok {
+				continue
+			}
+			s.sendToClient(c, view, conflatable(msg.Channel), sub.key())
 		}
-		s.sendToClient(c, msg, conflatable(msg.Channel))
 	}
 }
 
-func (s *Server) sendToClient(c *client, msg WSMessage, conflatableMessage bool) {
+func (s *Server) sendToClient(c *client, msg WSMessage, conflatableMessage bool, conflationKey string) {
 	payload, _ := json.Marshal(msg)
 	if conflatableMessage {
-		c.mu.Lock()
-		c.conflated[c.subscribeKey(msg.Channel, msg.Symbol)] = payload
-		c.mu.Unlock()
+		if conflationKey == "" {
+			conflationKey = conflationKeyForMessage(msg)
+		}
+		replaced, accepted := c.setConflated(conflationKey, payload)
+		if accepted && replaced {
+			s.state.mu.Lock()
+			s.state.wsDroppedMsgs++
+			s.state.mu.Unlock()
+		}
 		return
 	}
 
-	select {
-	case c.send <- payload:
-	default:
+	if !c.enqueue(payload) {
 		s.state.mu.Lock()
 		s.state.slowConsumerCloses++
+		s.state.wsDroppedMsgs++
 		s.state.mu.Unlock()
-		_ = c.conn.WriteControl(websocket.CloseMessage,
-			websocket.FormatCloseMessage(slowConsumerCloseCode, "SLOW_CONSUMER"),
-			time.Now().Add(1*time.Second),
-		)
-		close(c.send)
+		if c.conn != nil {
+			_ = c.conn.WriteControl(websocket.CloseMessage,
+				websocket.FormatCloseMessage(slowConsumerCloseCode, "SLOW_CONSUMER"),
+				time.Now().Add(1*time.Second),
+			)
+		}
+		c.closeSend()
 	}
+}
+
+func parseWSSubscription(cmd WSCommand) (wsSubscription, error) {
+	channel := strings.ToLower(strings.TrimSpace(cmd.Channel))
+	symbol := strings.ToUpper(strings.TrimSpace(cmd.Symbol))
+	if channel == "" || symbol == "" {
+		return wsSubscription{}, fmt.Errorf("channel/symbol required")
+	}
+	if !supportedWSChannel(channel) {
+		return wsSubscription{}, fmt.Errorf("unsupported channel")
+	}
+
+	sub := wsSubscription{
+		channel: channel,
+		symbol:  symbol,
+	}
+	switch channel {
+	case "book":
+		sub.depth = parseLimit(strconv.Itoa(cmd.Depth), defaultBookDepth)
+	case "candles":
+		interval := strings.ToLower(strings.TrimSpace(cmd.Interval))
+		if interval == "" {
+			interval = defaultCandleInterval
+		}
+		sub.interval = interval
+	}
+	return sub, nil
+}
+
+func defaultSubscription(channel, symbol string) wsSubscription {
+	sub := wsSubscription{
+		channel: strings.ToLower(strings.TrimSpace(channel)),
+		symbol:  strings.ToUpper(strings.TrimSpace(symbol)),
+	}
+	if sub.channel == "book" {
+		sub.depth = defaultBookDepth
+	}
+	if sub.channel == "candles" {
+		sub.interval = defaultCandleInterval
+	}
+	return sub
+}
+
+func supportedWSChannel(channel string) bool {
+	return channel == "trades" || channel == "book" || channel == "candles" || channel == "ticker"
+}
+
+func applySubscriptionView(msg WSMessage, sub wsSubscription) WSMessage {
+	view, ok := messageForSubscription(msg, sub)
+	if !ok {
+		return msg
+	}
+	return view
+}
+
+func messageForSubscription(msg WSMessage, sub wsSubscription) (WSMessage, bool) {
+	if msg.Channel != sub.channel || msg.Symbol != sub.symbol {
+		return WSMessage{}, false
+	}
+
+	switch sub.channel {
+	case "book":
+		data, ok := msg.Data.(map[string]interface{})
+		if !ok {
+			return msg, true
+		}
+		cloned := map[string]interface{}{}
+		for k, v := range data {
+			cloned[k] = v
+		}
+		cloned["depth"] = sub.depth
+		cloned["bids"] = trimBookLevels(cloned["bids"], sub.depth)
+		cloned["asks"] = trimBookLevels(cloned["asks"], sub.depth)
+		msg.Data = cloned
+		return msg, true
+	case "candles":
+		eventInterval := candleInterval(msg)
+		if eventInterval != sub.interval {
+			return WSMessage{}, false
+		}
+		data, ok := msg.Data.(map[string]interface{})
+		if !ok {
+			return msg, true
+		}
+		cloned := map[string]interface{}{}
+		for k, v := range data {
+			cloned[k] = v
+		}
+		cloned["interval"] = sub.interval
+		msg.Data = cloned
+		return msg, true
+	default:
+		return msg, true
+	}
+}
+
+func candleInterval(msg WSMessage) string {
+	data, ok := msg.Data.(map[string]interface{})
+	if !ok {
+		return defaultCandleInterval
+	}
+	interval, ok := data["interval"].(string)
+	if !ok {
+		return defaultCandleInterval
+	}
+	interval = strings.ToLower(strings.TrimSpace(interval))
+	if interval == "" {
+		return defaultCandleInterval
+	}
+	return interval
+}
+
+func conflationKeyForMessage(msg WSMessage) string {
+	sub := defaultSubscription(msg.Channel, msg.Symbol)
+	if sub.channel == "book" {
+		data, ok := msg.Data.(map[string]interface{})
+		if ok {
+			sub.depth = parseLimit(fmt.Sprint(data["depth"]), defaultBookDepth)
+		}
+	}
+	if sub.channel == "candles" {
+		sub.interval = candleInterval(msg)
+	}
+	return sub.key()
 }
 
 func (s *Server) appendHistory(symbol string, msg WSMessage) {
@@ -2545,6 +2815,25 @@ func parseLimit(raw string, fallback int) int {
 		return 1_000
 	}
 	return n
+}
+
+func p99(values []int) int {
+	if len(values) == 0 {
+		return 0
+	}
+	sorted := make([]int, len(values))
+	copy(sorted, values)
+	sort.Ints(sorted)
+
+	rank := (99*len(sorted) + 100 - 1) / 100 // ceil(0.99*n)
+	if rank <= 0 {
+		rank = 1
+	}
+	idx := rank - 1
+	if idx >= len(sorted) {
+		idx = len(sorted) - 1
+	}
+	return sorted[idx]
 }
 
 func abs64(v int64) int64 {

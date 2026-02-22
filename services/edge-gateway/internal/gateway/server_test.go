@@ -607,3 +607,143 @@ func TestWebSocketUpgradeWithTraceMiddleware(t *testing.T) {
 		t.Fatalf("write subscribe frame: %v", err)
 	}
 }
+
+func TestParseWSSubscriptionIncludesChannelDimensions(t *testing.T) {
+	bookSub, err := parseWSSubscription(WSCommand{
+		Op:      "SUB",
+		Channel: "book",
+		Symbol:  "btc-krw",
+		Depth:   7,
+	})
+	if err != nil {
+		t.Fatalf("parse book subscription: %v", err)
+	}
+	if got, want := bookSub.key(), "book:BTC-KRW:depth=7"; got != want {
+		t.Fatalf("unexpected book key: got=%s want=%s", got, want)
+	}
+
+	candleSub, err := parseWSSubscription(WSCommand{
+		Op:       "SUB",
+		Channel:  "candles",
+		Symbol:   "btc-krw",
+		Interval: "5m",
+	})
+	if err != nil {
+		t.Fatalf("parse candle subscription: %v", err)
+	}
+	if got, want := candleSub.key(), "candles:BTC-KRW:interval=5m"; got != want {
+		t.Fatalf("unexpected candle key: got=%s want=%s", got, want)
+	}
+}
+
+func TestSendToClientConflationDropsPreviousMessage(t *testing.T) {
+	s := &Server{state: &state{}}
+	c := &client{
+		send:        make(chan []byte, 1),
+		conflated:   map[string][]byte{},
+		subscribers: map[string]wsSubscription{},
+	}
+	msg := WSMessage{
+		Type:    "OrderbookUpdated",
+		Channel: "book",
+		Symbol:  "BTC-KRW",
+		Seq:     1,
+		Ts:      time.Now().UnixMilli(),
+		Data: map[string]interface{}{
+			"depth": 20,
+			"bids":  []interface{}{},
+			"asks":  []interface{}{},
+		},
+	}
+
+	s.sendToClient(c, msg, true, "book:BTC-KRW:depth=20")
+	if got := s.state.wsDroppedMsgs; got != 0 {
+		t.Fatalf("unexpected dropped count after first conflation write: %d", got)
+	}
+	s.sendToClient(c, msg, true, "book:BTC-KRW:depth=20")
+	if got := s.state.wsDroppedMsgs; got != 1 {
+		t.Fatalf("expected one dropped message for same conflation key, got %d", got)
+	}
+
+	s.sendToClient(c, msg, true, "book:BTC-KRW:depth=10")
+	if got := len(c.conflated); got != 2 {
+		t.Fatalf("expected two conflated buckets (depth-aware), got %d", got)
+	}
+}
+
+func TestSendToClientQueueOverflowMarksSlowConsumer(t *testing.T) {
+	s := &Server{state: &state{}}
+	c := &client{
+		send:        make(chan []byte, 1),
+		conflated:   map[string][]byte{},
+		subscribers: map[string]wsSubscription{},
+	}
+	c.send <- []byte(`{"type":"seed"}`)
+
+	s.sendToClient(c, WSMessage{
+		Type:    "TradeExecuted",
+		Channel: "trades",
+		Symbol:  "BTC-KRW",
+		Seq:     1,
+		Ts:      time.Now().UnixMilli(),
+		Data:    map[string]string{"tradeId": "t-1"},
+	}, false, "")
+
+	if got := s.state.slowConsumerCloses; got != 1 {
+		t.Fatalf("expected one slow-consumer close, got %d", got)
+	}
+	if got := s.state.wsDroppedMsgs; got != 1 {
+		t.Fatalf("expected one dropped trade on overflow, got %d", got)
+	}
+
+	_, ok := <-c.send
+	if !ok {
+		t.Fatalf("expected buffered message before close")
+	}
+	_, ok = <-c.send
+	if ok {
+		t.Fatalf("expected closed queue after overflow")
+	}
+}
+
+func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
+	c1 := &client{send: make(chan []byte, 8)}
+	c2 := &client{send: make(chan []byte, 8)}
+	c3 := &client{send: make(chan []byte, 8)}
+	c2.send <- []byte("a")
+	c2.send <- []byte("b")
+	c3.send <- []byte("1")
+	c3.send <- []byte("2")
+	c3.send <- []byte("3")
+	c3.send <- []byte("4")
+
+	s := &Server{
+		state: &state{
+			clients: map[*client]struct{}{
+				c1: {},
+				c2: {},
+				c3: {},
+			},
+			slowConsumerCloses: 2,
+			wsDroppedMsgs:      7,
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	w := httptest.NewRecorder()
+	s.handleMetrics(w, req)
+	body := w.Body.String()
+
+	assertMetric := func(name, value string) {
+		t.Helper()
+		line := name + " " + value
+		if !strings.Contains(body, line+"\n") {
+			t.Fatalf("missing metric line %q in body=%q", line, body)
+		}
+	}
+
+	assertMetric("ws_active_conns", "3")
+	assertMetric("ws_send_queue_p99", "4")
+	assertMetric("ws_dropped_msgs", "7")
+	assertMetric("ws_slow_closes", "2")
+}

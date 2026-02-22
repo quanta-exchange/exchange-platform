@@ -15,6 +15,7 @@ func main() {
 		Addr:           getenv("EDGE_ADDR", ":8080"),
 		DBDsn:          getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
 		WSQueueSize:    getenvInt("EDGE_WS_QUEUE_SIZE", 128),
+		WSWriteDelay:   time.Duration(getenvInt("EDGE_WS_WRITE_DELAY_MS", 0)) * time.Millisecond,
 		DisableDB:      getenv("EDGE_DISABLE_DB", "false") == "true",
 		DisableCore:    getenv("EDGE_DISABLE_CORE", "false") == "true",
 		SeedMarketData: getenv("EDGE_SEED_MARKET_DATA", "true") == "true",
