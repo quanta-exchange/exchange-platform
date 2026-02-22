@@ -49,6 +49,8 @@
 **Recovery**
 - If safe: replay settlement from last good offset using idempotency keys
 - If corruption: stop trading, rebuild balances from ledger, apply correction entries
+- reconciliation safety latch is manual-release only:
+  - `POST /v1/admin/reconciliation/latch/{symbol}/release` (requires operator approval reason)
 - Postmortem required
 
 ---

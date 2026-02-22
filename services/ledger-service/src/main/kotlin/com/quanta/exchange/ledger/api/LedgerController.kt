@@ -51,6 +51,8 @@ class LedgerController(
     private val lagThreshold: Long,
     @Value("\${ledger.reconciliation.safety-mode:CANCEL_ONLY}")
     private val safetyMode: String,
+    @Value("\${ledger.reconciliation.safety-latch-enabled:true}")
+    private val safetyLatchEnabled: Boolean,
 ) {
     @PostMapping("/internal/trades/executed")
     fun tradeExecuted(@RequestBody req: TradeExecutedDto): Map<String, Any> {
@@ -145,8 +147,34 @@ class LedgerController(
             "checkedAt" to dashboard.checkedAt,
             "lagThreshold" to lagThreshold,
             "safetyMode" to safetyMode,
+            "safetyLatchEnabled" to safetyLatchEnabled,
             "statuses" to dashboard.statuses,
             "history" to dashboard.history,
+        )
+    }
+
+    @PostMapping("/admin/reconciliation/latch/{symbol}/release")
+    fun releaseReconciliationLatch(
+        @PathVariable symbol: String,
+        @RequestBody req: ReconciliationLatchReleaseDto,
+    ): Map<String, Any?> {
+        val result = ledgerService.releaseReconciliationLatch(
+            symbol = symbol,
+            lagThreshold = lagThreshold,
+            approvedBy = req.approvedBy,
+            reason = req.reason,
+            restoreSymbolMode = req.restoreSymbolMode,
+        )
+        return mapOf(
+            "symbol" to result.symbol,
+            "released" to result.released,
+            "modeRestored" to result.modeRestored,
+            "reason" to result.reason,
+            "lag" to result.lag,
+            "mismatch" to result.mismatch,
+            "thresholdBreached" to result.thresholdBreached,
+            "releasedAt" to result.releasedAt,
+            "releasedBy" to result.releasedBy,
         )
     }
 

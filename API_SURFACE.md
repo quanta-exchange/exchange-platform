@@ -233,6 +233,8 @@ Base: `/v1`
   - return engine/settled coverage gap and recommendation
 - `GET /admin/reconciliation/status`
   - return all symbol reconciliation statuses + recent reconciliation history
+- `POST /admin/reconciliation/latch/{symbol}/release`
+  - manually release reconciliation safety latch after recovery (`lag==0`, invariants pass)
 - `POST /admin/consumers/settlement/pause`
   - pause settlement Kafka listener without stopping reconciliation observer
 - `POST /admin/consumers/settlement/resume`

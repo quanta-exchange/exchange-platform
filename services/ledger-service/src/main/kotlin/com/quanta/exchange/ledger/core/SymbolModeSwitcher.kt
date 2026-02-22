@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit
 
 interface SymbolModeSwitcher {
     fun setSymbolMode(symbol: String, mode: SafetyMode, reason: String): Boolean
+    fun restoreSymbolMode(symbol: String, reason: String): Boolean
 }
 
 @Component
@@ -32,6 +33,14 @@ class GrpcSymbolModeSwitcher(
     private val stub = TradingCoreServiceGrpc.newBlockingStub(channel)
 
     override fun setSymbolMode(symbol: String, mode: SafetyMode, reason: String): Boolean {
+        return applySymbolMode(symbol, toProtoMode(mode), reason)
+    }
+
+    override fun restoreSymbolMode(symbol: String, reason: String): Boolean {
+        return applySymbolMode(symbol, SymbolMode.SYMBOL_MODE_NORMAL, reason)
+    }
+
+    private fun applySymbolMode(symbol: String, mode: SymbolMode, reason: String): Boolean {
         val now = Instant.now()
         val commandId = "recon-${symbol}-${now.toEpochMilli()}-${UUID.randomUUID()}"
         val metadata = CommandMetadata.newBuilder()
@@ -45,7 +54,7 @@ class GrpcSymbolModeSwitcher(
             .build()
         val req = SetSymbolModeRequest.newBuilder()
             .setMeta(metadata)
-            .setMode(toProtoMode(mode))
+            .setMode(mode)
             .setReason(reason)
             .build()
 
@@ -80,6 +89,7 @@ class GrpcSymbolModeSwitcher(
 
     private fun toProtoMode(mode: SafetyMode): SymbolMode {
         return when (mode) {
+            SafetyMode.NORMAL -> SymbolMode.SYMBOL_MODE_NORMAL
             SafetyMode.CANCEL_ONLY -> SymbolMode.SYMBOL_MODE_CANCEL_ONLY
             SafetyMode.SOFT_HALT -> SymbolMode.SYMBOL_MODE_SOFT_HALT
             SafetyMode.HARD_HALT -> SymbolMode.SYMBOL_MODE_HARD_HALT
@@ -100,5 +110,8 @@ class NoopSymbolModeSwitcher : SymbolModeSwitcher {
     override fun setSymbolMode(symbol: String, mode: SafetyMode, reason: String): Boolean {
         return false
     }
-}
 
+    override fun restoreSymbolMode(symbol: String, reason: String): Boolean {
+        return false
+    }
+}

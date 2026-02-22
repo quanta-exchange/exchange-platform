@@ -114,3 +114,9 @@ data class ApproveCorrectionDto(
 data class ApplyCorrectionDto(
     val envelope: EventEnvelopeDto,
 )
+
+data class ReconciliationLatchReleaseDto(
+    val approvedBy: String,
+    val reason: String,
+    val restoreSymbolMode: Boolean = true,
+)

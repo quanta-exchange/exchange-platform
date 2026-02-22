@@ -244,7 +244,9 @@ class LedgerRepository(
         val rows = jdbc.query(
             """
             SELECT symbol, breach_active, last_lag, last_mismatch, safety_mode,
-                   last_action_taken, reason, updated_at, last_action_at
+                   last_action_taken, reason, latch_engaged, latch_reason,
+                   latch_updated_at, latch_released_at, latch_released_by,
+                   updated_at, last_action_at
             FROM reconciliation_safety_state
             WHERE symbol = ?
             """.trimIndent(),
@@ -258,7 +260,9 @@ class LedgerRepository(
         val rows = jdbc.query(
             """
             SELECT symbol, breach_active, last_lag, last_mismatch, safety_mode,
-                   last_action_taken, reason, updated_at, last_action_at
+                   last_action_taken, reason, latch_engaged, latch_reason,
+                   latch_updated_at, latch_released_at, latch_released_by,
+                   updated_at, last_action_at
             FROM reconciliation_safety_state
             """.trimIndent(),
             { rs, _ -> toSafetyState(rs) },
@@ -276,94 +280,72 @@ class LedgerRepository(
         reason: String?,
         updatedAt: Instant,
         lastActionAt: Instant?,
+        latchEngaged: Boolean,
+        latchReason: String?,
+        latchUpdatedAt: Instant?,
+        latchReleasedAt: Instant?,
+        latchReleasedBy: String?,
     ) {
-        val updated = if (lastActionAt == null) {
-            jdbc.update(
-                """
-                UPDATE reconciliation_safety_state
-                SET breach_active = ?,
-                    last_lag = ?,
-                    last_mismatch = ?,
-                    safety_mode = ?,
-                    last_action_taken = ?,
-                    reason = ?,
-                    updated_at = ?
-                WHERE symbol = ?
-                """.trimIndent(),
-                breachActive,
-                lag,
-                mismatch,
-                safetyMode,
-                actionTaken,
-                reason,
-                java.sql.Timestamp.from(updatedAt),
-                symbol,
-            )
-        } else {
-            jdbc.update(
-                """
-                UPDATE reconciliation_safety_state
-                SET breach_active = ?,
-                    last_lag = ?,
-                    last_mismatch = ?,
-                    safety_mode = ?,
-                    last_action_taken = ?,
-                    reason = ?,
-                    updated_at = ?,
-                    last_action_at = ?
-                WHERE symbol = ?
-                """.trimIndent(),
-                breachActive,
-                lag,
-                mismatch,
-                safetyMode,
-                actionTaken,
-                reason,
-                java.sql.Timestamp.from(updatedAt),
-                java.sql.Timestamp.from(lastActionAt),
-                symbol,
-            )
-        }
+        val updated = jdbc.update(
+            """
+            UPDATE reconciliation_safety_state
+            SET breach_active = ?,
+                last_lag = ?,
+                last_mismatch = ?,
+                safety_mode = ?,
+                last_action_taken = ?,
+                reason = ?,
+                updated_at = ?,
+                last_action_at = ?,
+                latch_engaged = ?,
+                latch_reason = ?,
+                latch_updated_at = ?,
+                latch_released_at = ?,
+                latch_released_by = ?
+            WHERE symbol = ?
+            """.trimIndent(),
+            breachActive,
+            lag,
+            mismatch,
+            safetyMode,
+            actionTaken,
+            reason,
+            java.sql.Timestamp.from(updatedAt),
+            lastActionAt?.let { java.sql.Timestamp.from(it) },
+            latchEngaged,
+            latchReason,
+            latchUpdatedAt?.let { java.sql.Timestamp.from(it) },
+            latchReleasedAt?.let { java.sql.Timestamp.from(it) },
+            latchReleasedBy,
+            symbol,
+        )
         if (updated > 0) {
             return
         }
         try {
-            if (lastActionAt == null) {
-                jdbc.update(
-                    """
-                    INSERT INTO reconciliation_safety_state(
-                        symbol, breach_active, last_lag, last_mismatch, safety_mode,
-                        last_action_taken, reason, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """.trimIndent(),
-                    symbol,
-                    breachActive,
-                    lag,
-                    mismatch,
-                    safetyMode,
-                    actionTaken,
-                    reason,
-                    java.sql.Timestamp.from(updatedAt),
-                )
-            } else {
-                jdbc.update(
-                    """
-                    INSERT INTO reconciliation_safety_state(
-                        symbol, breach_active, last_lag, last_mismatch, safety_mode,
-                        last_action_taken, reason, updated_at, last_action_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """.trimIndent(),
-                    symbol,
-                    breachActive,
-                    lag,
-                    mismatch,
-                    safetyMode,
-                    actionTaken,
-                    reason,
-                    java.sql.Timestamp.from(updatedAt),
-                    java.sql.Timestamp.from(lastActionAt),
-                )
-            }
+            jdbc.update(
+                """
+                INSERT INTO reconciliation_safety_state(
+                    symbol, breach_active, last_lag, last_mismatch, safety_mode,
+                    last_action_taken, reason, updated_at, last_action_at,
+                    latch_engaged, latch_reason, latch_updated_at, latch_released_at, latch_released_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                symbol,
+                breachActive,
+                lag,
+                mismatch,
+                safetyMode,
+                actionTaken,
+                reason,
+                java.sql.Timestamp.from(updatedAt),
+                lastActionAt?.let { java.sql.Timestamp.from(it) },
+                latchEngaged,
+                latchReason,
+                latchUpdatedAt?.let { java.sql.Timestamp.from(it) },
+                latchReleasedAt?.let { java.sql.Timestamp.from(it) },
+                latchReleasedBy,
+            )
         } catch (ex: DataIntegrityViolationException) {
             if (isUniqueViolation(ex)) {
                 upsertReconciliationSafetyState(
@@ -376,11 +358,53 @@ class LedgerRepository(
                     reason = reason,
                     updatedAt = updatedAt,
                     lastActionAt = lastActionAt,
+                    latchEngaged = latchEngaged,
+                    latchReason = latchReason,
+                    latchUpdatedAt = latchUpdatedAt,
+                    latchReleasedAt = latchReleasedAt,
+                    latchReleasedBy = latchReleasedBy,
                 )
             } else {
                 throw ex
             }
         }
+    }
+
+    fun releaseReconciliationLatch(
+        symbol: String,
+        lag: Long,
+        mismatch: Boolean,
+        safetyMode: String?,
+        releaseReason: String,
+        releasedBy: String,
+        releasedAt: Instant,
+    ): Boolean {
+        val updated = jdbc.update(
+            """
+            UPDATE reconciliation_safety_state
+            SET breach_active = FALSE,
+                last_lag = ?,
+                last_mismatch = ?,
+                safety_mode = ?,
+                last_action_taken = FALSE,
+                reason = ?,
+                updated_at = ?,
+                latch_engaged = FALSE,
+                latch_reason = NULL,
+                latch_released_at = ?,
+                latch_released_by = ?
+            WHERE symbol = ? AND latch_engaged = TRUE
+            """.trimIndent(),
+            lag,
+            mismatch,
+            safetyMode,
+            releaseReason,
+            java.sql.Timestamp.from(releasedAt),
+            java.sql.Timestamp.from(releasedAt),
+            releasedBy,
+            symbol,
+        )
+        return updated > 0
     }
 
     fun invariantCheck(): InvariantCheckResult {
@@ -630,6 +654,11 @@ class LedgerRepository(
             safetyMode = rs.getString("safety_mode"),
             lastActionTaken = rs.getBoolean("last_action_taken"),
             reason = rs.getString("reason"),
+            latchEngaged = rs.getBoolean("latch_engaged"),
+            latchReason = rs.getString("latch_reason"),
+            latchUpdatedAt = rs.getTimestamp("latch_updated_at")?.toInstant(),
+            latchReleasedAt = rs.getTimestamp("latch_released_at")?.toInstant(),
+            latchReleasedBy = rs.getString("latch_released_by"),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
             lastActionAt = rs.getTimestamp("last_action_at")?.toInstant(),
         )

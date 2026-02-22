@@ -100,6 +100,7 @@ data class TradeLookup(
 )
 
 enum class SafetyMode {
+    NORMAL,
     CANCEL_ONLY,
     SOFT_HALT,
     HARD_HALT,
@@ -108,6 +109,7 @@ enum class SafetyMode {
     companion object {
         fun parse(value: String): SafetyMode {
             return when (value.trim().uppercase()) {
+                "NORMAL" -> NORMAL
                 "CANCEL_ONLY" -> CANCEL_ONLY
                 "SOFT_HALT" -> SOFT_HALT
                 "HARD_HALT", "HALT" -> HARD_HALT
@@ -154,6 +156,11 @@ data class ReconciliationSafetyState(
     val safetyMode: String?,
     val lastActionTaken: Boolean,
     val reason: String?,
+    val latchEngaged: Boolean,
+    val latchReason: String?,
+    val latchUpdatedAt: Instant?,
+    val latchReleasedAt: Instant?,
+    val latchReleasedBy: String?,
     val updatedAt: Instant,
     val lastActionAt: Instant?,
 )
@@ -169,6 +176,11 @@ data class ReconciliationStatusView(
     val breachActive: Boolean,
     val safetyMode: String?,
     val lastActionAt: Instant?,
+    val latchEngaged: Boolean,
+    val latchReason: String?,
+    val latchUpdatedAt: Instant?,
+    val latchReleasedAt: Instant?,
+    val latchReleasedBy: String?,
     val updatedAt: Instant?,
 )
 
@@ -181,4 +193,16 @@ data class ReconciliationDashboard(
     val checkedAt: Instant,
     val statuses: List<ReconciliationStatusView>,
     val history: List<ReconciliationHistoryPoint>,
+)
+
+data class ReconciliationLatchReleaseResult(
+    val symbol: String,
+    val released: Boolean,
+    val modeRestored: Boolean,
+    val reason: String,
+    val lag: Long,
+    val mismatch: Boolean,
+    val thresholdBreached: Boolean,
+    val releasedAt: Instant?,
+    val releasedBy: String?,
 )

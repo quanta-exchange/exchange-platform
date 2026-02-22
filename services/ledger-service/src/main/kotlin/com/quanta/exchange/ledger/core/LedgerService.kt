@@ -168,6 +168,7 @@ class LedgerService(
         lagThreshold: Long,
         safetyMode: SafetyMode,
         autoSwitchEnabled: Boolean,
+        safetyLatchEnabled: Boolean,
     ): ReconciliationRunSummary {
         val checkedAt = Instant.now()
         val statuses = repo.reconciliationAll()
@@ -182,11 +183,24 @@ class LedgerService(
             val thresholdBreached = lag > lagThreshold
             val breached = mismatch || thresholdBreached
             val reason = reconciliationReason(mismatch, thresholdBreached)
+            val prev = existingSafety[status.symbol]
+            val latchEngaged = if (safetyLatchEnabled) (prev?.latchEngaged == true || breached) else false
+            val effectiveBreachActive = if (latchEngaged) true else breached
+            val effectiveReason = if (!breached && latchEngaged) "MANUAL_RELEASE_REQUIRED" else reason
+            val latchUpdatedAt = when {
+                !latchEngaged -> null
+                prev?.latchEngaged == true && !breached -> prev.latchUpdatedAt ?: checkedAt
+                else -> checkedAt
+            }
+            val latchReason = when {
+                !latchEngaged -> null
+                breached -> reason
+                else -> prev?.latchReason ?: "MANUAL_RELEASE_REQUIRED"
+            }
             if (mismatch) {
                 metrics.incrementReconciliationMismatch()
             }
 
-            val prev = existingSafety[status.symbol]
             val shouldTrigger = breached && (prev == null || !prev.breachActive)
             var safetyActionTaken = false
             var actionAt: Instant? = prev?.lastActionAt
@@ -204,7 +218,7 @@ class LedgerService(
                 }
             }
 
-            if (breached) {
+            if (effectiveBreachActive) {
                 activeBreaches += 1
             }
             if (lag > maxLag) {
@@ -219,7 +233,7 @@ class LedgerService(
                 mismatch = mismatch,
                 threshold = lagThreshold,
                 breached = breached,
-                reason = reason,
+                reason = effectiveReason,
                 safetyMode = safetyMode,
                 safetyActionTaken = safetyActionTaken,
                 checkedAt = checkedAt,
@@ -227,14 +241,19 @@ class LedgerService(
             repo.recordReconciliationHistory(evaluation)
             repo.upsertReconciliationSafetyState(
                 symbol = status.symbol,
-                breachActive = breached,
+                breachActive = effectiveBreachActive,
                 lag = lag,
                 mismatch = mismatch,
                 safetyMode = if (breached) safetyMode.name else prev?.safetyMode,
                 actionTaken = safetyActionTaken,
-                reason = reason,
+                reason = effectiveReason,
                 updatedAt = checkedAt,
                 lastActionAt = actionAt,
+                latchEngaged = latchEngaged,
+                latchReason = latchReason,
+                latchUpdatedAt = latchUpdatedAt,
+                latchReleasedAt = if (latchEngaged) null else prev?.latchReleasedAt,
+                latchReleasedBy = if (latchEngaged) null else prev?.latchReleasedBy,
             )
             evaluations += evaluation
         }
@@ -263,6 +282,11 @@ class LedgerService(
                 breachActive = safety?.breachActive ?: false,
                 safetyMode = safety?.safetyMode,
                 lastActionAt = safety?.lastActionAt,
+                latchEngaged = safety?.latchEngaged ?: false,
+                latchReason = safety?.latchReason,
+                latchUpdatedAt = safety?.latchUpdatedAt,
+                latchReleasedAt = safety?.latchReleasedAt,
+                latchReleasedBy = safety?.latchReleasedBy,
                 updatedAt = status.updatedAt,
             )
         }
@@ -271,6 +295,137 @@ class LedgerService(
             checkedAt = now,
             statuses = views,
             history = history,
+        )
+    }
+
+    fun releaseReconciliationLatch(
+        symbol: String,
+        lagThreshold: Long,
+        approvedBy: String,
+        reason: String,
+        restoreSymbolMode: Boolean,
+    ): ReconciliationLatchReleaseResult {
+        val safeSymbol = symbol.trim().uppercase()
+        val status = repo.reconciliation(safeSymbol)
+        val lag = status.lastEngineSeq - status.lastSettledSeq
+        val mismatch = lag < 0
+        val thresholdBreached = lag > lagThreshold
+        if (mismatch || thresholdBreached) {
+            return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = false,
+                reason = "still_breached",
+                lag = lag,
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                releasedAt = null,
+                releasedBy = null,
+            )
+        }
+
+        val safety = repo.reconciliationSafetyState(safeSymbol)
+            ?: return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = false,
+                reason = "safety_state_not_found",
+                lag = lag,
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                releasedAt = null,
+                releasedBy = null,
+            )
+        if (!safety.latchEngaged) {
+            return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = false,
+                reason = "latch_not_engaged",
+                lag = lag,
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                releasedAt = null,
+                releasedBy = null,
+            )
+        }
+
+        val releasedAt = Instant.now()
+        val modeRestored = if (restoreSymbolMode) {
+            symbolModeSwitcher.restoreSymbolMode(safeSymbol, "reconciliation_latch_release:$reason")
+        } else {
+            false
+        }
+        if (restoreSymbolMode && !modeRestored) {
+            return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = false,
+                reason = "mode_restore_failed",
+                lag = lag,
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                releasedAt = null,
+                releasedBy = null,
+            )
+        }
+
+        val nextMode = if (restoreSymbolMode) "NORMAL" else safety.safetyMode
+        val releaseReason = "manual_latch_release:$reason"
+        val released = repo.releaseReconciliationLatch(
+            symbol = safeSymbol,
+            lag = lag,
+            mismatch = mismatch,
+            safetyMode = nextMode,
+            releaseReason = releaseReason,
+            releasedBy = approvedBy,
+            releasedAt = releasedAt,
+        )
+        if (!released) {
+            return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = modeRestored,
+                reason = "release_not_applied",
+                lag = lag,
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                releasedAt = null,
+                releasedBy = null,
+            )
+        }
+
+        repo.recordReconciliationHistory(
+            ReconciliationEvaluation(
+                symbol = safeSymbol,
+                lastEngineSeq = status.lastEngineSeq,
+                lastSettledSeq = status.lastSettledSeq,
+                lag = lag,
+                mismatch = mismatch,
+                threshold = lagThreshold,
+                breached = false,
+                reason = releaseReason,
+                safetyMode = SafetyMode.parse(nextMode ?: "CANCEL_ONLY"),
+                safetyActionTaken = modeRestored,
+                checkedAt = releasedAt,
+            ),
+        )
+        val refreshedStatuses = repo.reconciliationAll()
+        val refreshedSafety = repo.reconciliationSafetyStates()
+        val maxLag = refreshedStatuses.maxOfOrNull { it.gap.coerceAtLeast(0) } ?: 0L
+        val activeBreaches = refreshedSafety.values.count { it.breachActive }.toLong()
+        metrics.setReconciliationSummary(maxLag = maxLag, activeBreaches = activeBreaches)
+
+        return ReconciliationLatchReleaseResult(
+            symbol = safeSymbol,
+            released = true,
+            modeRestored = modeRestored,
+            reason = releaseReason,
+            lag = lag,
+            mismatch = mismatch,
+            thresholdBreached = thresholdBreached,
+            releasedAt = releasedAt,
+            releasedBy = approvedBy,
         )
     }
 

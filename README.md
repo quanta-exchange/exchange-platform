@@ -253,6 +253,7 @@ Market order liquidity policy (v1):
   - `POST /v1/admin/invariants/check`
   - `GET /v1/admin/reconciliation/{symbol}`
   - `GET /v1/admin/reconciliation/status`
+  - `POST /v1/admin/reconciliation/latch/{symbol}/release`
   - `POST /v1/admin/consumers/settlement/pause`
   - `POST /v1/admin/consumers/settlement/resume`
   - `GET /v1/admin/consumers/settlement/status`
@@ -312,6 +313,7 @@ Ledger env:
 - `LEDGER_RECONCILIATION_LAG_THRESHOLD=10`
 - `LEDGER_RECONCILIATION_SAFETY_MODE=CANCEL_ONLY` (`SOFT_HALT`/`HARD_HALT` supported)
 - `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
+- `LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED=true` (breach latched until manual release)
 
 Reconciliation alert rule examples:
 - `infra/observability/reconciliation-alert-rules.example.yml`

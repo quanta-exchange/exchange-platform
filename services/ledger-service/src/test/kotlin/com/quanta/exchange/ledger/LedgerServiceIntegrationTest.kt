@@ -159,6 +159,7 @@ class LedgerServiceIntegrationTest {
             lagThreshold = 5,
             safetyMode = SafetyMode.CANCEL_ONLY,
             autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
         )
 
         assertEquals(1, run.evaluations.size)
@@ -174,6 +175,74 @@ class LedgerServiceIntegrationTest {
             Boolean::class.java,
         )!!
         assertTrue(active)
+    }
+
+    @Test
+    fun safetyLatchRemainsActiveUntilManualRelease() {
+        ledgerService.updateEngineSeq("BTC-KRW", 50)
+        seedBalancesAndReserves()
+        assertTrue(ledgerService.consumeTrade(trade("trade-latch-1", 40)).applied)
+
+        val breachRun = ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+        assertTrue(breachRun.evaluations.first().breached)
+
+        assertTrue(ledgerService.consumeTrade(trade("trade-latch-1b", 50)).applied)
+        val recoveredRun = ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+        assertFalse(recoveredRun.evaluations.first().breached)
+
+        val statusBeforeRelease = ledgerService.reconciliationStatus(historyLimit = 5, lagThreshold = 5)
+            .statuses
+            .first { it.symbol == "BTC-KRW" }
+        assertTrue(statusBeforeRelease.latchEngaged)
+        assertTrue(statusBeforeRelease.breachActive)
+
+        val release = ledgerService.releaseReconciliationLatch(
+            symbol = "BTC-KRW",
+            lagThreshold = 5,
+            approvedBy = "ops-1",
+            reason = "reconciliation_verified",
+            restoreSymbolMode = false,
+        )
+        assertTrue(release.released)
+
+        val statusAfterRelease = ledgerService.reconciliationStatus(historyLimit = 5, lagThreshold = 5)
+            .statuses
+            .first { it.symbol == "BTC-KRW" }
+        assertFalse(statusAfterRelease.latchEngaged)
+        assertFalse(statusAfterRelease.breachActive)
+    }
+
+    @Test
+    fun latchReleaseIsRejectedWhileStillBreached() {
+        ledgerService.updateEngineSeq("BTC-KRW", 50)
+        seedBalancesAndReserves()
+        assertTrue(ledgerService.consumeTrade(trade("trade-latch-2", 40)).applied)
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+
+        val release = ledgerService.releaseReconciliationLatch(
+            symbol = "BTC-KRW",
+            lagThreshold = 5,
+            approvedBy = "ops-2",
+            reason = "attempt_before_recovery",
+            restoreSymbolMode = false,
+        )
+        assertFalse(release.released)
+        assertEquals("still_breached", release.reason)
     }
 
     @Test
