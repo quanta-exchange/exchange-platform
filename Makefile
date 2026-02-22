@@ -1,4 +1,7 @@
-.PHONY: load-smoke dr-rehearsal safety-case safety-case-upload
+doctor:
+	./scripts/doctor.sh
+
+.PHONY: doctor load-smoke dr-rehearsal safety-case safety-case-upload
 
 load-smoke:
 	./scripts/load_smoke.sh

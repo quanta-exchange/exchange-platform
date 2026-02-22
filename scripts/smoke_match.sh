@@ -15,6 +15,28 @@ edge_log="/tmp/edge-gateway-smoke-match.log"
 ledger_log="/tmp/ledger-service-smoke-match.log"
 kafka_log="/tmp/kafka-consume-smoke-match.log"
 
+
+require_cmd() {
+  local cmd="$1"
+  local hint="$2"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "missing required command: ${cmd}. ${hint}" >&2
+    exit 1
+  fi
+}
+
+require_cmd docker "Install Docker Desktop and ensure docker compose works."
+require_cmd curl "Install curl (usually preinstalled on macOS)."
+require_cmd cargo "Install Rust toolchain via rustup."
+require_cmd go "Install Go via brew install go."
+require_cmd java "Install JDK 17/21 and set JAVA_HOME."
+require_cmd "${PYTHON_BIN}" "Install Python 3 (brew install python)."
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "docker compose is not available. Install/update Docker Desktop." >&2
+  exit 1
+fi
+
 cleanup() {
   if [[ -n "${KAFKA_PID:-}" ]] && kill -0 "${KAFKA_PID}" >/dev/null 2>&1; then
     kill "${KAFKA_PID}" >/dev/null 2>&1 || true
@@ -68,7 +90,7 @@ CORE_STUB_TRADES="false" \
 cargo run -p trading-core --bin trading-core >"${core_log}" 2>&1 &
 CORE_PID=$!
 
-echo "Waiting for trading-core gRPC..."
+echo "[checkpoint-a] waiting for trading-core gRPC port ${CORE_ADDR}..."
 for _ in {1..40}; do
   if (echo > /dev/tcp/localhost/55051) >/dev/null 2>&1; then
     break
@@ -87,6 +109,7 @@ docker compose -f "${COMPOSE_FILE}" exec -T postgres \
   psql -U exchange -d postgres -c "CREATE DATABASE ${LEDGER_DB_NAME};" >/dev/null
 
 echo "Starting edge-gateway..."
+echo "[checkpoint-b] placing orders through Edge and verifying Core receives PlaceOrder"
 EDGE_ADDR="${EDGE_ADDR}" \
 EDGE_DISABLE_DB="true" \
 EDGE_DISABLE_CORE="false" \
@@ -208,6 +231,19 @@ if [[ "${BUY_STATUS}" != "FILLED" && "${SELL_STATUS}" != "FILLED" ]]; then
   exit 1
 fi
 
+
+if ! grep -q "place_order" "${core_log}"; then
+  echo "core log does not contain place_order invocation; expected Edge->Core traffic" >&2
+  tail -n 120 "${core_log}" >&2 || true
+  exit 1
+fi
+if ! grep -Eq "${BUY_ORDER_ID}|${SELL_ORDER_ID}" "${core_log}"; then
+  echo "core log does not show submitted order ids; expected BUY/SELL to reach Core" >&2
+  tail -n 120 "${core_log}" >&2 || true
+  exit 1
+fi
+
+echo "[checkpoint-c] waiting for TradeExecuted on topic core.trade-events.v1"
 for _ in {1..30}; do
   if ! kill -0 "${KAFKA_PID}" >/dev/null 2>&1; then
     break
@@ -244,7 +280,7 @@ print(trade_id)
 PY
 )"
 
-echo "Waiting for ledger trade ${TRADE_ID}..."
+echo "[checkpoint-d] waiting for ledger REST to reflect tradeId=${TRADE_ID}"
 found="false"
 for _ in {1..60}; do
   code="$(curl -s -o /dev/null -w '%{http_code}' "${LEDGER_BASE_URL}/v1/admin/trades/${TRADE_ID}")"
@@ -262,3 +298,4 @@ if [[ "${found}" != "true" ]]; then
 fi
 
 echo "smoke_match_success=true trade_id=${TRADE_ID} buy_status=${BUY_STATUS} sell_status=${SELL_STATUS}"
+echo "checkpoint_a=core_grpc_listening checkpoint_b=edge_to_core_placeorder checkpoint_c=tradeexecuted_on_kafka checkpoint_d=ledger_trade_visible"

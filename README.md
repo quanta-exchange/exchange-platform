@@ -29,6 +29,7 @@ infra/
 scripts/
   smoke_g0.sh             # gate G0 local smoke
   smoke_g3.sh             # gate G3 ledger safety smoke
+  smoke_reconciliation_safety.sh # reconciliation lag/safety auto-mode smoke
   smoke_e2e.sh            # minimal E2E: Edge -> Core -> Kafka -> Ledger
   smoke_match.sh          # Gate G1 real match smoke (BUY+SELL crossing)
   load_smoke.sh           # I-0105 load smoke harness
@@ -47,6 +48,22 @@ docker compose -f infra/compose/docker-compose.yml up -d
 2) Run the minimal E2E smoke (starts core/edge/ledger locally):
 ```bash
 ./scripts/smoke_e2e.sh
+```
+
+## Dev environment doctor (fresh macOS)
+Run this first on a new machine:
+```bash
+make doctor
+```
+
+If doctor fails, install missing tools with Homebrew (example):
+```bash
+brew install protobuf go openjdk@21
+```
+
+For Rust, install via rustup:
+```bash
+curl https://sh.rustup.rs -sSf | sh
 ```
 
 ## Web user frontend (alpha)
@@ -78,6 +95,12 @@ cargo test
 go test ./...
 ./gradlew test
 ```
+
+
+Rust protobuf build note (Trading Core):
+- `cargo test -p trading-core` requires `protoc` + Google well-known includes (`google/protobuf/*.proto`).
+- On macOS this is normally provided by `brew install protobuf` (`/opt/homebrew/include` or `/usr/local/include`).
+- If installed in a custom location, set `PROTOC_INCLUDE=/path/to/include`.
 
 ### 2.1) Ops/Infra validation
 ```bash
@@ -115,14 +138,29 @@ This script verifies:
 - `TradeExecuted` publish to `core.trade-events.v1`
 - ledger append lookup for the trade via REST
 
-### 7) Smoke (real matching path)
+### 7) Smoke (reconciliation safety auto-trigger)
 ```bash
-./scripts/smoke_match.sh
+./scripts/smoke_reconciliation_safety.sh
 ```
 This script verifies:
-- BUY then SELL crossing order path produces at least one `FILLED`
-- `TradeExecuted` emitted to `core.trade-events.v1`
-- ledger Kafka consumer applies the trade idempotently
+- core trade seq keeps moving while settlement consumer is paused
+- reconciliation lag grows above threshold
+- ledger auto-triggers `CANCEL_ONLY` safety mode on trading core
+- new orders are rejected with `CANCEL_ONLY`
+
+### 8) E2E Smoke (no frontend, real matching path)
+Exact command sequence on a fresh machine:
+```bash
+make doctor
+docker compose -f infra/compose/docker-compose.yml up -d
+./scripts/smoke_match.sh
+```
+
+`smoke_match.sh` verifies these checkpoints:
+- (a) trading-core gRPC port is listening
+- (b) Edge `POST /v1/orders` reaches Core `PlaceOrder`
+- (c) `TradeExecuted` exists on topic `core.trade-events.v1` (via `docker compose exec redpanda rpk ...`)
+- (d) ledger reflects `tradeId` through REST (`GET /v1/admin/trades/{tradeId}`)
 
 ## Gate G1 status
 - Trading Core implements:
@@ -151,6 +189,7 @@ Market order liquidity policy (v1):
   - reserve model (`available`↔`hold`) for reserve/release/fill
   - balances materialization and rebuild endpoint
   - invariant checks + reconciliation gap tracking
+  - periodic reconciliation evaluation + history + auto safety-mode trigger
   - correction workflow (request, 2-person approval, reversal apply)
   - Kafka consumer baseline (`LEDGER_KAFKA_ENABLED=true`)
 
@@ -213,6 +252,10 @@ Market order liquidity policy (v1):
   - `POST /v1/admin/rebuild-balances`
   - `POST /v1/admin/invariants/check`
   - `GET /v1/admin/reconciliation/{symbol}`
+  - `GET /v1/admin/reconciliation/status`
+  - `POST /v1/admin/consumers/settlement/pause`
+  - `POST /v1/admin/consumers/settlement/resume`
+  - `GET /v1/admin/consumers/settlement/status`
   - `POST /v1/admin/corrections/requests`
   - `POST /v1/admin/corrections/{correctionId}/approve`
   - `POST /v1/admin/corrections/{correctionId}/apply`
@@ -264,3 +307,19 @@ Edge env:
 Ledger env:
 - `LEDGER_OTEL_ENDPOINT=http://localhost:24318/v1/traces`
 - `LEDGER_OTEL_SAMPLE_PROB=1.0`
+- `LEDGER_RECONCILIATION_ENABLED=true`
+- `LEDGER_RECONCILIATION_INTERVAL_MS=5000`
+- `LEDGER_RECONCILIATION_LAG_THRESHOLD=10`
+- `LEDGER_RECONCILIATION_SAFETY_MODE=CANCEL_ONLY` (`SOFT_HALT`/`HARD_HALT` supported)
+- `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
+
+Reconciliation alert rule examples:
+- `infra/observability/reconciliation-alert-rules.example.yml`
+
+Reconciliation metrics (ledger `/metrics`):
+- `reconciliation_lag_max`
+- `reconciliation_breach_active`
+- `reconciliation_alert_total`
+- `reconciliation_mismatch_total`
+- `reconciliation_safety_trigger_total`
+- `reconciliation_safety_failure_total`

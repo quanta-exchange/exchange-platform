@@ -29,12 +29,19 @@ impl TradingCoreService for CoreGrpcService {
         &self,
         request: Request<PlaceOrderRequest>,
     ) -> Result<Response<PlaceOrderResponse>, Status> {
+        let req = request.into_inner();
+        eprintln!(
+            "service=trading-core msg=place_order order_id={} symbol={} user_id={}",
+            req.order_id,
+            req.meta.as_ref().map(|m| m.symbol.as_str()).unwrap_or(""),
+            req.meta.as_ref().map(|m| m.user_id.as_str()).unwrap_or("")
+        );
         let response = {
             let mut core = self
                 .core
                 .lock()
                 .map_err(|_| Status::internal("core lock poisoned"))?;
-            core.place_order(request.into_inner())
+            core.place_order(req)
                 .map_err(|e| Status::internal(format!("place order: {e}")))?
         };
 
@@ -118,6 +125,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     cfg.stub_trades = stub_trades;
 
     let core = TradingCore::new(cfg, FencingCoordinator::default())?;
+    eprintln!(
+        "service=trading-core msg=recovered_from_wal seq={} state_hash={} mode={:?}",
+        core.current_seq(),
+        core.last_state_hash(),
+        core.symbol_mode(),
+    );
     let publisher = KafkaTradePublisher::new(&kafka_brokers, &kafka_topic, Duration::from_secs(2))?;
 
     let service = CoreGrpcService {
