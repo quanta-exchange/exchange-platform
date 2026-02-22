@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
 import java.time.Duration
 import java.time.Instant
 
@@ -59,6 +61,8 @@ class LedgerController(
     private val staleStateThresholdMs: Long,
     @Value("\${ledger.reconciliation.latch-allow-negative-balances:false}")
     private val latchAllowNegativeBalances: Boolean,
+    @Value("\${ledger.admin.token:}")
+    private val adminToken: String,
 ) {
     @PostMapping("/internal/trades/executed")
     fun tradeExecuted(@RequestBody req: TradeExecutedDto): Map<String, Any> {
@@ -84,8 +88,12 @@ class LedgerController(
 
     @PostMapping("/internal/reconciliation/engine-seq")
     fun recordEngineSeq(@RequestBody req: EngineSeqDto): Map<String, Any> {
-        ledgerService.updateEngineSeq(req.symbol, req.seq)
-        val status = ledgerService.reconciliation(req.symbol)
+        val symbol = normalizeSymbol(req.symbol)
+        if (req.seq < 0) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "seq_must_be_non_negative")
+        }
+        ledgerService.updateEngineSeq(symbol, req.seq)
+        val status = ledgerService.reconciliation(symbol)
         return mapOf(
             "symbol" to status.symbol,
             "lastEngineSeq" to status.lastEngineSeq,
@@ -101,7 +109,24 @@ class LedgerController(
     }
 
     @GetMapping("/balances")
-    fun balances(): Map<String, Any> {
+    fun balances(
+        @RequestHeader(name = "X-Admin-Token", required = false)
+        providedToken: String?,
+    ): Map<String, Any> {
+        requireAdminToken(providedToken)
+        return mapOf(
+            "balances" to ledgerService.listBalances(),
+            "deprecated" to true,
+            "replacement" to "/v1/admin/balances",
+        )
+    }
+
+    @GetMapping("/admin/balances")
+    fun adminBalances(
+        @RequestHeader(name = "X-Admin-Token", required = false)
+        providedToken: String?,
+    ): Map<String, Any> {
+        requireAdminToken(providedToken)
         return mapOf("balances" to ledgerService.listBalances())
     }
 
@@ -287,5 +312,26 @@ class LedgerController(
             "entryId" to result.entryId,
             "reason" to result.reason,
         )
+    }
+
+    private fun requireAdminToken(providedToken: String?) {
+        if (adminToken.isBlank()) {
+            return
+        }
+        if (providedToken.isNullOrBlank() || providedToken != adminToken) {
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "admin_token_required")
+        }
+    }
+
+    private fun normalizeSymbol(raw: String): String {
+        val symbol = raw.trim().uppercase()
+        if (!SYMBOL_PATTERN.matches(symbol)) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_symbol")
+        }
+        return symbol
+    }
+
+    companion object {
+        private val SYMBOL_PATTERN = Regex("^[A-Z0-9]{2,16}-[A-Z0-9]{2,16}$")
     }
 }

@@ -278,7 +278,8 @@ Market order liquidity policy (v1):
   - `POST /v1/internal/orders/release`
   - `POST /v1/internal/reconciliation/engine-seq`
   - `POST /v1/admin/adjustments`
-  - `GET /v1/balances`
+  - `GET /v1/admin/balances` (optional `X-Admin-Token` when `LEDGER_ADMIN_TOKEN` set)
+  - `GET /v1/balances` (legacy alias, deprecated)
   - `POST /v1/admin/rebuild-balances`
   - `POST /v1/admin/invariants/check`
   - `GET /v1/admin/reconciliation/{symbol}`
@@ -342,6 +343,7 @@ Ledger env:
 - `LEDGER_RECONCILIATION_INTERVAL_MS=5000`
 - `LEDGER_RECONCILIATION_LAG_THRESHOLD=10`
 - `LEDGER_RECONCILIATION_STATE_STALE_MS=30000` (latest seq update freshness budget)
+- `LEDGER_ADMIN_TOKEN=` (optional; when set, `/v1/admin/balances` and `/v1/balances` require `X-Admin-Token`)
 - `LEDGER_RECONCILIATION_SAFETY_MODE=CANCEL_ONLY` (`SOFT_HALT`/`HARD_HALT` supported)
 - `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
 - `LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED=true` (breach latched until manual release)

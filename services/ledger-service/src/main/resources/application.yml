@@ -32,6 +32,8 @@ management:
       endpoint: ${LEDGER_OTEL_ENDPOINT:http://localhost:24318/v1/traces}
 
 ledger:
+  admin:
+    token: ${LEDGER_ADMIN_TOKEN:}
   kafka:
     enabled: ${LEDGER_KAFKA_ENABLED:false}
     trade-topic: ${LEDGER_KAFKA_TRADE_TOPIC:core.trade-events.v1}

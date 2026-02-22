@@ -2,6 +2,7 @@
 set -euo pipefail
 
 LEDGER_BASE_URL="${LEDGER_BASE_URL:-http://localhost:8082}"
+LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 REPEATS="${REPEATS:-10000}"
 CONCURRENCY="${CONCURRENCY:-32}"
 SYMBOL="${SYMBOL:-BTC-KRW}"
@@ -87,6 +88,15 @@ post_json() {
     -d "${payload}"
 }
 
+admin_get() {
+  local path="$1"
+  local -a headers=()
+  if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
+    headers+=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
+  fi
+  curl -fsS "${headers[@]}" "${LEDGER_BASE_URL}${path}"
+}
+
 echo "[exactly-once] reserve buyer quote hold"
 BUY_RESERVE="$(post_json "/v1/internal/orders/reserve" "$(reserve_payload "${BUY_ORDER_ID}" "${BUYER_ID}" "BUY" "${QUOTE_AMOUNT}" 1)")"
 echo "buyer_reserve=${BUY_RESERVE}"
@@ -151,7 +161,7 @@ PY
 
 echo "trade_injection_summary=${RESULT}"
 
-BALANCES="$(curl -fsS "${LEDGER_BASE_URL}/v1/balances")"
+BALANCES="$(admin_get "/v1/admin/balances")"
 export BALANCES BUYER_ID SELLER_ID QUOTE_AMOUNT QTY RESULT
 
 "${PYTHON_BIN}" - <<'PY'
@@ -190,4 +200,3 @@ print("exactly_once_stress_success=true")
 print(f"trade_applied_once={summary['applied_true']}")
 print(f"duplicate_blocked={summary['duplicate']}")
 PY
-

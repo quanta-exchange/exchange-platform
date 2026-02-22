@@ -219,12 +219,15 @@ Base: `/v1`
   - release move after cancel/partial fill: hold→available
 - `POST /internal/reconciliation/engine-seq`
   - update latest engine seq per symbol
+  - validates `symbol` format (`BASE-QUOTE`) and `seq >= 0`
 
 ### Admin controls
 - `POST /admin/adjustments`
   - manual adjustment entry (append-only)
+- `GET /admin/balances`
+  - read materialized balances snapshot (optional `X-Admin-Token` if `LEDGER_ADMIN_TOKEN` configured)
 - `GET /balances`
-  - read materialized balances snapshot
+  - legacy alias of admin balances endpoint (deprecated)
 - `POST /admin/rebuild-balances`
   - recompute `account_balances` from postings
 - `POST /admin/invariants/check`
