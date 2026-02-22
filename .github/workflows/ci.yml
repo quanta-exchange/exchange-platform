@@ -191,9 +191,76 @@ jobs:
           name: dr-rehearsal-report
           path: build/dr/dr-report.json
 
+  exactly-once-stress:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.ops == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: run exactly-once stress
+        run: |
+          docker compose -f infra/compose/docker-compose.yml up -d postgres
+          LEDGER_DB_NAME=exchange_ci_exactly_once
+          docker compose -f infra/compose/docker-compose.yml exec -T postgres psql -U exchange -d postgres -c "DROP DATABASE IF EXISTS ${LEDGER_DB_NAME} WITH (FORCE);"
+          docker compose -f infra/compose/docker-compose.yml exec -T postgres psql -U exchange -d postgres -c "CREATE DATABASE ${LEDGER_DB_NAME};"
+          LEDGER_KAFKA_ENABLED=false \
+          LEDGER_GUARD_ENABLED=false \
+          LEDGER_RECONCILIATION_ENABLED=false \
+          LEDGER_DB_URL="jdbc:postgresql://localhost:25432/${LEDGER_DB_NAME}" \
+          LEDGER_DB_USER=exchange \
+          LEDGER_DB_PASSWORD=exchange \
+          LEDGER_PORT=18082 \
+          ./gradlew :services:ledger-service:bootRun --quiet > /tmp/ledger-ci-exactly-once.log 2>&1 &
+          LEDGER_PID=$!
+          trap 'kill ${LEDGER_PID} >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 90); do
+            curl -fsS http://localhost:18082/readyz >/dev/null 2>&1 && break
+            sleep 1
+          done
+          LEDGER_BASE_URL=http://localhost:18082 REPEATS=2000 CONCURRENCY=32 ./scripts/exactly_once_stress.sh
+      - name: upload exactly-once logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: exactly-once-stress-report
+          path: |
+            /tmp/ledger-ci-exactly-once.log
+
+  chaos-replay:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.rust == 'true' || needs.changes.outputs.ops == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: run full chaos replay
+        run: ./scripts/chaos/full_replay.sh
+      - name: run redpanda bounce drill
+        run: ./scripts/chaos/redpanda_broker_bounce.sh
+      - name: upload chaos logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-replay-report
+          path: |
+            /tmp/trading-core-chaos-replay.log
+            /tmp/edge-gateway-chaos-replay.log
+            /tmp/ledger-service-chaos-replay.log
+            /tmp/chaos-replay-trades-*.jsonl
+
   safety-case:
     runs-on: ubuntu-latest
-    needs: [changes, load-smoke, dr-rehearsal]
+    needs: [changes, load-smoke, dr-rehearsal, exactly-once-stress, chaos-replay]
     if: needs.changes.outputs.ops == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true'
     steps:
       - uses: actions/checkout@v4
