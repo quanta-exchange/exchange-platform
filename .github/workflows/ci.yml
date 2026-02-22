@@ -205,12 +205,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: dtolnay/rust-toolchain@stable
-      - name: regenerate load and dr evidence
-        run: |
-          ./scripts/load_smoke.sh
-          ./scripts/dr_rehearsal.sh
       - name: generate safety case
-        run: ./scripts/safety_case.sh
+        run: ./scripts/safety_case.sh --run-checks
       - name: upload safety case bundle
         uses: actions/upload-artifact@v4
         with:

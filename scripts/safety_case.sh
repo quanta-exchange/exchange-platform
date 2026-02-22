@@ -71,6 +71,7 @@ if [[ "$RUN_CHECKS" == "true" ]]; then
   run_cmd "gradle-test" ./gradlew test
   run_cmd "load-smoke" ./scripts/load_smoke.sh
   run_cmd "dr-rehearsal" ./scripts/dr_rehearsal.sh
+  run_cmd "invariants" ./scripts/invariants.sh
 fi
 
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
@@ -79,6 +80,7 @@ TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 LOAD_REPORT="$ROOT_DIR/build/load/load-smoke.json"
 DR_REPORT="$ROOT_DIR/build/dr/dr-report.json"
+INVARIANT_REPORT="$ROOT_DIR/build/invariants/ledger-invariants.json"
 
 if [[ ! -f "$LOAD_REPORT" ]]; then
   echo "missing load report: $LOAD_REPORT"
@@ -86,6 +88,10 @@ if [[ ! -f "$LOAD_REPORT" ]]; then
 fi
 if [[ ! -f "$DR_REPORT" ]]; then
   echo "missing dr report: $DR_REPORT"
+  exit 1
+fi
+if [[ ! -f "$INVARIANT_REPORT" ]]; then
+  echo "missing invariants report: $INVARIANT_REPORT"
   exit 1
 fi
 
@@ -102,7 +108,8 @@ cat > "$MANIFEST" <<JSON
   },
   "evidence": [
     "build/load/load-smoke.json",
-    "build/dr/dr-report.json"
+    "build/dr/dr-report.json",
+    "build/invariants/ledger-invariants.json"
   ]
 }
 JSON
@@ -116,6 +123,7 @@ REPORTS_REL="$(relpath "$ROOT_DIR" "$OUT_DIR/reports")"
   tar -czf "$TARBALL" \
     build/load/load-smoke.json \
     build/dr/dr-report.json \
+    build/invariants/ledger-invariants.json \
     "$MANIFEST_REL" \
     "$REPORTS_REL"
 )

@@ -109,6 +109,7 @@ Rust protobuf build note (Trading Core):
 ./scripts/validate_infra.sh
 ./scripts/load_smoke.sh
 ./scripts/dr_rehearsal.sh
+./scripts/invariants.sh
 make safety-case
 ```
 

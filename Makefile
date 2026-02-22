@@ -1,13 +1,16 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke dr-rehearsal safety-case safety-case-upload exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-upload exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
 
 dr-rehearsal:
 	./scripts/dr_rehearsal.sh
+
+invariants:
+	./scripts/invariants.sh
 
 safety-case:
 	./scripts/safety_case.sh --run-checks
