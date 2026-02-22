@@ -829,3 +829,25 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("edge_auth_fail_reason_total{reason=\"bad_signature\"}", "2")
 	assertMetric("edge_auth_fail_reason_total{reason=\"unknown_key\"}", "3")
 }
+
+func TestHTTPServerTimeoutsConfigured(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	httpServer := s.httpServer()
+	if httpServer.ReadTimeout != 10*time.Second {
+		t.Fatalf("unexpected read timeout: %s", httpServer.ReadTimeout)
+	}
+	if httpServer.ReadHeaderTimeout != 5*time.Second {
+		t.Fatalf("unexpected read-header timeout: %s", httpServer.ReadHeaderTimeout)
+	}
+	if httpServer.WriteTimeout != 15*time.Second {
+		t.Fatalf("unexpected write timeout: %s", httpServer.WriteTimeout)
+	}
+	if httpServer.IdleTimeout != 60*time.Second {
+		t.Fatalf("unexpected idle timeout: %s", httpServer.IdleTimeout)
+	}
+	if httpServer.MaxHeaderBytes != 1<<20 {
+		t.Fatalf("unexpected max header bytes: %d", httpServer.MaxHeaderBytes)
+	}
+}

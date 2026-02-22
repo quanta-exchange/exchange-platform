@@ -558,7 +558,19 @@ func (s *Server) Close() error {
 
 func (s *Server) ListenAndServe() error {
 	log.Printf("service=edge-gateway msg=starting addr=%s", s.cfg.Addr)
-	return http.ListenAndServe(s.cfg.Addr, s.router)
+	return s.httpServer().ListenAndServe()
+}
+
+func (s *Server) httpServer() *http.Server {
+	return &http.Server{
+		Addr:              s.cfg.Addr,
+		Handler:           s.router,
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
 }
 
 func (s *Server) initSchema(ctx context.Context) error {
