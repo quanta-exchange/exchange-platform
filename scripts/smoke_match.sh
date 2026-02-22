@@ -9,6 +9,7 @@ EDGE_ADDR=":18081"
 EDGE_BASE_URL="http://localhost:18081"
 LEDGER_PORT="18082"
 LEDGER_BASE_URL="http://localhost:18082"
+LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 
 core_log="/tmp/trading-core-smoke-match.log"
 edge_log="/tmp/edge-gateway-smoke-match.log"
@@ -35,6 +36,11 @@ require_cmd "${PYTHON_BIN}" "Install Python 3 (brew install python)."
 if ! docker compose version >/dev/null 2>&1; then
   echo "docker compose is not available. Install/update Docker Desktop." >&2
   exit 1
+fi
+
+LEDGER_ADMIN_HEADERS=()
+if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
+  LEDGER_ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
 fi
 
 cleanup() {
@@ -283,7 +289,7 @@ PY
 echo "[checkpoint-d] waiting for ledger REST to reflect tradeId=${TRADE_ID}"
 found="false"
 for _ in {1..60}; do
-  code="$(curl -s -o /dev/null -w '%{http_code}' "${LEDGER_BASE_URL}/v1/admin/trades/${TRADE_ID}")"
+  code="$(curl -s "${LEDGER_ADMIN_HEADERS[@]}" -o /dev/null -w '%{http_code}' "${LEDGER_BASE_URL}/v1/admin/trades/${TRADE_ID}")"
   if [[ "${code}" == "200" ]]; then
     found="true"
     break

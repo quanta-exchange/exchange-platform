@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="${ROOT_DIR}/infra/compose/docker-compose.yml"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 
 N_INITIAL_ORDERS="${N_INITIAL_ORDERS:-8}"
 N_AFTER_CORE_RESTART="${N_AFTER_CORE_RESTART:-4}"
@@ -94,6 +95,11 @@ wait_http() {
   done
   return 1
 }
+
+ADMIN_HEADERS=()
+if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
+  ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
+fi
 
 ledger_trade_count() {
   docker compose -f "${COMPOSE_FILE}" exec -T postgres \
@@ -463,7 +469,7 @@ if [[ "${DUP_ROWS}" != "0" ]]; then
   exit 1
 fi
 
-INVARIANTS_JSON="$(curl -fsS -X POST "http://localhost:${LEDGER_PORT}/v1/admin/invariants/check")"
+INVARIANTS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/invariants/check")"
 INVARIANT_CHECK_RESULT="$(
 INVARIANT_PAYLOAD="${INVARIANTS_JSON}" ALLOW_NEGATIVE="${ALLOW_NEGATIVE_BALANCE_INVARIANT}" "${PYTHON_BIN}" - <<'PY'
 import json

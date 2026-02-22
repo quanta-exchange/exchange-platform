@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 EDGE_LOG="/tmp/edge-gateway-smoke-g3.log"
 LEDGER_LOG="/tmp/ledger-service-smoke-g3.log"
 WS_LOG="/tmp/ws-events-smoke-g3.log"
+LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 
 cleanup() {
   if [[ -n "${EDGE_PID:-}" ]] && kill -0 "$EDGE_PID" 2>/dev/null; then
@@ -17,6 +18,11 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$ROOT_DIR"
+
+ADMIN_HEADERS=()
+if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
+  ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
+fi
 
 docker compose -f infra/compose/docker-compose.yml up -d postgres redpanda redpanda-init redis clickhouse minio minio-init otel-collector prometheus
 
@@ -69,10 +75,12 @@ TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 RUN_ID="$(date -u +%s)"
 
 curl -fsS -X POST "http://localhost:8082/v1/admin/adjustments" \
+  "${ADMIN_HEADERS[@]}" \
   -H 'Content-Type: application/json' \
   -d "{\"envelope\":{\"eventId\":\"evt-seed-1-$RUN_ID\",\"eventVersion\":1,\"symbol\":\"BTC-KRW\",\"seq\":1,\"occurredAt\":\"$TS\",\"correlationId\":\"corr-seed-1-$RUN_ID\",\"causationId\":\"cause-seed-1-$RUN_ID\"},\"referenceId\":\"seed-buyer-g3-$RUN_ID\",\"userId\":\"buyer\",\"currency\":\"KRW\",\"amountDelta\":200000000}" >/dev/null
 
 curl -fsS -X POST "http://localhost:8082/v1/admin/adjustments" \
+  "${ADMIN_HEADERS[@]}" \
   -H 'Content-Type: application/json' \
   -d "{\"envelope\":{\"eventId\":\"evt-seed-2-$RUN_ID\",\"eventVersion\":1,\"symbol\":\"BTC-KRW\",\"seq\":2,\"occurredAt\":\"$TS\",\"correlationId\":\"corr-seed-2-$RUN_ID\",\"causationId\":\"cause-seed-2-$RUN_ID\"},\"referenceId\":\"seed-seller-g3-$RUN_ID\",\"userId\":\"seller\",\"currency\":\"BTC\",\"amountDelta\":10000}" >/dev/null
 

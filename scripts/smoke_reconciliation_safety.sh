@@ -13,6 +13,7 @@ BASE_PORT="$((20000 + RANDOM % 10000))"
 CORE_PORT="${BASE_PORT}"
 EDGE_PORT="$((BASE_PORT + 1))"
 LEDGER_PORT="$((BASE_PORT + 2))"
+LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 CORE_RUNTIME_DIR="/tmp/trading-core-reconciliation-smoke-${RUN_ID}"
 CORE_WAL_DIR="${CORE_RUNTIME_DIR}/wal"
 CORE_OUTBOX_DIR="${CORE_RUNTIME_DIR}/outbox"
@@ -137,6 +138,11 @@ if ! curl -fsS "http://localhost:${EDGE_PORT}/readyz" >/dev/null 2>&1; then
   exit 1
 fi
 
+ADMIN_HEADERS=()
+if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
+  ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
+fi
+
 USER_EMAIL="recon-smoke-${RUN_ID}@example.com"
 SIGNUP_RESP="$(curl -fsS -X POST "http://localhost:${EDGE_PORT}/v1/auth/signup" \
   -H 'Content-Type: application/json' \
@@ -166,7 +172,7 @@ BASELINE_ORDER="$(place_order "recon-base-${RUN_ID}")"
 echo "baseline_order=${BASELINE_ORDER}"
 sleep 2
 
-PAUSE_RESP="$(curl -fsS -X POST "http://localhost:${LEDGER_PORT}/v1/admin/consumers/settlement/pause")"
+PAUSE_RESP="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/consumers/settlement/pause")"
 echo "pause_consumer=${PAUSE_RESP}"
 if ! PAUSE_JSON="${PAUSE_RESP}" python3 - <<'PY'
 import json
@@ -191,7 +197,7 @@ done
 
 breach_confirmed="false"
 for _ in {1..45}; do
-  STATUS_JSON="$(curl -fsS "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/status?historyLimit=30")"
+  STATUS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/status?historyLimit=30")"
   if STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
 import json
 import os
@@ -242,7 +248,7 @@ then
   exit 1
 fi
 
-RESUME_RESP="$(curl -fsS -X POST "http://localhost:${LEDGER_PORT}/v1/admin/consumers/settlement/resume")"
+RESUME_RESP="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/consumers/settlement/resume")"
 echo "resume_consumer=${RESUME_RESP}"
 if ! RESUME_JSON="${RESUME_RESP}" python3 - <<'PY'
 import json
@@ -262,7 +268,7 @@ fi
 
 recovered="false"
 for _ in {1..60}; do
-  STATUS_JSON="$(curl -fsS "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/status?historyLimit=30")"
+  STATUS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/status?historyLimit=30")"
   if STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
 import json
 import os
@@ -289,7 +295,7 @@ if [[ "${recovered}" != "true" ]]; then
   exit 1
 fi
 
-LATCH_RELEASE_RESP="$(curl -fsS -X POST "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/latch/BTC-KRW/release" \
+LATCH_RELEASE_RESP="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/latch/BTC-KRW/release" \
   -H 'Content-Type: application/json' \
   -d '{"approvedBy":"smoke-ops","reason":"smoke_verified","restoreSymbolMode":true}')"
 echo "latch_release=${LATCH_RELEASE_RESP}"

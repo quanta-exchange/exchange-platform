@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="${ROOT_DIR}/infra/compose/docker-compose.yml"
+LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 
 core_log="/tmp/trading-core-e2e.log"
 edge_log="/tmp/edge-gateway-e2e.log"
@@ -28,6 +29,11 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+LEDGER_ADMIN_HEADERS=()
+if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
+  LEDGER_ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
+fi
 
 docker compose -f "${COMPOSE_FILE}" up -d
 
@@ -109,7 +115,7 @@ PY
 echo "Waiting for ledger entry for trade ${trade_id}..."
 found="false"
 for _ in {1..30}; do
-  status="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/v1/admin/trades/${trade_id})"
+  status="$(curl -s "${LEDGER_ADMIN_HEADERS[@]}" -o /dev/null -w '%{http_code}' http://localhost:8082/v1/admin/trades/${trade_id})"
   if [[ "${status}" == "200" ]]; then
     found="true"
     break

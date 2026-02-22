@@ -222,6 +222,7 @@ Base: `/v1`
   - validates `symbol` format (`BASE-QUOTE`) and `seq >= 0`
 
 ### Admin controls
+- if `LEDGER_ADMIN_TOKEN` is configured, every `/admin/*` endpoint requires header `X-Admin-Token`
 - `POST /admin/adjustments`
   - manual adjustment entry (append-only)
 - `GET /admin/balances`
