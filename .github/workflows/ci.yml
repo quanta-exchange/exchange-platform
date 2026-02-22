@@ -5,13 +5,19 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: read
+  security-events: write
 
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       contracts: ${{ steps.filter.outputs.contracts }}
       rust: ${{ steps.filter.outputs.rust }}
@@ -58,6 +64,7 @@ jobs:
 
   contracts:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.contracts == 'true'
     steps:
@@ -89,6 +96,7 @@ jobs:
 
   rust-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: changes
     if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.contracts == 'true'
     steps:
@@ -106,6 +114,7 @@ jobs:
 
   go-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.contracts == 'true'
     steps:
@@ -125,6 +134,7 @@ jobs:
 
   gradle-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: changes
     if: needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.contracts == 'true'
     steps:
@@ -146,6 +156,7 @@ jobs:
 
   infra-validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: changes
     if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.ops == 'true'
     steps:
@@ -162,6 +173,7 @@ jobs:
 
   load-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.ops == 'true'
     steps:
@@ -179,6 +191,7 @@ jobs:
 
   dr-rehearsal:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.ops == 'true'
     steps:
@@ -193,6 +206,7 @@ jobs:
 
   exactly-once-stress:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     needs: changes
     if: needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.ops == 'true'
     steps:
@@ -231,6 +245,7 @@ jobs:
 
   chaos-replay:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     needs: changes
     if: needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true' || needs.changes.outputs.rust == 'true' || needs.changes.outputs.ops == 'true'
     steps:
@@ -260,7 +275,8 @@ jobs:
 
   safety-case:
     runs-on: ubuntu-latest
-    needs: [changes, load-smoke, dr-rehearsal, exactly-once-stress, chaos-replay]
+    timeout-minutes: 40
+    needs: [changes, load-smoke, dr-rehearsal, exactly-once-stress, chaos-replay, security-baseline]
     if: needs.changes.outputs.ops == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.kotlin == 'true'
     steps:
       - uses: actions/checkout@v4
@@ -286,6 +302,7 @@ jobs:
 
   security-baseline:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: trivy (secret scan)
@@ -296,7 +313,7 @@ jobs:
           format: sarif
           output: trivy-secrets.sarif
           severity: HIGH,CRITICAL
-          exit-code: '0'
+          exit-code: '1'
       - name: secret rotation drill
         run: ./scripts/secret_rotation_drill.sh
       - name: trivy (dependency and fs vulnerability scan)
@@ -308,8 +325,19 @@ jobs:
           output: trivy-results.sarif
           ignore-unfixed: true
           severity: HIGH,CRITICAL
-          exit-code: '0'
+          exit-code: '1'
+      - name: upload SARIF (secrets)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-secrets.sarif
+      - name: upload SARIF (vulns)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
       - name: upload security report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-report
