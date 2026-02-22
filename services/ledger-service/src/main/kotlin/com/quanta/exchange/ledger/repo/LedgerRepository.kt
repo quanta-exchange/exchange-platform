@@ -187,6 +187,18 @@ class LedgerRepository(
         )
     }
 
+    fun trackedSymbols(): List<String> {
+        return jdbc.query(
+            """
+            SELECT symbol FROM reconciliation_state
+            UNION
+            SELECT DISTINCT symbol FROM ledger_entries
+            ORDER BY symbol ASC
+            """.trimIndent(),
+            { rs, _ -> rs.getString("symbol") },
+        )
+    }
+
     fun recordReconciliationHistory(evaluation: ReconciliationEvaluation) {
         jdbc.update(
             """

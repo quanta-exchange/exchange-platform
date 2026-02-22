@@ -206,3 +206,9 @@ data class ReconciliationLatchReleaseResult(
     val releasedAt: Instant?,
     val releasedBy: String?,
 )
+
+data class SafetyModeActivationSummary(
+    val requestedSymbols: List<String>,
+    val switchedSymbols: List<String>,
+    val failedSymbols: List<String>,
+)

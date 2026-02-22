@@ -25,6 +25,8 @@ class LedgerMetrics {
     private val reconciliationMismatchTotal = AtomicLong(0)
     private val reconciliationSafetyTriggerTotal = AtomicLong(0)
     private val reconciliationSafetyFailureTotal = AtomicLong(0)
+    private val invariantSafetyTriggerTotal = AtomicLong(0)
+    private val invariantSafetyFailureTotal = AtomicLong(0)
 
     fun observeLedgerAppendLatency(ms: Long) = ledgerAppendLatencyMs.set(ms.coerceAtLeast(0))
     fun incrementUniqueViolation() = uniqueViolationTotal.incrementAndGet()
@@ -52,6 +54,16 @@ class LedgerMetrics {
     fun incrementReconciliationMismatch() = reconciliationMismatchTotal.incrementAndGet()
     fun incrementReconciliationSafetyTrigger() = reconciliationSafetyTriggerTotal.incrementAndGet()
     fun incrementReconciliationSafetyFailure() = reconciliationSafetyFailureTotal.incrementAndGet()
+    fun incrementInvariantSafetyTrigger(delta: Long = 1) {
+        if (delta > 0) {
+            invariantSafetyTriggerTotal.addAndGet(delta)
+        }
+    }
+    fun incrementInvariantSafetyFailure(delta: Long = 1) {
+        if (delta > 0) {
+            invariantSafetyFailureTotal.addAndGet(delta)
+        }
+    }
 
     fun renderPrometheus(): String {
         return buildString {
@@ -75,6 +87,8 @@ class LedgerMetrics {
             appendMetric("reconciliation_mismatch_total", reconciliationMismatchTotal.get())
             appendMetric("reconciliation_safety_trigger_total", reconciliationSafetyTriggerTotal.get())
             appendMetric("reconciliation_safety_failure_total", reconciliationSafetyFailureTotal.get())
+            appendMetric("invariant_safety_trigger_total", invariantSafetyTriggerTotal.get())
+            appendMetric("invariant_safety_failure_total", invariantSafetyFailureTotal.get())
         }
     }
 

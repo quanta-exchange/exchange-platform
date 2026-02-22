@@ -42,6 +42,8 @@ ledger:
   guard:
     enabled: ${LEDGER_GUARD_ENABLED:true}
     interval-ms: ${LEDGER_GUARD_INTERVAL_MS:30000}
+    auto-switch-enabled: ${LEDGER_GUARD_AUTO_SWITCH:true}
+    safety-mode: ${LEDGER_GUARD_SAFETY_MODE:CANCEL_ONLY}
   reconciliation:
     enabled: ${LEDGER_RECONCILIATION_ENABLED:true}
     interval-ms: ${LEDGER_RECONCILIATION_INTERVAL_MS:5000}

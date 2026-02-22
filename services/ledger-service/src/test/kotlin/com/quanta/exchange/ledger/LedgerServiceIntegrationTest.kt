@@ -246,6 +246,18 @@ class LedgerServiceIntegrationTest {
     }
 
     @Test
+    fun invariantSafetyActivationTargetsTrackedSymbols() {
+        ledgerService.updateEngineSeq("BTC-KRW", 10)
+        val summary = ledgerService.activateSafetyModeForTrackedSymbols(
+            mode = SafetyMode.CANCEL_ONLY,
+            reason = "test_invariant_violation",
+        )
+        assertTrue(summary.requestedSymbols.contains("BTC-KRW"))
+        assertTrue(summary.switchedSymbols.isEmpty())
+        assertTrue(summary.failedSymbols.contains("BTC-KRW"))
+    }
+
+    @Test
     fun correctionsRequireTwoApproversAndReverseHistory() {
         assertTrue(ledgerService.adjustAvailable(adjustment("corr-base", "alice", "USD", 500)))
 

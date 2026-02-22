@@ -316,6 +316,8 @@ Ledger env:
 - `LEDGER_RECONCILIATION_SAFETY_MODE=CANCEL_ONLY` (`SOFT_HALT`/`HARD_HALT` supported)
 - `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
 - `LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED=true` (breach latched until manual release)
+- `LEDGER_GUARD_AUTO_SWITCH=true` (`false` to keep invariant scheduler as monitor-only)
+- `LEDGER_GUARD_SAFETY_MODE=CANCEL_ONLY`
 
 Reconciliation alert rule examples:
 - `infra/observability/reconciliation-alert-rules.example.yml`
@@ -327,3 +329,5 @@ Reconciliation metrics (ledger `/metrics`):
 - `reconciliation_mismatch_total`
 - `reconciliation_safety_trigger_total`
 - `reconciliation_safety_failure_total`
+- `invariant_safety_trigger_total`
+- `invariant_safety_failure_total`

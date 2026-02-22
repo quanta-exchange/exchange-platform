@@ -298,6 +298,36 @@ class LedgerService(
         )
     }
 
+    fun activateSafetyModeForTrackedSymbols(mode: SafetyMode, reason: String): SafetyModeActivationSummary {
+        val symbols = repo.trackedSymbols().filter { it.isNotBlank() }
+        if (symbols.isEmpty()) {
+            return SafetyModeActivationSummary(
+                requestedSymbols = emptyList(),
+                switchedSymbols = emptyList(),
+                failedSymbols = emptyList(),
+            )
+        }
+
+        val switched = mutableListOf<String>()
+        val failed = mutableListOf<String>()
+        symbols.forEach { symbol ->
+            val ok = symbolModeSwitcher.setSymbolMode(symbol, mode, reason)
+            if (ok) {
+                switched += symbol
+            } else {
+                failed += symbol
+            }
+        }
+
+        metrics.incrementInvariantSafetyTrigger(switched.size.toLong())
+        metrics.incrementInvariantSafetyFailure(failed.size.toLong())
+        return SafetyModeActivationSummary(
+            requestedSymbols = symbols,
+            switchedSymbols = switched,
+            failedSymbols = failed,
+        )
+    }
+
     fun releaseReconciliationLatch(
         symbol: String,
         lagThreshold: Long,
