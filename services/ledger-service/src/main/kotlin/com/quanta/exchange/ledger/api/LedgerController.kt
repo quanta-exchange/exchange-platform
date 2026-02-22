@@ -53,6 +53,8 @@ class LedgerController(
     private val safetyMode: String,
     @Value("\${ledger.reconciliation.safety-latch-enabled:true}")
     private val safetyLatchEnabled: Boolean,
+    @Value("\${ledger.reconciliation.latch-allow-negative-balances:false}")
+    private val latchAllowNegativeBalances: Boolean,
 ) {
     @PostMapping("/internal/trades/executed")
     fun tradeExecuted(@RequestBody req: TradeExecutedDto): Map<String, Any> {
@@ -164,6 +166,7 @@ class LedgerController(
             approvedBy = req.approvedBy,
             reason = req.reason,
             restoreSymbolMode = req.restoreSymbolMode,
+            allowNegativeBalanceViolations = latchAllowNegativeBalances,
         )
         return mapOf(
             "symbol" to result.symbol,
@@ -173,6 +176,8 @@ class LedgerController(
             "lag" to result.lag,
             "mismatch" to result.mismatch,
             "thresholdBreached" to result.thresholdBreached,
+            "invariantsOk" to result.invariantsOk,
+            "invariantViolations" to result.invariantViolations,
             "releasedAt" to result.releasedAt,
             "releasedBy" to result.releasedBy,
         )

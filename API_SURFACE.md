@@ -234,7 +234,8 @@ Base: `/v1`
 - `GET /admin/reconciliation/status`
   - return all symbol reconciliation statuses + recent reconciliation history
 - `POST /admin/reconciliation/latch/{symbol}/release`
-  - manually release reconciliation safety latch after recovery (`lag==0`, invariants pass)
+  - manually release reconciliation safety latch after recovery (`lag==0` + invariant check pass)
+  - response includes `invariantsOk` and `invariantViolations`
 - `POST /admin/consumers/settlement/pause`
   - pause settlement Kafka listener without stopping reconciliation observer
 - `POST /admin/consumers/settlement/resume`

@@ -344,8 +344,15 @@ Ledger env:
 - `LEDGER_RECONCILIATION_SAFETY_MODE=CANCEL_ONLY` (`SOFT_HALT`/`HARD_HALT` supported)
 - `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
 - `LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED=true` (breach latched until manual release)
+- `LEDGER_RECONCILIATION_LATCH_ALLOW_NEGATIVE=false` (stub smoke only: `true` 허용 가능)
 - `LEDGER_GUARD_AUTO_SWITCH=true` (`false` to keep invariant scheduler as monitor-only)
 - `LEDGER_GUARD_SAFETY_MODE=CANCEL_ONLY`
+
+Safety latch release contract:
+- `POST /v1/admin/reconciliation/latch/{symbol}/release`
+- release is allowed only when:
+  - reconciliation is recovered (`lag==0`, no mismatch/threshold breach)
+  - invariant check passes at release time
 
 Reconciliation alert rule examples:
 - `infra/observability/reconciliation-alert-rules.example.yml`

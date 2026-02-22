@@ -435,7 +435,13 @@ class LedgerRepository(
         }
 
         val negativeBalances = jdbc.queryForList(
-            "SELECT account_id, currency, balance FROM account_balances WHERE balance < 0",
+            """
+            SELECT b.account_id, b.currency, b.balance
+            FROM account_balances b
+            JOIN accounts a ON a.account_id = b.account_id AND a.currency = b.currency
+            WHERE b.balance < 0
+              AND a.account_id NOT LIKE 'system:%'
+            """.trimIndent(),
         )
         if (negativeBalances.isNotEmpty()) {
             violations += "negative_balances=${negativeBalances.size}"

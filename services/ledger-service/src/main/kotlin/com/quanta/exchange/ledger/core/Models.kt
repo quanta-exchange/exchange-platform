@@ -203,6 +203,8 @@ data class ReconciliationLatchReleaseResult(
     val lag: Long,
     val mismatch: Boolean,
     val thresholdBreached: Boolean,
+    val invariantsOk: Boolean,
+    val invariantViolations: List<String>,
     val releasedAt: Instant?,
     val releasedBy: String?,
 )

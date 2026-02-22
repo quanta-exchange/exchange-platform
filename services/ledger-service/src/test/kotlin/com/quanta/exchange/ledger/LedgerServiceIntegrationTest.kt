@@ -191,6 +191,8 @@ class LedgerServiceIntegrationTest {
         )
         assertTrue(breachRun.evaluations.first().breached)
 
+        assertTrue(ledgerService.reserve(reserve("ord-buy-latch-2", "buyer", "BUY", 100_000, 45)))
+        assertTrue(ledgerService.reserve(reserve("ord-sell-latch-2", "seller", "SELL", 1, 46)))
         assertTrue(ledgerService.consumeTrade(trade("trade-latch-1b", 50)).applied)
         val recoveredRun = ledgerService.runReconciliationEvaluation(
             lagThreshold = 5,
@@ -212,8 +214,10 @@ class LedgerServiceIntegrationTest {
             approvedBy = "ops-1",
             reason = "reconciliation_verified",
             restoreSymbolMode = false,
+            allowNegativeBalanceViolations = false,
         )
-        assertTrue(release.released)
+        assertTrue(release.released) { "release=$release" }
+        assertTrue(release.invariantsOk) { "release=$release" }
 
         val statusAfterRelease = ledgerService.reconciliationStatus(historyLimit = 5, lagThreshold = 5)
             .statuses
@@ -240,9 +244,53 @@ class LedgerServiceIntegrationTest {
             approvedBy = "ops-2",
             reason = "attempt_before_recovery",
             restoreSymbolMode = false,
+            allowNegativeBalanceViolations = false,
         )
         assertFalse(release.released)
         assertEquals("still_breached", release.reason)
+    }
+
+    @Test
+    fun latchReleaseIsRejectedWhenInvariantsFail() {
+        ledgerService.updateEngineSeq("BTC-KRW", 50)
+        seedBalancesAndReserves()
+        assertTrue(ledgerService.consumeTrade(trade("trade-latch-3", 40)).applied)
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+        assertTrue(ledgerService.reserve(reserve("ord-buy-latch-3", "buyer", "BUY", 100_000, 45)))
+        assertTrue(ledgerService.reserve(reserve("ord-sell-latch-3", "seller", "SELL", 1, 46)))
+        assertTrue(ledgerService.consumeTrade(trade("trade-latch-3b", 50)).applied)
+
+        jdbc.update(
+            "INSERT INTO accounts(account_id, user_id, currency, account_kind) VALUES (?, ?, ?, ?)",
+            "user:bad:KRW:AVAILABLE",
+            "bad",
+            "KRW",
+            "AVAILABLE",
+        )
+        jdbc.update(
+            "INSERT INTO account_balances(account_id, currency, balance) VALUES (?, ?, ?)",
+            "user:bad:KRW:AVAILABLE",
+            "KRW",
+            -1,
+        )
+
+        val release = ledgerService.releaseReconciliationLatch(
+            symbol = "BTC-KRW",
+            lagThreshold = 5,
+            approvedBy = "ops-3",
+            reason = "attempt_with_bad_invariants",
+            restoreSymbolMode = false,
+            allowNegativeBalanceViolations = false,
+        )
+        assertFalse(release.released)
+        assertEquals("invariants_failed", release.reason)
+        assertFalse(release.invariantsOk)
+        assertTrue(release.invariantViolations.isNotEmpty())
     }
 
     @Test

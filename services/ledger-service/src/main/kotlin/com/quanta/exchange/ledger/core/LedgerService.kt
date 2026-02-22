@@ -334,6 +334,7 @@ class LedgerService(
         approvedBy: String,
         reason: String,
         restoreSymbolMode: Boolean,
+        allowNegativeBalanceViolations: Boolean,
     ): ReconciliationLatchReleaseResult {
         val safeSymbol = symbol.trim().uppercase()
         val status = repo.reconciliation(safeSymbol)
@@ -349,6 +350,8 @@ class LedgerService(
                 lag = lag,
                 mismatch = mismatch,
                 thresholdBreached = thresholdBreached,
+                invariantsOk = false,
+                invariantViolations = emptyList(),
                 releasedAt = null,
                 releasedBy = null,
             )
@@ -363,6 +366,8 @@ class LedgerService(
                 lag = lag,
                 mismatch = mismatch,
                 thresholdBreached = thresholdBreached,
+                invariantsOk = false,
+                invariantViolations = emptyList(),
                 releasedAt = null,
                 releasedBy = null,
             )
@@ -375,6 +380,28 @@ class LedgerService(
                 lag = lag,
                 mismatch = mismatch,
                 thresholdBreached = thresholdBreached,
+                invariantsOk = false,
+                invariantViolations = emptyList(),
+                releasedAt = null,
+                releasedBy = null,
+            )
+        }
+
+        val invariantResult = runInvariantCheck()
+        val negativeOnlyViolation = invariantResult.violations.isNotEmpty() &&
+            invariantResult.violations.all { it.startsWith("negative_balances=") }
+        val invariantGatePass = invariantResult.ok || (allowNegativeBalanceViolations && negativeOnlyViolation)
+        if (!invariantGatePass) {
+            return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = false,
+                reason = "invariants_failed",
+                lag = lag,
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                invariantsOk = false,
+                invariantViolations = invariantResult.violations,
                 releasedAt = null,
                 releasedBy = null,
             )
@@ -395,6 +422,8 @@ class LedgerService(
                 lag = lag,
                 mismatch = mismatch,
                 thresholdBreached = thresholdBreached,
+                invariantsOk = invariantResult.ok,
+                invariantViolations = invariantResult.violations,
                 releasedAt = null,
                 releasedBy = null,
             )
@@ -420,6 +449,8 @@ class LedgerService(
                 lag = lag,
                 mismatch = mismatch,
                 thresholdBreached = thresholdBreached,
+                invariantsOk = invariantResult.ok,
+                invariantViolations = invariantResult.violations,
                 releasedAt = null,
                 releasedBy = null,
             )
@@ -454,6 +485,8 @@ class LedgerService(
             lag = lag,
             mismatch = mismatch,
             thresholdBreached = thresholdBreached,
+            invariantsOk = invariantResult.ok,
+            invariantViolations = invariantResult.violations,
             releasedAt = releasedAt,
             releasedBy = approvedBy,
         )
