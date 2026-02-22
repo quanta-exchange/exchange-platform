@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.time.Duration
+import java.time.Instant
 
 @RestController
 class SystemController(
@@ -53,6 +55,8 @@ class LedgerController(
     private val safetyMode: String,
     @Value("\${ledger.reconciliation.safety-latch-enabled:true}")
     private val safetyLatchEnabled: Boolean,
+    @Value("\${ledger.reconciliation.state-stale-ms:30000}")
+    private val staleStateThresholdMs: Long,
     @Value("\${ledger.reconciliation.latch-allow-negative-balances:false}")
     private val latchAllowNegativeBalances: Boolean,
 ) {
@@ -120,19 +124,25 @@ class LedgerController(
     @GetMapping("/admin/reconciliation/{symbol}")
     fun reconciliation(@PathVariable symbol: String): Map<String, Any?> {
         val status = ledgerService.reconciliation(symbol)
+        val now = Instant.now()
         val lag = status.lastEngineSeq - status.lastSettledSeq
+        val stateAgeMs = status.updatedAt?.let { Duration.between(it, now).toMillis().coerceAtLeast(0) } ?: Long.MAX_VALUE
         val mismatch = lag < 0
         val thresholdBreached = lag > lagThreshold
+        val staleThresholdBreached = staleStateThresholdMs > 0 && stateAgeMs > staleStateThresholdMs
         return mapOf(
             "symbol" to status.symbol,
             "lastEngineSeq" to status.lastEngineSeq,
             "lastSettledSeq" to status.lastSettledSeq,
             "gap" to lag,
+            "stateAgeMs" to stateAgeMs,
             "lagThreshold" to lagThreshold,
+            "stateStaleThresholdMs" to staleStateThresholdMs,
             "mismatch" to mismatch,
             "thresholdBreached" to thresholdBreached,
+            "staleThresholdBreached" to staleThresholdBreached,
             "updatedAt" to status.updatedAt,
-            "recommendation" to if (mismatch || thresholdBreached) "$safetyMode + investigate/replay" else "NONE",
+            "recommendation" to if (mismatch || thresholdBreached || staleThresholdBreached) "$safetyMode + investigate/replay" else "NONE",
         )
     }
 
@@ -144,10 +154,12 @@ class LedgerController(
         val dashboard = ledgerService.reconciliationStatus(
             historyLimit = historyLimit,
             lagThreshold = lagThreshold,
+            staleStateThresholdMs = staleStateThresholdMs,
         )
         return mapOf(
             "checkedAt" to dashboard.checkedAt,
             "lagThreshold" to lagThreshold,
+            "stateStaleThresholdMs" to staleStateThresholdMs,
             "safetyMode" to safetyMode,
             "safetyLatchEnabled" to safetyLatchEnabled,
             "statuses" to dashboard.statuses,
@@ -163,6 +175,7 @@ class LedgerController(
         val result = ledgerService.releaseReconciliationLatch(
             symbol = symbol,
             lagThreshold = lagThreshold,
+            staleStateThresholdMs = staleStateThresholdMs,
             approvedBy = req.approvedBy,
             reason = req.reason,
             restoreSymbolMode = req.restoreSymbolMode,

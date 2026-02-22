@@ -2,6 +2,7 @@ package com.quanta.exchange.ledger
 
 import com.quanta.exchange.ledger.core.BalanceAdjustmentCommand
 import com.quanta.exchange.ledger.core.EventEnvelope
+import com.quanta.exchange.ledger.core.LedgerMetrics
 import com.quanta.exchange.ledger.core.LedgerService
 import com.quanta.exchange.ledger.core.ReserveCommand
 import com.quanta.exchange.ledger.core.SafetyMode
@@ -25,6 +26,9 @@ class LedgerServiceIntegrationTest {
 
     @Autowired
     lateinit var jdbc: JdbcTemplate
+
+    @Autowired
+    lateinit var ledgerMetrics: LedgerMetrics
 
     @BeforeEach
     fun cleanDb() {
@@ -175,6 +179,62 @@ class LedgerServiceIntegrationTest {
             Boolean::class.java,
         )!!
         assertTrue(active)
+    }
+
+    @Test
+    fun reconciliationEvaluationBreachesWhenStateIsStale() {
+        ledgerService.updateEngineSeq("BTC-KRW", 10)
+        jdbc.update(
+            "UPDATE reconciliation_state SET last_settled_seq = ?, updated_at = ? WHERE symbol = ?",
+            10L,
+            java.sql.Timestamp.from(Instant.now().minusSeconds(120)),
+            "BTC-KRW",
+        )
+
+        val run = ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+            staleStateThresholdMs = 1_000,
+        )
+        val evaluation = run.evaluations.first()
+        assertTrue(evaluation.breached)
+        assertEquals("state_stale", evaluation.reason)
+
+        val status = ledgerService.reconciliationStatus(
+            historyLimit = 5,
+            lagThreshold = 5,
+            staleStateThresholdMs = 1_000,
+        ).statuses.first { it.symbol == "BTC-KRW" }
+        assertTrue(status.staleThresholdBreached)
+        assertTrue(status.breached)
+        assertTrue(status.stateAgeMs >= 1_000)
+    }
+
+    @Test
+    fun reconciliationRetriesSafetySwitchWhenPreviousAttemptFailed() {
+        ledgerService.updateEngineSeq("BTC-KRW", 50)
+        seedBalancesAndReserves()
+        assertTrue(ledgerService.consumeTrade(trade("trade-recon-retry", 40)).applied)
+
+        val alertsBefore = metricValue("reconciliation_alert_total")
+        val failuresBefore = metricValue("reconciliation_safety_failure_total")
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = true,
+            safetyLatchEnabled = true,
+        )
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = true,
+            safetyLatchEnabled = true,
+        )
+
+        assertEquals(alertsBefore + 2, metricValue("reconciliation_alert_total"))
+        assertEquals(failuresBefore + 2, metricValue("reconciliation_safety_failure_total"))
     }
 
     @Test
@@ -384,5 +444,13 @@ class LedgerServiceIntegrationTest {
             correlationId = "corr-$seq",
             causationId = "cause-$seq",
         )
+    }
+
+    private fun metricValue(name: String): Long {
+        val line = ledgerMetrics.renderPrometheus()
+            .lineSequence()
+            .firstOrNull { it.startsWith("$name ") }
+            ?: return 0
+        return line.substringAfter(' ').trim().toLong()
     }
 }

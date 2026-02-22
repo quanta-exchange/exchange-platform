@@ -23,6 +23,7 @@ class LedgerMetrics {
     private val reconciliationBreachActive = AtomicLong(0)
     private val reconciliationAlertTotal = AtomicLong(0)
     private val reconciliationMismatchTotal = AtomicLong(0)
+    private val reconciliationStaleTotal = AtomicLong(0)
     private val reconciliationSafetyTriggerTotal = AtomicLong(0)
     private val reconciliationSafetyFailureTotal = AtomicLong(0)
     private val invariantSafetyTriggerTotal = AtomicLong(0)
@@ -52,6 +53,7 @@ class LedgerMetrics {
     }
     fun incrementReconciliationAlert() = reconciliationAlertTotal.incrementAndGet()
     fun incrementReconciliationMismatch() = reconciliationMismatchTotal.incrementAndGet()
+    fun incrementReconciliationStale() = reconciliationStaleTotal.incrementAndGet()
     fun incrementReconciliationSafetyTrigger() = reconciliationSafetyTriggerTotal.incrementAndGet()
     fun incrementReconciliationSafetyFailure() = reconciliationSafetyFailureTotal.incrementAndGet()
     fun incrementInvariantSafetyTrigger(delta: Long = 1) {
@@ -85,6 +87,7 @@ class LedgerMetrics {
             appendMetric("reconciliation_breach_active", reconciliationBreachActive.get())
             appendMetric("reconciliation_alert_total", reconciliationAlertTotal.get())
             appendMetric("reconciliation_mismatch_total", reconciliationMismatchTotal.get())
+            appendMetric("reconciliation_stale_total", reconciliationStaleTotal.get())
             appendMetric("reconciliation_safety_trigger_total", reconciliationSafetyTriggerTotal.get())
             appendMetric("reconciliation_safety_failure_total", reconciliationSafetyFailureTotal.get())
             appendMetric("invariant_safety_trigger_total", invariantSafetyTriggerTotal.get())

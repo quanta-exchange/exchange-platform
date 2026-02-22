@@ -9,7 +9,17 @@ groups:
           service: ledger-service
         annotations:
           summary: "Ledger reconciliation breach is active"
-          description: "At least one symbol has lag above threshold or mismatch."
+          description: "At least one symbol has lag above threshold, mismatch, or stale reconciliation state."
+
+      - alert: LedgerReconciliationStateStale
+        expr: increase(reconciliation_stale_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: ledger-service
+        annotations:
+          summary: "Reconciliation state stale breach observed"
+          description: "A symbol exceeded reconciliation state freshness threshold in the last 5 minutes."
 
       - alert: LedgerReconciliationSafetyTriggered
         expr: increase(reconciliation_safety_trigger_total[5m]) > 0
@@ -30,4 +40,3 @@ groups:
         annotations:
           summary: "Safety mode trigger attempt failed"
           description: "Ledger reconciliation detected a breach but could not apply safety mode."
-

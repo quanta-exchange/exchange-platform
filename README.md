@@ -341,6 +341,7 @@ Ledger env:
 - `LEDGER_RECONCILIATION_ENABLED=true`
 - `LEDGER_RECONCILIATION_INTERVAL_MS=5000`
 - `LEDGER_RECONCILIATION_LAG_THRESHOLD=10`
+- `LEDGER_RECONCILIATION_STATE_STALE_MS=30000` (latest seq update freshness budget)
 - `LEDGER_RECONCILIATION_SAFETY_MODE=CANCEL_ONLY` (`SOFT_HALT`/`HARD_HALT` supported)
 - `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
 - `LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED=true` (breach latched until manual release)
@@ -362,6 +363,7 @@ Reconciliation metrics (ledger `/metrics`):
 - `reconciliation_breach_active`
 - `reconciliation_alert_total`
 - `reconciliation_mismatch_total`
+- `reconciliation_stale_total`
 - `reconciliation_safety_trigger_total`
 - `reconciliation_safety_failure_total`
 - `invariant_safety_trigger_total`

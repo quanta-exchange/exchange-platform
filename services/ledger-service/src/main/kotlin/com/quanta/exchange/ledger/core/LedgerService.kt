@@ -169,8 +169,10 @@ class LedgerService(
         safetyMode: SafetyMode,
         autoSwitchEnabled: Boolean,
         safetyLatchEnabled: Boolean,
+        staleStateThresholdMs: Long = Long.MAX_VALUE,
     ): ReconciliationRunSummary {
         val checkedAt = Instant.now()
+        val staleThresholdMs = staleStateThresholdMs.coerceAtLeast(0)
         val statuses = repo.reconciliationAll()
         val existingSafety = repo.reconciliationSafetyStates()
         val evaluations = mutableListOf<ReconciliationEvaluation>()
@@ -179,10 +181,16 @@ class LedgerService(
 
         statuses.forEach { status ->
             val lag = status.lastEngineSeq - status.lastSettledSeq
+            val stateAgeMs = stateAgeMs(status.updatedAt, checkedAt)
             val mismatch = lag < 0
             val thresholdBreached = lag > lagThreshold
-            val breached = mismatch || thresholdBreached
-            val reason = reconciliationReason(mismatch, thresholdBreached)
+            val staleThresholdBreached = staleThresholdMs > 0 && stateAgeMs > staleThresholdMs
+            val breached = mismatch || thresholdBreached || staleThresholdBreached
+            val reason = reconciliationReason(
+                mismatch = mismatch,
+                thresholdBreached = thresholdBreached,
+                staleThresholdBreached = staleThresholdBreached,
+            )
             val prev = existingSafety[status.symbol]
             val latchEngaged = if (safetyLatchEnabled) (prev?.latchEngaged == true || breached) else false
             val effectiveBreachActive = if (latchEngaged) true else breached
@@ -200,8 +208,15 @@ class LedgerService(
             if (mismatch) {
                 metrics.incrementReconciliationMismatch()
             }
+            if (staleThresholdBreached) {
+                metrics.incrementReconciliationStale()
+            }
 
-            val shouldTrigger = breached && (prev == null || !prev.breachActive)
+            val shouldTrigger = breached && (
+                prev == null ||
+                    !prev.breachActive ||
+                    (autoSwitchEnabled && !prev.lastActionTaken)
+                )
             var safetyActionTaken = false
             var actionAt: Instant? = prev?.lastActionAt
 
@@ -264,21 +279,40 @@ class LedgerService(
 
     fun reconciliationStatus(historyLimit: Int, lagThreshold: Long): ReconciliationDashboard {
         val now = Instant.now()
+        return reconciliationStatus(
+            historyLimit = historyLimit,
+            lagThreshold = lagThreshold,
+            staleStateThresholdMs = Long.MAX_VALUE,
+            checkedAt = now,
+        )
+    }
+
+    fun reconciliationStatus(
+        historyLimit: Int,
+        lagThreshold: Long,
+        staleStateThresholdMs: Long,
+        checkedAt: Instant = Instant.now(),
+    ): ReconciliationDashboard {
+        val staleThresholdMs = staleStateThresholdMs.coerceAtLeast(0)
         val statuses = repo.reconciliationAll()
         val safetyStates = repo.reconciliationSafetyStates()
         val views = statuses.map { status ->
             val lag = status.lastEngineSeq - status.lastSettledSeq
+            val stateAgeMs = stateAgeMs(status.updatedAt, checkedAt)
             val mismatch = lag < 0
             val thresholdBreached = lag > lagThreshold
+            val staleThresholdBreached = staleThresholdMs > 0 && stateAgeMs > staleThresholdMs
             val safety = safetyStates[status.symbol]
             ReconciliationStatusView(
                 symbol = status.symbol,
                 lastEngineSeq = status.lastEngineSeq,
                 lastSettledSeq = status.lastSettledSeq,
                 lag = lag,
+                stateAgeMs = stateAgeMs,
                 mismatch = mismatch,
                 thresholdBreached = thresholdBreached,
-                breached = (mismatch || thresholdBreached),
+                staleThresholdBreached = staleThresholdBreached,
+                breached = (mismatch || thresholdBreached || staleThresholdBreached),
                 breachActive = safety?.breachActive ?: false,
                 safetyMode = safety?.safetyMode,
                 lastActionAt = safety?.lastActionAt,
@@ -292,7 +326,7 @@ class LedgerService(
         }
         val history = repo.reconciliationHistory(historyLimit)
         return ReconciliationDashboard(
-            checkedAt = now,
+            checkedAt = checkedAt,
             statuses = views,
             history = history,
         )
@@ -331,6 +365,7 @@ class LedgerService(
     fun releaseReconciliationLatch(
         symbol: String,
         lagThreshold: Long,
+        staleStateThresholdMs: Long = Long.MAX_VALUE,
         approvedBy: String,
         reason: String,
         restoreSymbolMode: Boolean,
@@ -338,15 +373,18 @@ class LedgerService(
     ): ReconciliationLatchReleaseResult {
         val safeSymbol = symbol.trim().uppercase()
         val status = repo.reconciliation(safeSymbol)
+        val now = Instant.now()
         val lag = status.lastEngineSeq - status.lastSettledSeq
+        val stateAgeMs = stateAgeMs(status.updatedAt, now)
         val mismatch = lag < 0
         val thresholdBreached = lag > lagThreshold
-        if (mismatch || thresholdBreached) {
+        val staleThresholdBreached = staleStateThresholdMs > 0 && stateAgeMs > staleStateThresholdMs
+        if (mismatch || thresholdBreached || staleThresholdBreached) {
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
                 modeRestored = false,
-                reason = "still_breached",
+                reason = if (staleThresholdBreached) "state_stale" else "still_breached",
                 lag = lag,
                 mismatch = mismatch,
                 thresholdBreached = thresholdBreached,
@@ -407,7 +445,7 @@ class LedgerService(
             )
         }
 
-        val releasedAt = Instant.now()
+        val releasedAt = now
         val modeRestored = if (restoreSymbolMode) {
             symbolModeSwitcher.restoreSymbolMode(safeSymbol, "reconciliation_latch_release:$reason")
         } else {
@@ -634,12 +672,21 @@ class LedgerService(
         metrics.setCorrectionPendingAgeMs(ageMs)
     }
 
-    private fun reconciliationReason(mismatch: Boolean, thresholdBreached: Boolean): String {
+    private fun reconciliationReason(
+        mismatch: Boolean,
+        thresholdBreached: Boolean,
+        staleThresholdBreached: Boolean,
+    ): String {
         return when {
             mismatch -> "settled_seq_ahead_of_engine_seq"
             thresholdBreached -> "lag_threshold_exceeded"
+            staleThresholdBreached -> "state_stale"
             else -> "within_threshold"
         }
+    }
+
+    private fun stateAgeMs(updatedAt: Instant?, now: Instant): Long {
+        return updatedAt?.let { Duration.between(it, now).toMillis().coerceAtLeast(0) } ?: Long.MAX_VALUE
     }
 
     private fun nanosToMillis(started: Long): Long {

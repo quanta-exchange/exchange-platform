@@ -18,6 +18,8 @@ class ReconciliationScheduler(
     private val autoSwitchEnabled: Boolean,
     @Value("\${ledger.reconciliation.safety-latch-enabled:true}")
     private val safetyLatchEnabled: Boolean,
+    @Value("\${ledger.reconciliation.state-stale-ms:30000}")
+    private val staleStateThresholdMs: Long,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -29,14 +31,16 @@ class ReconciliationScheduler(
             safetyMode = mode,
             autoSwitchEnabled = autoSwitchEnabled,
             safetyLatchEnabled = safetyLatchEnabled,
+            staleStateThresholdMs = staleStateThresholdMs.coerceAtLeast(0),
         )
         val breached = result.evaluations.filter { it.breached }
         if (breached.isNotEmpty()) {
             log.error(
-                "service=ledger msg=reconciliation_breach symbols={} mode={} threshold={}",
+                "service=ledger msg=reconciliation_breach symbols={} mode={} threshold={} stale_ms={}",
                 breached.joinToString(",") { it.symbol },
                 mode.name,
                 lagThreshold,
+                staleStateThresholdMs.coerceAtLeast(0),
             )
         }
     }
