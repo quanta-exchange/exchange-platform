@@ -239,4 +239,83 @@ then
   exit 1
 fi
 
+RESUME_RESP="$(curl -fsS -X POST "http://localhost:${LEDGER_PORT}/v1/admin/consumers/settlement/resume")"
+echo "resume_consumer=${RESUME_RESP}"
+if ! RESUME_JSON="${RESUME_RESP}" python3 - <<'PY'
+import json
+import os
+import sys
+payload = json.loads(os.environ["RESUME_JSON"])
+if payload.get("gatePaused") is False:
+    sys.exit(0)
+sys.exit(1)
+PY
+then
+  echo "settlement consumer resume was not fully applied"
+  exit 1
+fi
+
+recovered="false"
+for _ in {1..60}; do
+  STATUS_JSON="$(curl -fsS "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/status?historyLimit=30")"
+  if STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
+import json
+import os
+import sys
+data = json.loads(os.environ["STATUS_JSON"])
+status = next((s for s in data.get("statuses", []) if s.get("symbol") == "BTC-KRW"), None)
+if status is None:
+    sys.exit(1)
+lag = int(status.get("lag", 0))
+if lag <= 2 and not bool(status.get("mismatch", False)) and not bool(status.get("thresholdBreached", False)):
+    sys.exit(0)
+sys.exit(1)
+PY
+  then
+    recovered="true"
+    break
+  fi
+  sleep 1
+done
+
+if [[ "${recovered}" != "true" ]]; then
+  echo "reconciliation recovery not observed in time"
+  tail -n 120 "${LEDGER_LOG}" || true
+  exit 1
+fi
+
+LATCH_RELEASE_RESP="$(curl -fsS -X POST "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/latch/BTC-KRW/release" \
+  -H 'Content-Type: application/json' \
+  -d '{"approvedBy":"smoke-ops","reason":"smoke_verified","restoreSymbolMode":true}')"
+echo "latch_release=${LATCH_RELEASE_RESP}"
+if ! RELEASE_JSON="${LATCH_RELEASE_RESP}" python3 - <<'PY'
+import json
+import os
+import sys
+resp = json.loads(os.environ["RELEASE_JSON"])
+if bool(resp.get("released", False)) and bool(resp.get("modeRestored", False)):
+    sys.exit(0)
+sys.exit(1)
+PY
+then
+  echo "expected successful latch release with mode restore"
+  exit 1
+fi
+
+POST_RELEASE_ORDER="$(place_order "recon-post-release-${RUN_ID}")"
+echo "post_release_order=${POST_RELEASE_ORDER}"
+if ! ORDER_JSON="${POST_RELEASE_ORDER}" python3 - <<'PY'
+import json
+import os
+import sys
+resp = json.loads(os.environ["ORDER_JSON"])
+if resp.get("status") == "REJECTED" and resp.get("rejectCode") == "CANCEL_ONLY":
+    sys.exit(1)
+sys.exit(0)
+PY
+then
+  echo "order still rejected by CANCEL_ONLY after latch release"
+  exit 1
+fi
+
 echo "smoke_reconciliation_safety_success=true"

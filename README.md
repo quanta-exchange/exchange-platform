@@ -147,6 +147,8 @@ This script verifies:
 - reconciliation lag grows above threshold
 - ledger auto-triggers `CANCEL_ONLY` safety mode on trading core
 - new orders are rejected with `CANCEL_ONLY`
+- after lag recovery, safety latch is manually released via admin API
+- trading returns to non-`CANCEL_ONLY` mode
 
 ### 8) E2E Smoke (no frontend, real matching path)
 Exact command sequence on a fresh machine:
