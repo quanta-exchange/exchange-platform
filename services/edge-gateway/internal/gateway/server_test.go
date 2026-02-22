@@ -170,6 +170,12 @@ func TestCreateOrderIsIdempotent(t *testing.T) {
 	if a1.OrderID != a2.OrderID || a1.Seq != a2.Seq {
 		t.Fatalf("expected idempotent response, got %+v vs %+v", a1, a2)
 	}
+	if strings.Contains(strings.ToLower(a1.OrderID), "idem-1") {
+		t.Fatalf("order id leaks idempotency key: %s", a1.OrderID)
+	}
+	if !strings.HasPrefix(a1.OrderID, "ord_") {
+		t.Fatalf("unexpected order id format: %s", a1.OrderID)
+	}
 }
 
 func TestRejectsInvalidSignature(t *testing.T) {

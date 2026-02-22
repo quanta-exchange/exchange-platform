@@ -1438,7 +1438,7 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orderID := fmt.Sprintf("ord_%s", idemKey)
+	orderID := "ord_" + uuid.NewString()
 	commandID := uuid.NewString()
 	correlationID := uuid.NewString()
 	traceID := trace.SpanFromContext(r.Context()).SpanContext().TraceID().String()
