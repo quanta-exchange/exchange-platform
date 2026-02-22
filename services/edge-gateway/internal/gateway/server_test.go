@@ -801,6 +801,10 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 			},
 			slowConsumerCloses: 2,
 			wsDroppedMsgs:      7,
+			authFailReason: map[string]uint64{
+				"unknown_key":   3,
+				"bad_signature": 2,
+			},
 		},
 	}
 
@@ -821,4 +825,7 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("ws_send_queue_p99", "4")
 	assertMetric("ws_dropped_msgs", "7")
 	assertMetric("ws_slow_closes", "2")
+	assertMetric("edge_auth_fail_total", "5")
+	assertMetric("edge_auth_fail_reason_total{reason=\"bad_signature\"}", "2")
+	assertMetric("edge_auth_fail_reason_total{reason=\"unknown_key\"}", "3")
 }

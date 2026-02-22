@@ -641,11 +641,20 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 		queueLens = append(queueLens, c.queueLen())
 	}
 	authFail := uint64(0)
+	authFailByReason := make(map[string]uint64, len(s.state.authFailReason))
 	for _, c := range s.state.authFailReason {
 		authFail += c
 	}
+	for reason, count := range s.state.authFailReason {
+		authFailByReason[reason] = count
+	}
 	s.state.mu.Unlock()
 	queueP99 := p99(queueLens)
+	reasons := make([]string, 0, len(authFailByReason))
+	for reason := range authFailByReason {
+		reasons = append(reasons, reason)
+	}
+	sort.Strings(reasons)
 
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	_, _ = w.Write([]byte("edge_orders_total " + strconv.FormatUint(orders, 10) + "\n"))
@@ -653,6 +662,14 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_ws_connections " + strconv.Itoa(clients) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_close_slow_consumer_total " + strconv.FormatUint(slowClose, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
+	for _, reason := range reasons {
+		line := fmt.Sprintf(
+			"edge_auth_fail_reason_total{reason=\"%s\"} %d\n",
+			prometheusLabelEscape(reason),
+			authFailByReason[reason],
+		)
+		_, _ = w.Write([]byte(line))
+	}
 	_, _ = w.Write([]byte("edge_replay_detect_total " + strconv.FormatUint(replayDetected, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_active_conns " + strconv.Itoa(clients) + "\n"))
 	_, _ = w.Write([]byte("ws_send_queue_p99 " + strconv.Itoa(queueP99) + "\n"))
@@ -2706,6 +2723,13 @@ func (s *Server) cacheGet(ctx context.Context, key string) ([]byte, bool) {
 
 func cacheKey(channel, symbol string) string {
 	return "snapshot:" + channel + ":" + symbol
+}
+
+func prometheusLabelEscape(value string) string {
+	escaped := strings.ReplaceAll(value, `\`, `\\`)
+	escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+	escaped = strings.ReplaceAll(escaped, "\n", `\n`)
+	return escaped
 }
 
 func conflatable(channel string) bool {
