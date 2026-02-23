@@ -86,20 +86,25 @@ fi
 if ! run_step "controls-check" "$ROOT_DIR/scripts/controls_check.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "safety-budget" "$ROOT_DIR/scripts/safety_budget_check.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "assurance-pack" "$ROOT_DIR/scripts/assurance_pack.sh"; then
   HAS_FAILURE=true
 fi
 
 SAFETY_LOG="$LOG_DIR/safety-case.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
+SAFETY_BUDGET_LOG="$LOG_DIR/safety-budget.log"
 ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
 SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
 SAFETY_ARTIFACT="$(extract_value "safety_case_artifact" "$SAFETY_LOG")"
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
+SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$CONTROLS_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$CONTROLS_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -111,7 +116,8 @@ steps_tsv = sys.argv[5]
 safety_manifest = sys.argv[6]
 safety_artifact = sys.argv[7]
 controls_report = sys.argv[8]
-assurance_json = sys.argv[9]
+safety_budget_report = sys.argv[9]
+assurance_json = sys.argv[10]
 
 steps = []
 ok = True
@@ -141,6 +147,7 @@ summary = {
         "safety_case_manifest": safety_manifest or None,
         "safety_case_artifact": safety_artifact or None,
         "controls_check_report": controls_report or None,
+        "safety_budget_report": safety_budget_report or None,
         "assurance_pack_json": assurance_json or None,
     },
 }

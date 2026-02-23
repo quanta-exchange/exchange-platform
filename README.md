@@ -39,13 +39,16 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->budget->assurance)
+  safety_budget_check.sh  # G31 safety budget checker
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
   ws_smoke.sh             # WS slow-consumer backpressure smoke
 policies/
   trading-policy.v1.json  # baseline policy-as-code document
+safety/
+  budgets.yaml            # safety budget thresholds
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -260,6 +263,15 @@ make policy-smoke
 Success output includes:
 - `policy_smoke_ok=true`
 - `policy_smoke_signature=build/policy-smoke/trading-policy.v1.sig`
+
+### 16) Safety budget check
+```bash
+make safety-budget
+```
+Success output includes:
+- `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
+- `safety_budget_latest=build/safety/safety-budget-latest.json`
+- `safety_budget_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

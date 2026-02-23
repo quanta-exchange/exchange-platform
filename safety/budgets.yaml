@@ -1,0 +1,36 @@
+{
+  "budgets": {
+    "load": {
+      "required": true,
+      "orderP99MsMax": 50.0,
+      "orderErrorRateMax": 0.01
+    },
+    "dr": {
+      "required": true,
+      "restoreTimeMsMax": 300000,
+      "replayTimeMsMax": 300000
+    },
+    "invariants": {
+      "required": true,
+      "mustBeOk": true
+    },
+    "ws": {
+      "required": false,
+      "slowClosesMin": 1,
+      "droppedMsgsMin": 1
+    },
+    "reconciliationSmoke": {
+      "required": false,
+      "mustConfirmBreach": true,
+      "mustRecover": true,
+      "mustReleaseLatch": true
+    }
+  },
+  "reports": {
+    "load": "build/load/load-smoke.json",
+    "dr": "build/dr/dr-report.json",
+    "invariants": "build/invariants/ledger-invariants.json",
+    "ws": "build/ws/ws-smoke.json",
+    "reconciliationSmoke": "build/reconciliation/smoke-reconciliation-safety.json"
+  }
+}

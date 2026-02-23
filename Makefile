@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory policy-sign policy-verify policy-smoke exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory safety-budget policy-sign policy-verify policy-smoke exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -29,6 +29,9 @@ controls-check:
 
 verification-factory:
 	./scripts/verification_factory.sh
+
+safety-budget:
+	./scripts/safety_budget_check.sh
 
 policy-sign:
 	./scripts/policy_sign.sh
