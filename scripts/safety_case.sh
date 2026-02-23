@@ -134,6 +134,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/exactly-once/exactly-once-stress.json"
   "build/idempotency/prove-idempotency-latest.json"
   "build/latch/prove-latch-approval-latest.json"
+  "build/safety/prove-budget-freshness-latest.json"
   "build/reconciliation/smoke-reconciliation-safety.json"
   "build/chaos/chaos-replay.json"
   "build/chaos/redpanda-broker-bounce.json"

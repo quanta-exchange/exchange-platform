@@ -383,6 +383,18 @@
       "title": "Safety-case bundle can include audit-chain and change-audit-chain evidence",
       "enforced": false,
       "required_evidence": ["scripts/safety_case.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-065",
+      "title": "Safety budget freshness proof verifies stale-report rejection",
+      "enforced": false,
+      "required_evidence": ["scripts/prove_budget_freshness.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "build/safety/prove-budget-freshness-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-066",
+      "title": "Verification factory runs budget freshness proof and records artifact",
+      "enforced": false,
+      "required_evidence": ["scripts/verification_factory.sh", "scripts/prove_budget_freshness.sh", "README.md"]
     }
   ]
 }

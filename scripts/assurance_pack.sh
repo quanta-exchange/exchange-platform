@@ -95,6 +95,7 @@ evidence = [
     {"id": "determinism", "path": pathlib.Path("build/determinism/prove-determinism-latest.json"), "required": False},
     {"id": "idempotency_scope", "path": pathlib.Path("build/idempotency/prove-idempotency-latest.json"), "required": False},
     {"id": "latch_dual_approval", "path": pathlib.Path("build/latch/prove-latch-approval-latest.json"), "required": False},
+    {"id": "budget_freshness", "path": pathlib.Path("build/safety/prove-budget-freshness-latest.json"), "required": False},
     {"id": "circuit_breakers", "path": pathlib.Path("build/breakers/prove-breakers-latest.json"), "required": False},
     {"id": "candle_correctness", "path": pathlib.Path("build/candles/prove-candles-latest.json"), "required": False},
     {"id": "snapshot_verify", "path": pathlib.Path("build/snapshot/snapshot-verify-latest.json"), "required": False},
@@ -156,6 +157,7 @@ pack = {
         {"id": "G22", "text": "RBAC SoD check enforces role separation constraints and fails on restricted-permission overlaps."},
         {"id": "G23", "text": "Change workflow proposal/approval/apply history is captured with a hash chain and independently verifiable for tamper evidence."},
         {"id": "G24", "text": "Runbook-as-code drill validates the full change workflow and emits reproducible operational evidence with before/after posture snapshots."},
+        {"id": "G25", "text": "Safety budget freshness proof confirms stale evidence is rejected while fresh evidence passes, reducing false trust in outdated reports."},
     ],
 }
 

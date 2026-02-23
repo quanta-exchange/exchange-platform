@@ -1,17 +1,23 @@
 {
+  "freshness": {
+    "defaultMaxAgeSeconds": 2592000
+  },
   "budgets": {
     "load": {
       "required": true,
+      "maxAgeSeconds": 604800,
       "orderP99MsMax": 50.0,
       "orderErrorRateMax": 0.01
     },
     "dr": {
       "required": true,
+      "maxAgeSeconds": 2592000,
       "restoreTimeMsMax": 300000,
       "replayTimeMsMax": 300000
     },
     "invariants": {
       "required": true,
+      "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
     "invariantsSummary": {
@@ -42,21 +48,25 @@
     },
     "auditChain": {
       "required": false,
+      "maxAgeSeconds": 604800,
       "mustBeOk": true,
       "allowedModes": ["chained", "mixed"]
     },
     "changeAuditChain": {
       "required": false,
+      "maxAgeSeconds": 604800,
       "mustBeOk": true,
       "allowedModes": ["chained", "mixed"]
     },
     "piiLogScan": {
       "required": false,
+      "maxAgeSeconds": 604800,
       "mustBeOk": true,
       "maxHits": 0
     },
     "anomaly": {
       "required": false,
+      "maxAgeSeconds": 604800,
       "mustBeOk": true,
       "mustNotDetectAnomaly": true
     }

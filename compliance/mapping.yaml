@@ -269,6 +269,16 @@
       "controlId": "CTRL-064",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.7.5.3"],
       "description": "Safety-case artifact manifest can capture audit-chain and change-audit-chain verification evidence for release traceability"
+    },
+    {
+      "controlId": "CTRL-065",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Safety budget freshness proof demonstrates stale evidence is rejected before policy decisions are trusted"
+    },
+    {
+      "controlId": "CTRL-066",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
+      "description": "Verification factory executes the budget-freshness proof and publishes its artifact in the consolidated verification summary"
     }
   ]
 }

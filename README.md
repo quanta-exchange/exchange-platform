@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -54,6 +54,7 @@ scripts/
   prove_determinism.sh    # G4.6 deterministic replay proof runner
   prove_idempotency_scope.sh # G4.1 idempotency scope/TTL proof runner
   prove_latch_approval.sh # G4.1 reconciliation latch approval proof runner
+  prove_budget_freshness.sh # G31 safety budget artifact freshness proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
   prove_candles.sh        # G17 candle correctness proof runner
   snapshot_verify.sh      # G4.2 snapshot checksum + restore rehearsal verifier
@@ -379,6 +380,7 @@ make safety-case-extended
 - `build/exactly-once/exactly-once-stress.json`
 - `build/idempotency/prove-idempotency-latest.json`
 - `build/latch/prove-latch-approval-latest.json`
+- `build/safety/prove-budget-freshness-latest.json`
 - `build/reconciliation/smoke-reconciliation-safety.json`
 - `build/chaos/chaos-replay.json`
 - `build/ws/ws-smoke.json`
@@ -422,7 +424,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `verify_change_audit_chain_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `verify_change_audit_chain_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -441,6 +443,10 @@ Success output includes:
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
 - when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly` gates
+- supports report freshness policy via `safety/budgets.yaml`:
+  - top-level `freshness.defaultMaxAgeSeconds`
+  - per-check override `budgets.<check>.maxAgeSeconds`
+  - output fields: `age_seconds`, `max_age_seconds`, `report_time_source`
 
 ### 17) System status snapshot
 ```bash
@@ -663,7 +669,16 @@ Outputs:
 - `prove_latch_approval_latest=build/latch/prove-latch-approval-latest.json`
 - `prove_latch_approval_ok=true|false`
 
-### 27.3) Circuit-breaker proof
+### 27.3) Budget freshness proof
+```bash
+make prove-budget-freshness
+```
+Outputs:
+- `prove_budget_freshness_report=build/safety/prove-budget-freshness-<timestamp>.json`
+- `prove_budget_freshness_latest=build/safety/prove-budget-freshness-latest.json`
+- `prove_budget_freshness_ok=true|false`
+
+### 27.4) Circuit-breaker proof
 ```bash
 make prove-breakers
 ```
@@ -672,7 +687,7 @@ Outputs:
 - `prove_breakers_latest=build/breakers/prove-breakers-latest.json`
 - `prove_breakers_ok=true|false`
 
-### 27.4) Service-mode matrix verification
+### 27.5) Service-mode matrix verification
 ```bash
 make verify-service-modes
 ```

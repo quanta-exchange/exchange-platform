@@ -157,6 +157,9 @@ fi
 if ! run_step "prove-latch-approval" "$ROOT_DIR/scripts/prove_latch_approval.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "prove-budget-freshness" "$ROOT_DIR/scripts/prove_budget_freshness.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "model-check" "$ROOT_DIR/scripts/model_check.sh"; then
   HAS_FAILURE=true
 fi
@@ -210,6 +213,7 @@ ANOMALY_DETECTOR_LOG="$LOG_DIR/anomaly-detector.log"
 ANOMALY_SMOKE_LOG="$LOG_DIR/anomaly-smoke.log"
 PROVE_IDEMPOTENCY_LOG="$LOG_DIR/prove-idempotency.log"
 PROVE_LATCH_APPROVAL_LOG="$LOG_DIR/prove-latch-approval.log"
+PROVE_BUDGET_FRESHNESS_LOG="$LOG_DIR/prove-budget-freshness.log"
 MODEL_CHECK_LOG="$LOG_DIR/model-check.log"
 PROVE_BREAKERS_LOG="$LOG_DIR/prove-breakers.log"
 PROVE_CANDLES_LOG="$LOG_DIR/prove-candles.log"
@@ -240,6 +244,7 @@ ANOMALY_DETECTOR_REPORT="$(extract_value "anomaly_report" "$ANOMALY_DETECTOR_LOG
 ANOMALY_SMOKE_REPORT="$(extract_value "anomaly_smoke_report" "$ANOMALY_SMOKE_LOG")"
 PROVE_IDEMPOTENCY_REPORT="$(extract_value "prove_idempotency_report" "$PROVE_IDEMPOTENCY_LOG")"
 PROVE_LATCH_APPROVAL_REPORT="$(extract_value "prove_latch_approval_report" "$PROVE_LATCH_APPROVAL_LOG")"
+PROVE_BUDGET_FRESHNESS_REPORT="$(extract_value "prove_budget_freshness_report" "$PROVE_BUDGET_FRESHNESS_LOG")"
 MODEL_CHECK_REPORT="$(extract_value "model_check_report" "$MODEL_CHECK_LOG")"
 PROVE_BREAKERS_REPORT="$(extract_value "prove_breakers_report" "$PROVE_BREAKERS_LOG")"
 PROVE_CANDLES_REPORT="$(extract_value "prove_candles_report" "$PROVE_CANDLES_LOG")"
@@ -253,7 +258,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -272,28 +277,29 @@ external_replay_report = sys.argv[12]
 controls_report = sys.argv[13]
 prove_idempotency_report = sys.argv[14]
 prove_latch_approval_report = sys.argv[15]
-model_check_report = sys.argv[16]
-prove_breakers_report = sys.argv[17]
-prove_candles_report = sys.argv[18]
-snapshot_verify_report = sys.argv[19]
-verify_service_modes_report = sys.argv[20]
-ws_resume_smoke_report = sys.argv[21]
-shadow_verify_report = sys.argv[22]
-compliance_report = sys.argv[23]
-transparency_report = sys.argv[24]
-access_review_report = sys.argv[25]
-safety_budget_report = sys.argv[26]
-assurance_json = sys.argv[27]
-run_startup_guardrails = sys.argv[28].lower() == "true"
-startup_guardrails_runbook_dir = sys.argv[29]
-run_change_workflow = sys.argv[30].lower() == "true"
-change_workflow_runbook_dir = sys.argv[31]
-verify_audit_chain_report = sys.argv[32]
-verify_change_audit_chain_report = sys.argv[33]
-pii_log_scan_report = sys.argv[34]
-anomaly_detector_report = sys.argv[35]
-anomaly_smoke_report = sys.argv[36]
-rbac_sod_report = sys.argv[37]
+prove_budget_freshness_report = sys.argv[16]
+model_check_report = sys.argv[17]
+prove_breakers_report = sys.argv[18]
+prove_candles_report = sys.argv[19]
+snapshot_verify_report = sys.argv[20]
+verify_service_modes_report = sys.argv[21]
+ws_resume_smoke_report = sys.argv[22]
+shadow_verify_report = sys.argv[23]
+compliance_report = sys.argv[24]
+transparency_report = sys.argv[25]
+access_review_report = sys.argv[26]
+safety_budget_report = sys.argv[27]
+assurance_json = sys.argv[28]
+run_startup_guardrails = sys.argv[29].lower() == "true"
+startup_guardrails_runbook_dir = sys.argv[30]
+run_change_workflow = sys.argv[31].lower() == "true"
+change_workflow_runbook_dir = sys.argv[32]
+verify_audit_chain_report = sys.argv[33]
+verify_change_audit_chain_report = sys.argv[34]
+pii_log_scan_report = sys.argv[35]
+anomaly_detector_report = sys.argv[36]
+anomaly_smoke_report = sys.argv[37]
+rbac_sod_report = sys.argv[38]
 
 steps = []
 ok = True
@@ -340,6 +346,7 @@ summary = {
         "rbac_sod_check_report": rbac_sod_report or None,
         "prove_idempotency_report": prove_idempotency_report or None,
         "prove_latch_approval_report": prove_latch_approval_report or None,
+        "prove_budget_freshness_report": prove_budget_freshness_report or None,
         "model_check_report": model_check_report or None,
         "prove_breakers_report": prove_breakers_report or None,
         "prove_candles_report": prove_candles_report or None,

@@ -48,29 +48,72 @@ with open(budget_file, "r", encoding="utf-8") as f:
 
 budgets = cfg.get("budgets", {})
 reports_cfg = cfg.get("reports", {})
+freshness_cfg = cfg.get("freshness", {}) if isinstance(cfg.get("freshness"), dict) else {}
+
+freshness_default_max_age = freshness_cfg.get("defaultMaxAgeSeconds")
+if freshness_default_max_age is not None:
+    freshness_default_max_age = int(freshness_default_max_age)
 
 results = []
 violations = []
 
+def parse_utc(raw):
+    if raw is None:
+        return None
+    if isinstance(raw, (int, float)):
+        val = float(raw)
+        # Accept both epoch seconds and epoch milliseconds.
+        if val > 1_000_000_000_000:
+            val = val / 1000.0
+        return datetime.fromtimestamp(val, tz=timezone.utc)
+    if not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+def resolve_report_time(payload, path):
+    if isinstance(payload, dict):
+        for key in ("generated_at_utc", "timestamp_utc", "timestamp", "ts"):
+            if key not in payload:
+                continue
+            try:
+                parsed = parse_utc(payload.get(key))
+            except Exception:
+                parsed = None
+            if parsed is not None:
+                return parsed, key
+    return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc), "file_mtime"
+
 def load_report(key):
     rel = reports_cfg.get(key)
     if not rel:
-        return None, None
+        return None, None, None
     path = root / rel
     if not path.exists():
-        return rel, None
+        return rel, None, path
     with open(path, "r", encoding="utf-8") as f:
-        return rel, json.load(f)
+        return rel, json.load(f), path
 
 for key, budget in budgets.items():
     required = bool(budget.get("required", False))
-    rel_path, payload = load_report(key)
+    rel_path, payload, report_path = load_report(key)
 
     entry = {
         "check": key,
         "required": required,
         "report_path": rel_path,
         "report_exists": payload is not None,
+        "report_generated_at_utc": None,
+        "report_time_source": None,
+        "age_seconds": None,
+        "max_age_seconds": None,
         "ok": True,
         "details": [],
     }
@@ -82,6 +125,19 @@ for key, budget in budgets.items():
             violations.append(f"{key}:missing_report")
         results.append(entry)
         continue
+
+    max_age_seconds = budget.get("maxAgeSeconds", freshness_default_max_age)
+    if max_age_seconds is not None:
+        max_age_seconds = int(max_age_seconds)
+        entry["max_age_seconds"] = max_age_seconds
+        report_ts, report_ts_source = resolve_report_time(payload, report_path)
+        age_seconds = max(0, int((datetime.now(timezone.utc) - report_ts).total_seconds()))
+        entry["report_generated_at_utc"] = report_ts.strftime("%Y-%m-%dT%H:%M:%SZ")
+        entry["report_time_source"] = report_ts_source
+        entry["age_seconds"] = age_seconds
+        if age_seconds > max_age_seconds:
+            entry["ok"] = False
+            entry["details"].append(f"stale_report age_seconds={age_seconds} > {max_age_seconds}")
 
     if key == "load":
         p99 = float(payload.get("order_p99_ms", 0.0))
@@ -208,6 +264,7 @@ report = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "ok": len(violations) == 0,
     "allow_missing_optional": allow_missing_optional,
+    "freshness_default_max_age_seconds": freshness_default_max_age,
     "violations": violations,
     "results": results,
 }
