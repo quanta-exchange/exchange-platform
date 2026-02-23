@@ -46,6 +46,7 @@ core_invariants = read_json("build/invariants/core-invariants.json")
 invariants_summary = read_json("build/invariants/invariants-summary.json")
 ws = read_json("build/ws/ws-smoke.json")
 safety_budget = read_json("build/safety/safety-budget-latest.json")
+snapshot_verify = read_json("build/snapshot/snapshot-verify-latest.json")
 controls = read_json("build/controls/controls-check-latest.json")
 compliance = read_json("build/compliance/compliance-evidence-latest.json")
 
@@ -57,6 +58,7 @@ sources = {
     "invariants_summary": invariants_summary,
     "ws": ws,
     "safety_budget": safety_budget,
+    "snapshot_verify": snapshot_verify,
     "controls": controls,
     "compliance": compliance,
 }
@@ -112,6 +114,7 @@ report = {
             "clickhouse_invariants_ok": bool(invariants_summary.get("clickhouse", {}).get("ok")) if invariants_summary else None,
             "dr_invariant_violations": int(dr.get("invariant_violations")) if dr and dr.get("invariant_violations") is not None else None,
             "safety_budget_ok": bool(safety_budget.get("ok")) if safety_budget else None,
+            "snapshot_verify_ok": bool(snapshot_verify.get("ok")) if snapshot_verify else None,
         },
         "ws_proxy": {
             "ws_dropped_msgs": float(ws.get("metrics", {}).get("ws_dropped_msgs")) if ws else None,
@@ -134,6 +137,7 @@ report = {
         "invariants_summary": "build/invariants/invariants-summary.json",
         "ws": "build/ws/ws-smoke.json",
         "safety_budget": "build/safety/safety-budget-latest.json",
+        "snapshot_verify": "build/snapshot/snapshot-verify-latest.json",
         "controls": "build/controls/controls-check-latest.json",
         "compliance": "build/compliance/compliance-evidence-latest.json",
     },

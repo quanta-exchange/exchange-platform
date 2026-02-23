@@ -367,6 +367,7 @@ jobs:
             build/shadow/**
             build/breakers/**
             build/candles/**
+            build/snapshot/**
             build/service-modes/**
             build/ws/**
             build/idempotency/**

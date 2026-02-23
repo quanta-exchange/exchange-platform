@@ -19,6 +19,10 @@
       "mustClickhouseBeOkWhenChecked": true,
       "mustCoreBeOkWhenChecked": true
     },
+    "snapshotVerify": {
+      "required": false,
+      "mustBeOk": true
+    },
     "ws": {
       "required": false,
       "slowClosesMin": 1,
@@ -36,6 +40,7 @@
     "dr": "build/dr/dr-report.json",
     "invariants": "build/invariants/ledger-invariants.json",
     "invariantsSummary": "build/invariants/invariants-summary.json",
+    "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",
     "ws": "build/ws/ws-smoke.json",
     "reconciliationSmoke": "build/reconciliation/smoke-reconciliation-safety.json"
   }

@@ -126,6 +126,12 @@ for key, budget in budgets.items():
         if must_core_ok and core_status == "checked" and not core_ok:
             entry["ok"] = False
             entry["details"].append("core_seq_invariants_not_ok")
+    elif key == "snapshotVerify":
+        must_ok = bool(budget.get("mustBeOk", True))
+        snap_ok = bool(payload.get("ok", False))
+        if must_ok and not snap_ok:
+            entry["ok"] = False
+            entry["details"].append("snapshot_verify_not_ok")
     elif key == "ws":
         slow = float(payload.get("metrics", {}).get("ws_slow_closes", 0.0))
         dropped = float(payload.get("metrics", {}).get("ws_dropped_msgs", 0.0))

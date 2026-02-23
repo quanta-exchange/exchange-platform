@@ -209,6 +209,12 @@
       "title": "WS fan-out alert rule examples exist",
       "enforced": false,
       "required_evidence": ["infra/observability/ws-alert-rules.example.yml"]
+    },
+    {
+      "id": "CTRL-036",
+      "title": "Snapshot verify rehearsal evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/snapshot/snapshot-verify-latest.json", "scripts/snapshot_verify.sh", "services/trading-core/src/bin/snapshot-tool.rs"]
     }
   ]
 }

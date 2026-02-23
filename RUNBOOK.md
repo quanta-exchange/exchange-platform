@@ -192,6 +192,14 @@ Success criteria:
 - post-recovery invariant check returns `ok=true`
   - stub trade mode에서는 `invariants_warning=negative_balances_present_under_stub_mode`가 함께 출력될 수 있음
 
+Related snapshot rehearsal:
+- `./scripts/snapshot_verify.sh`
+  - optional `--snapshot-uri <http(s)|file://...>` for remote retrieval
+  - verifies checksum (`--sha256-file` or `<snapshot>.sha256`) when available
+  - executes snapshot + WAL restore rehearsal and emits:
+    - `snapshot_verify_ok=true`
+    - `snapshot_verify_latest=build/snapshot/snapshot-verify-latest.json`
+
 ---
 
 ## 5) Local smoke (Gate G0)

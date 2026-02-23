@@ -39,7 +39,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->latch-approval->model-check->breakers->candles->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -50,6 +50,7 @@ scripts/
   prove_latch_approval.sh # G4.1 reconciliation latch approval proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
   prove_candles.sh        # G17 candle correctness proof runner
+  snapshot_verify.sh      # G4.2 snapshot checksum + restore rehearsal verifier
   verify_service_modes.sh # G26 service mode matrix verification
   model_check.sh          # G28 state-machine model checker
   shadow_verify.sh        # G33 production shadow verification
@@ -155,6 +156,7 @@ Rust protobuf build note (Trading Core):
 ./scripts/load_smoke.sh
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
+./scripts/snapshot_verify.sh
 make safety-case
 # optional full safety-case proof set (exactly-once + idempotency-scope + latch-approval + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
 make safety-case-extended
@@ -290,6 +292,14 @@ Success output includes:
 - `prove_candles_ok=true`
 - `prove_candles_latest=build/candles/prove-candles-latest.json`
 
+### 10.4) Snapshot verify rehearsal
+```bash
+make snapshot-verify
+```
+Success output includes:
+- `snapshot_verify_ok=true`
+- `snapshot_verify_latest=build/snapshot/snapshot-verify-latest.json`
+
 ### 11) Safety case bundle (extended)
 ```bash
 make safety-case-extended
@@ -310,6 +320,7 @@ make safety-case-extended
 - `build/determinism/prove-determinism-latest.json`
 - `build/breakers/prove-breakers-latest.json`
 - `build/candles/prove-candles-latest.json`
+- `build/snapshot/snapshot-verify-latest.json`
 - `build/service-modes/verify-service-modes-latest.json`
 
 ### 12) Assurance pack (claims + evidence index)
