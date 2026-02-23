@@ -160,6 +160,7 @@ Gate G1 operational check:
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
+- PII log scan gate: `./scripts/pii_log_scan.sh`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`

@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->pii-scan->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -60,6 +60,7 @@ scripts/
   archive_range.sh        # G21 legal archive capture
   verify_archive.sh       # G21 archive checksum verifier
   verify_audit_chain.sh   # G25 tamper-evident audit chain verifier
+  pii_log_scan.sh         # G20 log PII leak gate
   change_proposal.sh      # G10 change proposal creation
   change_approve.sh       # G10 approval recording
   apply_change.sh         # G10 apply + verification evidence
@@ -550,6 +551,18 @@ Outputs:
 - `verify_audit_chain_latest=build/audit/verify-audit-chain-latest.json`
 - `verify_audit_chain_head=<sha256>`
 - `verify_audit_chain_ok=true|false`
+
+### 26.2) PII log scan gate
+```bash
+make pii-log-scan
+# dry-run mode (hits are reported but exit 0):
+./scripts/pii_log_scan.sh --allow-hits
+```
+Outputs:
+- `pii_log_scan_report=build/security/pii-log-scan-<timestamp>.json`
+- `pii_log_scan_latest=build/security/pii-log-scan-latest.json`
+- `pii_log_scan_hit_count=<n>`
+- `pii_log_scan_ok=true|false`
 
 `verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.  
 `--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.  
