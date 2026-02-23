@@ -365,6 +365,7 @@ jobs:
             build/breakers/**
             build/service-modes/**
             build/idempotency/**
+            build/latch/**
 
   security-baseline:
     runs-on: ubuntu-latest

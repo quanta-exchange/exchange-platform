@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-breakers verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-latch-approval prove-breakers verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -68,6 +68,9 @@ prove-determinism:
 
 prove-idempotency:
 	./scripts/prove_idempotency_scope.sh
+
+prove-latch-approval:
+	./scripts/prove_latch_approval.sh
 
 prove-breakers:
 	./scripts/prove_breakers.sh

@@ -167,6 +167,12 @@
       "title": "Idempotency scope proof evidence exists",
       "enforced": false,
       "required_evidence": ["build/idempotency/prove-idempotency-latest.json", "scripts/prove_idempotency_scope.sh", "services/trading-core/src/tests.rs"]
+    },
+    {
+      "id": "CTRL-029",
+      "title": "Reconciliation latch dual-approval proof evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/latch/prove-latch-approval-latest.json", "scripts/prove_latch_approval.sh", "services/ledger-service/src/test/kotlin/com/quanta/exchange/ledger/LedgerServiceIntegrationTest.kt"]
     }
   ]
 }

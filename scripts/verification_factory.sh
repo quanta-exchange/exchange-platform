@@ -105,6 +105,9 @@ fi
 if ! run_step "prove-idempotency" "$ROOT_DIR/scripts/prove_idempotency_scope.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "prove-latch-approval" "$ROOT_DIR/scripts/prove_latch_approval.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "model-check" "$ROOT_DIR/scripts/model_check.sh"; then
   HAS_FAILURE=true
 fi
@@ -139,6 +142,7 @@ VERIFY_ARCHIVE_LOG="$LOG_DIR/verify-archive.log"
 EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
 PROVE_IDEMPOTENCY_LOG="$LOG_DIR/prove-idempotency.log"
+PROVE_LATCH_APPROVAL_LOG="$LOG_DIR/prove-latch-approval.log"
 MODEL_CHECK_LOG="$LOG_DIR/model-check.log"
 PROVE_BREAKERS_LOG="$LOG_DIR/prove-breakers.log"
 VERIFY_SERVICE_MODES_LOG="$LOG_DIR/verify-service-modes.log"
@@ -156,6 +160,7 @@ VERIFY_ARCHIVE_SHA="$(extract_value "verify_archive_sha256" "$VERIFY_ARCHIVE_LOG
 EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL_REPLAY_LOG")"
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 PROVE_IDEMPOTENCY_REPORT="$(extract_value "prove_idempotency_report" "$PROVE_IDEMPOTENCY_LOG")"
+PROVE_LATCH_APPROVAL_REPORT="$(extract_value "prove_latch_approval_report" "$PROVE_LATCH_APPROVAL_LOG")"
 MODEL_CHECK_REPORT="$(extract_value "model_check_report" "$MODEL_CHECK_LOG")"
 PROVE_BREAKERS_REPORT="$(extract_value "prove_breakers_report" "$PROVE_BREAKERS_LOG")"
 VERIFY_SERVICE_MODES_REPORT="$(extract_value "verify_service_modes_report" "$VERIFY_SERVICE_MODES_LOG")"
@@ -166,7 +171,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -182,15 +187,16 @@ archive_sha = sys.argv[9]
 external_replay_report = sys.argv[10]
 controls_report = sys.argv[11]
 prove_idempotency_report = sys.argv[12]
-model_check_report = sys.argv[13]
-prove_breakers_report = sys.argv[14]
-verify_service_modes_report = sys.argv[15]
-shadow_verify_report = sys.argv[16]
-compliance_report = sys.argv[17]
-transparency_report = sys.argv[18]
-access_review_report = sys.argv[19]
-safety_budget_report = sys.argv[20]
-assurance_json = sys.argv[21]
+prove_latch_approval_report = sys.argv[13]
+model_check_report = sys.argv[14]
+prove_breakers_report = sys.argv[15]
+verify_service_modes_report = sys.argv[16]
+shadow_verify_report = sys.argv[17]
+compliance_report = sys.argv[18]
+transparency_report = sys.argv[19]
+access_review_report = sys.argv[20]
+safety_budget_report = sys.argv[21]
+assurance_json = sys.argv[22]
 
 steps = []
 ok = True
@@ -224,6 +230,7 @@ summary = {
         "external_replay_report": external_replay_report or None,
         "controls_check_report": controls_report or None,
         "prove_idempotency_report": prove_idempotency_report or None,
+        "prove_latch_approval_report": prove_latch_approval_report or None,
         "model_check_report": model_check_report or None,
         "prove_breakers_report": prove_breakers_report or None,
         "verify_service_modes_report": verify_service_modes_report or None,

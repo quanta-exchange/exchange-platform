@@ -89,6 +89,11 @@
       "controlId": "CTRL-028",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
       "description": "Idempotency scope and TTL verification for duplicate isolation correctness"
+    },
+    {
+      "controlId": "CTRL-029",
+      "frameworks": ["SOC2:CC6.2", "ISO27001:A.5.2"],
+      "description": "Reconciliation latch release dual-approval enforcement verification"
     }
   ]
 }
