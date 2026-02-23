@@ -150,6 +150,11 @@ Gate G1 operational check:
 - Monthly:
   - DR exercise, access review (RBAC/MFA/JIT)
 
+### 4.0 Runbook-as-code entrypoints
+- Reconciliation lag drill: `./runbooks/lag_spike.sh`
+- WS drop/slow-consumer drill: `./runbooks/ws_drop_spike.sh`
+- Shared verification bundle: `./scripts/verification_factory.sh`
+
 ### 4.1 Crash recovery drill
 Purpose:
 - verify Trading Core `kill -9` recovery from WAL is deterministic (`state_hash` continuity)

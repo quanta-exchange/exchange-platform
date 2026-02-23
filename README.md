@@ -45,6 +45,9 @@ scripts/
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
   ws_smoke.sh             # WS slow-consumer backpressure smoke
+runbooks/
+  lag_spike.sh            # reconciliation lag spike automated drill
+  ws_drop_spike.sh        # ws drop spike automated drill
 policies/
   trading-policy.v1.json  # baseline policy-as-code document
 safety/
@@ -272,6 +275,15 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
+
+### 17) Runbook-as-code drills
+```bash
+make runbook-lag-spike
+make runbook-ws-drop
+```
+Success output includes:
+- `runbook_lag_spike_ok=true` or `runbook_ws_drop_spike_ok=true`
+- `runbook_output_dir=build/runbooks/...`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
