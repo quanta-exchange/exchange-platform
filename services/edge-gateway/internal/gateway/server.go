@@ -267,6 +267,7 @@ type state struct {
 	sessionsByUser  map[string][]string
 	wallets         map[string]map[string]walletBalance
 	appliedTrades   map[string]int64
+	applyingTrades  map[string]int64
 
 	ordersTotal             uint64
 	tradesTotal             uint64
@@ -603,6 +604,7 @@ func New(cfg Config) (*Server, error) {
 			sessionsByUser:     map[string][]string{},
 			wallets:            map[string]map[string]walletBalance{},
 			appliedTrades:      map[string]int64{},
+			applyingTrades:     map[string]int64{},
 		},
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -2344,9 +2346,15 @@ func (s *Server) consumeTradeMessage(ctx context.Context, raw []byte) error {
 		tsMs = time.Now().UnixMilli()
 	}
 
-	if !s.markTradeApplied(payload.TradeID, tsMs) {
+	if !s.beginTradeApply(payload.TradeID) {
 		return nil
 	}
+	applied := false
+	defer func() {
+		if !applied {
+			s.abortTradeApply(payload.TradeID)
+		}
+	}()
 
 	s.applyTradeSettlement(payload.BuyerUserID, payload.SellerUserID, symbol, qty, quoteAmount)
 	s.applyOrderFill(payload.MakerOrderID, qty, price, seq)
@@ -2361,10 +2369,12 @@ func (s *Server) consumeTradeMessage(ctx context.Context, raw []byte) error {
 	if err != nil {
 		return fmt.Errorf("ingest trade message: %w", err)
 	}
+	s.commitTradeApply(payload.TradeID, tsMs)
+	applied = true
 	return nil
 }
 
-func (s *Server) markTradeApplied(tradeID string, tsMs int64) bool {
+func (s *Server) beginTradeApply(tradeID string) bool {
 	now := time.Now().UnixMilli()
 	cutoff := now - 24*60*60*1000
 
@@ -2375,11 +2385,32 @@ func (s *Server) markTradeApplied(tradeID string, tsMs int64) bool {
 			delete(s.state.appliedTrades, id)
 		}
 	}
+	for id, startedAt := range s.state.applyingTrades {
+		if startedAt < cutoff {
+			delete(s.state.applyingTrades, id)
+		}
+	}
 	if _, exists := s.state.appliedTrades[tradeID]; exists {
 		return false
 	}
-	s.state.appliedTrades[tradeID] = tsMs
+	if _, inProgress := s.state.applyingTrades[tradeID]; inProgress {
+		return false
+	}
+	s.state.applyingTrades[tradeID] = now
 	return true
+}
+
+func (s *Server) commitTradeApply(tradeID string, tsMs int64) {
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	delete(s.state.applyingTrades, tradeID)
+	s.state.appliedTrades[tradeID] = tsMs
+}
+
+func (s *Server) abortTradeApply(tradeID string) {
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	delete(s.state.applyingTrades, tradeID)
 }
 
 type walletPersistUpdate struct {

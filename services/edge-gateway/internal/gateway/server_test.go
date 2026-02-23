@@ -536,6 +536,28 @@ func TestCancelOrderFailsClosedWhenSymbolIsMissing(t *testing.T) {
 	}
 }
 
+func TestTradeApplyDedupTransitions(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	if !s.beginTradeApply("trade-dedup-1") {
+		t.Fatalf("first begin should succeed")
+	}
+	if s.beginTradeApply("trade-dedup-1") {
+		t.Fatalf("in-progress trade should be blocked")
+	}
+
+	s.abortTradeApply("trade-dedup-1")
+	if !s.beginTradeApply("trade-dedup-1") {
+		t.Fatalf("begin should succeed after abort")
+	}
+
+	s.commitTradeApply("trade-dedup-1", time.Now().UnixMilli())
+	if s.beginTradeApply("trade-dedup-1") {
+		t.Fatalf("committed trade should not be re-applied")
+	}
+}
+
 func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()
