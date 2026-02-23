@@ -329,6 +329,12 @@
       "title": "Anomaly detector webhook smoke proves alert delivery path",
       "enforced": false,
       "required_evidence": ["scripts/anomaly_detector_smoke.sh", "build/anomaly/anomaly-smoke-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-056",
+      "title": "Audit-chain tamper runbook proves detection on modified logs",
+      "enforced": false,
+      "required_evidence": ["runbooks/audit_chain_tamper.sh", "runbooks/audit_chain_tamper.md", "RUNBOOK.md", "README.md", "Makefile"]
     }
   ]
 }

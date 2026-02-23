@@ -158,6 +158,7 @@ Gate G1 operational check:
 - Crash recovery drill: `./runbooks/crash_recovery.sh`
 - Startup guardrails drill: `./runbooks/startup_guardrails.sh`
 - Game-day anomaly drill: `./runbooks/game_day_anomaly.sh`
+- Audit-chain tamper drill: `./runbooks/audit_chain_tamper.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
@@ -277,6 +278,19 @@ Success criteria:
 - runbook output contains:
   - `anomaly-detector-*.json`
   - `safety-budget-*.json`
+  - `status-before.json` / `status-after.json`
+
+### 4.6 Audit-chain tamper drill
+Purpose:
+- break-glass 감사 로그 변조를 복사본에서 주입해 hash-chain 검증기가 실패를 정확히 감지하는지 확인
+
+Command:
+- `./runbooks/audit_chain_tamper.sh`
+
+Success criteria:
+- output includes `runbook_audit_tamper_ok=true`
+- runbook output contains:
+  - `audit-chain-tamper-summary.json` (`baseline_ok=true`, `tamper_detected=true`)
   - `status-before.json` / `status-after.json`
 
 ---

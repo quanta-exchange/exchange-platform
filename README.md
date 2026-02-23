@@ -78,6 +78,8 @@ scripts/
 runbooks/
   crash_recovery.sh       # crash recovery runbook-as-code (snapshot+chaos)
   crash_recovery.md       # crash recovery drill notes
+  audit_chain_tamper.sh   # audit hash-chain tamper drill
+  audit_chain_tamper.md   # audit hash-chain tamper drill notes
   lag_spike.sh            # reconciliation lag spike automated drill
   load_regression.sh      # load regression automated drill
   game_day_anomaly.sh     # anomaly game-day automated drill
@@ -465,9 +467,10 @@ make runbook-ws-resume-gap
 make runbook-crash-recovery
 make runbook-startup-guardrails
 make runbook-game-day-anomaly
+make runbook-audit-tamper
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 

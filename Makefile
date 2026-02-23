@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke load-10k load-50k load-all dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive verify-audit-chain pii-log-scan anomaly-detector anomaly-smoke policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-latch-approval prove-breakers prove-candles verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-load-regression runbook-crash-recovery runbook-startup-guardrails runbook-game-day-anomaly exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke load-10k load-50k load-all dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive verify-audit-chain pii-log-scan anomaly-detector anomaly-smoke policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-latch-approval prove-breakers prove-candles verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-load-regression runbook-crash-recovery runbook-startup-guardrails runbook-game-day-anomaly runbook-audit-tamper exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -155,6 +155,9 @@ runbook-startup-guardrails:
 
 runbook-game-day-anomaly:
 	./runbooks/game_day_anomaly.sh
+
+runbook-audit-tamper:
+	./runbooks/audit_chain_tamper.sh
 
 exactly-once-stress:
 	./scripts/exactly_once_stress.sh

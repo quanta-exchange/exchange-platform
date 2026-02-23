@@ -224,6 +224,11 @@
       "controlId": "CTRL-055",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.16.1.4"],
       "description": "Anomaly webhook smoke test validates end-to-end alert payload delivery against a local receiver"
+    },
+    {
+      "controlId": "CTRL-056",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.2"],
+      "description": "Audit-chain tamper drill confirms hash-chain verification rejects modified break-glass audit log copies"
     }
   ]
 }
