@@ -314,6 +314,7 @@ Configure auth in env:
 - `EDGE_AUTH_SKEW_SEC=30`
 - `EDGE_REPLAY_TTL_SEC=120`
 - `EDGE_RATE_LIMIT_PER_MINUTE=1000`
+- `EDGE_PUBLIC_RATE_LIMIT_PER_MINUTE=2000` (public market REST, per-client IP)
 - `EDGE_DISABLE_CORE=true` (optional: 코어 없이 마켓 조회/WS만 실행)
 - `EDGE_SEED_MARKET_DATA=true` (default: server boot 시 샘플 마켓 데이터 자동 주입)
 - `EDGE_ENABLE_SMOKE_ROUTES=false` (default; test scripts only set `true`)

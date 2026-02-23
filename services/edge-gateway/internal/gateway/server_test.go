@@ -257,6 +257,43 @@ func TestLoginReturns503WhenAuthStoreUnavailable(t *testing.T) {
 	}
 }
 
+func TestPublicRateMiddlewareRejectsBurstByIP(t *testing.T) {
+	s := &Server{
+		cfg: Config{
+			PublicRateLimitPerMinute: 1,
+		},
+		state: &state{
+			publicRateWindow: map[string][]int64{},
+		},
+	}
+
+	handler := s.publicRateMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	}))
+
+	req1 := httptest.NewRequest(http.MethodGet, "/v1/markets/BTC-KRW/ticker", nil)
+	req1.RemoteAddr = "127.0.0.1:12345"
+	w1 := httptest.NewRecorder()
+	handler.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("expected first public request to pass, got %d", w1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/v1/markets/BTC-KRW/ticker", nil)
+	req2.RemoteAddr = "127.0.0.1:23456"
+	w2 := httptest.NewRecorder()
+	handler.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second public request to be rate-limited, got %d body=%s", w2.Code, w2.Body.String())
+	}
+	if !strings.Contains(w2.Body.String(), "TOO_MANY_REQUESTS") {
+		t.Fatalf("unexpected public rate-limit body: %s", w2.Body.String())
+	}
+	if got := s.state.publicRateLimited; got != 1 {
+		t.Fatalf("expected one public rate-limited event, got %d", got)
+	}
+}
+
 func TestRejectsUnsignedTradingWhenAuthNotConfigured(t *testing.T) {
 	coreAddr, shutdownCore := startTestCore(t)
 	defer shutdownCore()
@@ -1112,6 +1149,7 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 			wsRateLimitCloses:  3,
 			wsConnRejects:      5,
 			wsDroppedMsgs:      7,
+			publicRateLimited:  6,
 			authFailReason: map[string]uint64{
 				"unknown_key":   3,
 				"bad_signature": 2,
@@ -1139,10 +1177,12 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("ws_policy_closes", "4")
 	assertMetric("ws_command_rate_limit_closes", "3")
 	assertMetric("ws_connection_rejects", "5")
+	assertMetric("public_rate_limited", "6")
 	assertMetric("edge_auth_fail_total", "5")
 	assertMetric("edge_ws_close_policy_total", "4")
 	assertMetric("edge_ws_close_ratelimit_total", "3")
 	assertMetric("edge_ws_connection_reject_total", "5")
+	assertMetric("edge_public_rate_limited_total", "6")
 	assertMetric("edge_auth_fail_reason_total{reason=\"bad_signature\"}", "2")
 	assertMetric("edge_auth_fail_reason_total{reason=\"unknown_key\"}", "3")
 }

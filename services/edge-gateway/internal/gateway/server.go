@@ -52,45 +52,46 @@ const apiKeyContextKey contextKey = "api_key"
 
 // Config keeps runtime settings loaded from env.
 type Config struct {
-	Addr                string
-	DBDsn               string
-	DisableDB           bool
-	DisableCore         bool
-	SeedMarketData      bool
-	EnableSmokeRoutes   bool
-	AllowInsecureNoAuth bool
-	SessionTTL          time.Duration
-	WSQueueSize         int
-	WSWriteDelay        time.Duration
-	WSMaxSubscriptions  int
-	WSCommandRateLimit  int
-	WSCommandWindow     time.Duration
-	WSPingInterval      time.Duration
-	WSPongTimeout       time.Duration
-	WSReadLimitBytes    int64
-	WSAllowedOrigins    []string
-	WSMaxConns          int
-	WSMaxConnsPerIP     int
-	APISecrets          map[string]string
-	TimestampSkew       time.Duration
-	ReplayTTL           time.Duration
-	RateLimitPerMinute  int
-	RedisAddr           string
-	RedisPassword       string
-	RedisDB             int
-	OTelEndpoint        string
-	OTelServiceName     string
-	OTelSampleRatio     float64
-	OTelInsecure        bool
-	CoreAddr            string
-	CoreTimeout         time.Duration
-	KafkaBrokers        string
-	KafkaTradeTopic     string
-	KafkaGroupID        string
-	KafkaStartOffset    string
-	OrderRetention      time.Duration
-	OrderMaxRecords     int
-	OrderGCInterval     time.Duration
+	Addr                     string
+	DBDsn                    string
+	DisableDB                bool
+	DisableCore              bool
+	SeedMarketData           bool
+	EnableSmokeRoutes        bool
+	AllowInsecureNoAuth      bool
+	SessionTTL               time.Duration
+	WSQueueSize              int
+	WSWriteDelay             time.Duration
+	WSMaxSubscriptions       int
+	WSCommandRateLimit       int
+	WSCommandWindow          time.Duration
+	WSPingInterval           time.Duration
+	WSPongTimeout            time.Duration
+	WSReadLimitBytes         int64
+	WSAllowedOrigins         []string
+	WSMaxConns               int
+	WSMaxConnsPerIP          int
+	APISecrets               map[string]string
+	TimestampSkew            time.Duration
+	ReplayTTL                time.Duration
+	RateLimitPerMinute       int
+	PublicRateLimitPerMinute int
+	RedisAddr                string
+	RedisPassword            string
+	RedisDB                  int
+	OTelEndpoint             string
+	OTelServiceName          string
+	OTelSampleRatio          float64
+	OTelInsecure             bool
+	CoreAddr                 string
+	CoreTimeout              time.Duration
+	KafkaBrokers             string
+	KafkaTradeTopic          string
+	KafkaGroupID             string
+	KafkaStartOffset         string
+	OrderRetention           time.Duration
+	OrderMaxRecords          int
+	OrderGCInterval          time.Duration
 }
 
 type OrderRequest struct {
@@ -247,6 +248,7 @@ type state struct {
 	idempotencyResults map[string]idempotencyRecord
 	replayCache        map[string]int64
 	rateWindow         map[string][]int64
+	publicRateWindow   map[string][]int64
 	authFailReason     map[string]uint64
 
 	clients map[*client]struct{}
@@ -265,6 +267,7 @@ type state struct {
 	slowConsumerCloses uint64
 	wsDroppedMsgs      uint64
 	replayDetected     uint64
+	publicRateLimited  uint64
 	wsPolicyCloses     uint64
 	wsRateLimitCloses  uint64
 	nextOrderGcAtMs    int64
@@ -469,6 +472,9 @@ func New(cfg Config) (*Server, error) {
 	if cfg.RateLimitPerMinute <= 0 {
 		cfg.RateLimitPerMinute = 1_000
 	}
+	if cfg.PublicRateLimitPerMinute <= 0 {
+		cfg.PublicRateLimitPerMinute = 2_000
+	}
 	if cfg.OTelServiceName == "" {
 		cfg.OTelServiceName = "edge-gateway"
 	}
@@ -564,6 +570,7 @@ func New(cfg Config) (*Server, error) {
 			idempotencyResults: map[string]idempotencyRecord{},
 			replayCache:        map[string]int64{},
 			rateWindow:         map[string][]int64{},
+			publicRateWindow:   map[string][]int64{},
 			authFailReason:     map[string]uint64{},
 			clients:            map[*client]struct{}{},
 			wsConnsByIP:        map[string]int{},
@@ -597,10 +604,13 @@ func New(cfg Config) (*Server, error) {
 	r.Get("/readyz", s.handleReady)
 	r.Get("/metrics", s.handleMetrics)
 
-	r.Get("/v1/markets/{symbol}/trades", s.handleGetTrades)
-	r.Get("/v1/markets/{symbol}/orderbook", s.handleGetOrderbook)
-	r.Get("/v1/markets/{symbol}/candles", s.handleGetCandles)
-	r.Get("/v1/markets/{symbol}/ticker", s.handleGetTicker)
+	r.Group(func(market chi.Router) {
+		market.Use(s.publicRateMiddleware)
+		market.Get("/v1/markets/{symbol}/trades", s.handleGetTrades)
+		market.Get("/v1/markets/{symbol}/orderbook", s.handleGetOrderbook)
+		market.Get("/v1/markets/{symbol}/candles", s.handleGetCandles)
+		market.Get("/v1/markets/{symbol}/ticker", s.handleGetTicker)
+	})
 	r.Post("/v1/auth/signup", s.handleSignUp)
 	r.Post("/v1/auth/login", s.handleLogin)
 
@@ -756,6 +766,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	wsConnRejects := s.state.wsConnRejects
 	droppedMsgs := s.state.wsDroppedMsgs
 	replayDetected := s.state.replayDetected
+	publicRateLimited := s.state.publicRateLimited
 	queueLens := make([]int, 0, len(s.state.clients))
 	for c := range s.state.clients {
 		queueLens = append(queueLens, c.queueLen())
@@ -784,6 +795,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_ws_close_policy_total " + strconv.FormatUint(policyClose, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_close_ratelimit_total " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_connection_reject_total " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
+	_, _ = w.Write([]byte("edge_public_rate_limited_total " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
 	for _, reason := range reasons {
 		line := fmt.Sprintf(
@@ -801,6 +813,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ws_policy_closes " + strconv.FormatUint(policyClose, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_command_rate_limit_closes " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_connection_rejects " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
+	_, _ = w.Write([]byte("public_rate_limited " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -885,6 +898,17 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), apiKeyContextKey, apiKey)
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (s *Server) publicRateMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		client := wsClientIP(r.RemoteAddr)
+		if !s.allowPublicRate(client, time.Now().UnixMilli()) {
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "TOO_MANY_REQUESTS"})
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -3184,6 +3208,30 @@ func (s *Server) allowRate(apiKey string, nowMs int64) bool {
 	}
 	keep = append(keep, nowMs)
 	s.state.rateWindow[apiKey] = keep
+	return true
+}
+
+func (s *Server) allowPublicRate(clientKey string, nowMs int64) bool {
+	if s.cfg.PublicRateLimitPerMinute <= 0 {
+		return true
+	}
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	window := nowMs - 60_000
+	series := s.state.publicRateWindow[clientKey]
+	keep := series[:0]
+	for _, ts := range series {
+		if ts >= window {
+			keep = append(keep, ts)
+		}
+	}
+	if len(keep) >= s.cfg.PublicRateLimitPerMinute {
+		s.state.publicRateWindow[clientKey] = keep
+		s.state.publicRateLimited++
+		return false
+	}
+	keep = append(keep, nowMs)
+	s.state.publicRateWindow[clientKey] = keep
 	return true
 }
 
