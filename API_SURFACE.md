@@ -264,6 +264,10 @@ System probes:
   - return engine/settled coverage gap and recommendation
 - `GET /admin/reconciliation/status`
   - return all symbol reconciliation statuses + recent reconciliation history
+  - query params:
+    - `historyLimit` (1..500, default 50)
+    - `historyBeforeId` (optional cursor; returns entries with `id < historyBeforeId`)
+  - response includes `nextHistoryBeforeId` cursor for the next page
 - `POST /admin/reconciliation/latch/{symbol}/release`
   - manually release reconciliation safety latch after recovery (`lag==0` + invariant check pass)
   - response includes `invariantsOk` and `invariantViolations`

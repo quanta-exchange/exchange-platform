@@ -326,6 +326,42 @@ class LedgerServiceIntegrationTest {
     }
 
     @Test
+    fun reconciliationHistorySupportsCursorPaginationById() {
+        ledgerService.updateEngineSeq("BTC-KRW", 10)
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 1,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+        ledgerService.updateEngineSeq("BTC-KRW", 20)
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 1,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+
+        val firstPage = ledgerService.reconciliationStatus(
+            historyLimit = 1,
+            lagThreshold = 1,
+            staleStateThresholdMs = Long.MAX_VALUE,
+        ).history
+        assertEquals(1, firstPage.size)
+        val beforeId = firstPage.first().id
+
+        val secondPage = ledgerService.reconciliationStatus(
+            historyLimit = 10,
+            lagThreshold = 1,
+            staleStateThresholdMs = Long.MAX_VALUE,
+            historyBeforeId = beforeId,
+        ).history
+
+        assertFalse(secondPage.isEmpty())
+        assertTrue(secondPage.all { it.id < beforeId })
+    }
+
+    @Test
     fun reconciliationRetriesSafetySwitchWhenPreviousAttemptFailed() {
         ledgerService.updateEngineSeq("BTC-KRW", 50)
         seedBalancesAndReserves()

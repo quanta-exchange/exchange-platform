@@ -283,7 +283,7 @@ Market order liquidity policy (v1):
   - `POST /v1/admin/rebuild-balances`
   - `POST /v1/admin/invariants/check`
   - `GET /v1/admin/reconciliation/{symbol}`
-  - `GET /v1/admin/reconciliation/status`
+  - `GET /v1/admin/reconciliation/status` (`historyLimit`, optional `historyBeforeId` cursor; response has `nextHistoryBeforeId`)
   - `POST /v1/admin/reconciliation/latch/{symbol}/release`
   - `POST /v1/admin/consumers/settlement/pause`
   - `POST /v1/admin/consumers/settlement/resume`

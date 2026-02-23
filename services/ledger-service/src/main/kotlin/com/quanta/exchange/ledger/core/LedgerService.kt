@@ -284,6 +284,7 @@ class LedgerService(
             lagThreshold = lagThreshold,
             staleStateThresholdMs = Long.MAX_VALUE,
             checkedAt = now,
+            historyBeforeId = null,
         )
     }
 
@@ -291,6 +292,7 @@ class LedgerService(
         historyLimit: Int,
         lagThreshold: Long,
         staleStateThresholdMs: Long,
+        historyBeforeId: Long? = null,
         checkedAt: Instant = Instant.now(),
     ): ReconciliationDashboard {
         val staleThresholdMs = staleStateThresholdMs.coerceAtLeast(0)
@@ -324,7 +326,7 @@ class LedgerService(
                 updatedAt = status.updatedAt,
             )
         }
-        val history = repo.reconciliationHistory(historyLimit)
+        val history = repo.reconciliationHistory(historyLimit, historyBeforeId)
         return ReconciliationDashboard(
             checkedAt = checkedAt,
             statuses = views,

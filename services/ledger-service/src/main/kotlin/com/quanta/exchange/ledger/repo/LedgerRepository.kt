@@ -223,14 +223,17 @@ class LedgerRepository(
         )
     }
 
-    fun reconciliationHistory(limit: Int): List<ReconciliationHistoryPoint> {
+    fun reconciliationHistory(limit: Int, beforeId: Long? = null): List<ReconciliationHistoryPoint> {
         val clamped = limit.coerceIn(1, 500)
+        val whereClause = if (beforeId != null) "WHERE id < ?" else ""
+        val params = if (beforeId != null) arrayOf(beforeId) else emptyArray()
         return jdbc.query(
             """
             SELECT id, symbol, last_engine_seq, last_settled_seq, lag,
                    mismatch, threshold, breached, safety_mode,
                    safety_action_taken, reason, checked_at
             FROM reconciliation_history
+            $whereClause
             ORDER BY checked_at DESC, id DESC
             LIMIT $clamped
             """.trimIndent(),
@@ -250,6 +253,7 @@ class LedgerRepository(
                     checkedAt = rs.getTimestamp("checked_at").toInstant(),
                 )
             },
+            *params,
         )
     }
 

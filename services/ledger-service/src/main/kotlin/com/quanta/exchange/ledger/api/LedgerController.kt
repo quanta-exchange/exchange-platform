@@ -203,18 +203,24 @@ class LedgerController(
     fun reconciliationStatus(
         @RequestParam(name = "historyLimit", defaultValue = "50")
         historyLimit: Int,
+        @RequestParam(name = "historyBeforeId", required = false)
+        historyBeforeId: Long?,
     ): Map<String, Any?> {
         val dashboard = ledgerService.reconciliationStatus(
             historyLimit = historyLimit,
             lagThreshold = lagThreshold,
             staleStateThresholdMs = staleStateThresholdMs,
+            historyBeforeId = historyBeforeId,
         )
+        val nextHistoryBeforeId = dashboard.history.lastOrNull()?.id
         return mapOf(
             "checkedAt" to dashboard.checkedAt,
             "lagThreshold" to lagThreshold,
             "stateStaleThresholdMs" to staleStateThresholdMs,
             "safetyMode" to safetyMode,
             "safetyLatchEnabled" to safetyLatchEnabled,
+            "historyBeforeId" to historyBeforeId,
+            "nextHistoryBeforeId" to nextHistoryBeforeId,
             "statuses" to dashboard.statuses,
             "history" to dashboard.history,
         )
