@@ -248,6 +248,7 @@ if not kafka_status.get("up"):
     }
 
 controls_latest = read_latest_json("build/controls/controls-check-latest.json")
+compliance_latest = read_latest_json("build/compliance/compliance-evidence-latest.json")
 controls_freshness_latest = read_latest_json("build/controls/prove-controls-freshness-latest.json")
 determinism_latest = read_latest_json("build/determinism/prove-determinism-latest.json")
 audit_chain_latest = read_latest_json("build/audit/verify-audit-chain-latest.json")
@@ -289,6 +290,25 @@ report = {
         },
         "kafka": kafka_status,
         "compliance": {
+            "evidence_pack": {
+                "present": compliance_latest.get("present", False),
+                "path": compliance_latest.get("path"),
+                "ok": (compliance_latest.get("payload") or {}).get("ok"),
+                "mapping_count": (compliance_latest.get("payload") or {}).get("mapping_count"),
+                "missing_controls_count": (compliance_latest.get("payload") or {}).get(
+                    "missing_controls_count"
+                ),
+                "unmapped_controls_count": (compliance_latest.get("payload") or {}).get(
+                    "unmapped_controls_count"
+                ),
+                "unmapped_enforced_controls_count": (compliance_latest.get("payload") or {}).get(
+                    "unmapped_enforced_controls_count"
+                ),
+                "mapping_coverage_ratio": (compliance_latest.get("payload") or {}).get(
+                    "mapping_coverage_ratio"
+                ),
+                "error": compliance_latest.get("error"),
+            },
             "controls": {
                 "present": controls_latest.get("present", False),
                 "path": controls_latest.get("path"),

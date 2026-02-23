@@ -180,6 +180,11 @@ adversarial_failed_steps = []
 policy_smoke_ok = None
 policy_tamper_ok = None
 policy_tamper_detected = None
+compliance_ok = None
+compliance_missing_controls_count = None
+compliance_unmapped_controls_count = None
+compliance_unmapped_enforced_controls_count = None
+compliance_mapping_coverage_ratio = None
 network_partition_ok = None
 network_partition_during_reachable = None
 network_partition_recovered = None
@@ -243,6 +248,19 @@ if policy_tamper_report_path:
             tamper_payload = json.load(f)
         policy_tamper_ok = bool(tamper_payload.get("ok", False))
         policy_tamper_detected = bool(tamper_payload.get("tamper_detected", False))
+compliance_report_path = summary.get("artifacts", {}).get("compliance_evidence_report")
+if compliance_report_path:
+    candidate = pathlib.Path(compliance_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            compliance_payload = json.load(f)
+        compliance_ok = bool(compliance_payload.get("ok", False))
+        compliance_missing_controls_count = compliance_payload.get("missing_controls_count")
+        compliance_unmapped_controls_count = compliance_payload.get("unmapped_controls_count")
+        compliance_unmapped_enforced_controls_count = compliance_payload.get("unmapped_enforced_controls_count")
+        compliance_mapping_coverage_ratio = compliance_payload.get("mapping_coverage_ratio")
 network_partition_report_path = summary.get("artifacts", {}).get("network_partition_runbook_dir")
 if network_partition_report_path:
     candidate_dir = pathlib.Path(network_partition_report_path)
@@ -313,6 +331,11 @@ payload = {
     "policy_smoke_ok": policy_smoke_ok,
     "policy_tamper_ok": policy_tamper_ok,
     "policy_tamper_detected": policy_tamper_detected,
+    "compliance_ok": compliance_ok,
+    "compliance_missing_controls_count": compliance_missing_controls_count,
+    "compliance_unmapped_controls_count": compliance_unmapped_controls_count,
+    "compliance_unmapped_enforced_controls_count": compliance_unmapped_enforced_controls_count,
+    "compliance_mapping_coverage_ratio": compliance_mapping_coverage_ratio,
     "network_partition_ok": network_partition_ok,
     "network_partition_during_reachable": network_partition_during_reachable,
     "network_partition_recovered": network_partition_recovered,

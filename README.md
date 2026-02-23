@@ -530,7 +530,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist
+- report includes `checks.compliance.evidence_pack`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist
 
 ### 17.1) Anomaly detector
 ```bash
@@ -578,6 +578,7 @@ Success output includes:
 - `compliance_evidence_report=build/compliance/compliance-evidence-<timestamp>.json`
 - `compliance_evidence_latest=build/compliance/compliance-evidence-latest.json`
 - `compliance_evidence_ok=true|false`
+- report includes mapping integrity fields: `missing_controls_count`, `unmapped_controls_count`, `unmapped_enforced_controls_count`, `mapping_coverage_ratio`
 - report includes stale-evidence summaries: `failed_enforced_stale_count`, `advisory_stale_count`
 
 ### 20) Transparency report
@@ -755,6 +756,7 @@ Outputs:
 - report includes safety budget context: `safety_budget_ok`, `safety_budget_violations`
 - report includes policy-signature context: `policy_smoke_ok`
 - report includes policy-tamper context: `policy_tamper_ok`, `policy_tamper_detected`
+- report includes compliance mapping context: `compliance_ok`, `compliance_missing_controls_count`, `compliance_unmapped_controls_count`, `compliance_unmapped_enforced_controls_count`, `compliance_mapping_coverage_ratio`
 - report includes network-partition context: `network_partition_ok`, `network_partition_during_reachable`, `network_partition_recovered`
 - report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
 - report includes determinism context: `determinism_ok`, `determinism_executed_runs`, `determinism_distinct_hash_count`

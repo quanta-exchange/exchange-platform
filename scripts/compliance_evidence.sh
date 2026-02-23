@@ -58,6 +58,8 @@ with open(controls_file, "r", encoding="utf-8") as f:
     controls_payload = json.load(f)
 
 controls_by_id = {r.get("id"): r for r in controls_payload.get("results", [])}
+control_ids = {cid for cid in controls_by_id.keys() if cid}
+mapping_ids = {item.get("controlId") for item in mappings if item.get("controlId")}
 
 rows = []
 missing_controls = []
@@ -99,11 +101,39 @@ for item in mappings:
         advisory_stale_controls.append(cid)
     rows.append(row)
 
+unmapped_controls = sorted(control_ids - mapping_ids)
+unmapped_enforced_controls = sorted(
+    [
+        cid
+        for cid in unmapped_controls
+        if bool((controls_by_id.get(cid) or {}).get("enforced", False))
+    ]
+)
+total_controls = len(control_ids)
+mapped_controls = total_controls - len(unmapped_controls)
+mapping_coverage_ratio = (
+    (mapped_controls / total_controls)
+    if total_controls > 0
+    else 1.0
+)
+
 payload = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "ok": len(missing_controls) == 0 and len(failed_controls) == 0,
+    "ok": (
+        len(missing_controls) == 0
+        and len(failed_controls) == 0
+        and len(unmapped_enforced_controls) == 0
+    ),
     "mapping_count": len(rows),
+    "total_controls_count": total_controls,
+    "mapped_controls_count": mapped_controls,
+    "mapping_coverage_ratio": mapping_coverage_ratio,
     "missing_controls": missing_controls,
+    "missing_controls_count": len(missing_controls),
+    "unmapped_controls": unmapped_controls,
+    "unmapped_controls_count": len(unmapped_controls),
+    "unmapped_enforced_controls": unmapped_enforced_controls,
+    "unmapped_enforced_controls_count": len(unmapped_enforced_controls),
     "failed_enforced_controls": failed_controls,
     "failed_enforced_stale_controls": failed_stale_controls,
     "failed_enforced_stale_count": len(failed_stale_controls),
