@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
@@ -124,6 +125,49 @@ class LedgerServiceIntegrationTest {
 
         assertThrows(IllegalStateException::class.java) {
             ledgerRepository.appendEntry(command)
+        }
+    }
+
+    @Test
+    fun ledgerPostingCurrencyMustMatchAccountCurrencyAtDbLevel() {
+        jdbc.update(
+            "INSERT INTO accounts(account_id, user_id, currency, account_kind) VALUES (?, ?, ?, ?)",
+            "user:fkcheck:KRW:AVAILABLE",
+            "fkcheck",
+            "KRW",
+            "AVAILABLE",
+        )
+        jdbc.update(
+            """
+            INSERT INTO ledger_entries(
+                entry_id, reference_type, reference_id, entry_kind,
+                symbol, engine_seq, occurred_at, correlation_id, causation_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            "entry-fk-mismatch-1",
+            "TEST",
+            "ref-fk-mismatch-1",
+            "MANUAL",
+            "BTC-KRW",
+            1L,
+            java.sql.Timestamp.from(Instant.now()),
+            "corr-fk-mismatch-1",
+            "cause-fk-mismatch-1",
+        )
+
+        assertThrows(DataIntegrityViolationException::class.java) {
+            jdbc.update(
+                """
+                INSERT INTO ledger_postings(posting_id, entry_id, account_id, currency, amount, is_debit)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                "posting-fk-mismatch-1",
+                "entry-fk-mismatch-1",
+                "user:fkcheck:KRW:AVAILABLE",
+                "BTC",
+                10L,
+                true,
+            )
         }
     }
 
