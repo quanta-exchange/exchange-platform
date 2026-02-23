@@ -56,6 +56,7 @@ scripts/
   prove_latch_approval.sh # G4.1 reconciliation latch approval proof runner
   prove_budget_freshness.sh # G31 safety budget artifact freshness proof runner
   prove_controls_freshness.sh # G32 controls evidence freshness proof runner
+  prove_exactly_once_million.sh # G4.1 million-duplicate exactly-once proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
   prove_candles.sh        # G17 candle correctness proof runner
   snapshot_verify.sh      # G4.2 snapshot checksum + restore rehearsal verifier
@@ -309,6 +310,15 @@ Success output includes:
 - `exactly_once_stress_success=true`
 - `exactly_once_report=build/exactly-once/exactly-once-stress.json`
 
+Million-duplicate proof wrapper:
+```bash
+make prove-exactly-once-million
+```
+Outputs:
+- `prove_exactly_once_million_report=build/exactly-once/prove-exactly-once-million-<timestamp>.json`
+- `prove_exactly_once_million_latest=build/exactly-once/prove-exactly-once-million-latest.json`
+- `prove_exactly_once_million_ok=true|false`
+
 ### 10) Chaos drills (standardized)
 ```bash
 make chaos-full      # core+ledger kill/restart replay drill
@@ -382,6 +392,7 @@ make safety-case-extended
 - `build/change-audit/verify-change-audit-chain-latest.json` (있을 때 자동 포함)
 - `build/controls/prove-controls-freshness-latest.json` (있을 때 자동 포함)
 - `build/exactly-once/exactly-once-stress.json`
+- `build/exactly-once/prove-exactly-once-million-latest.json` (있을 때 자동 포함)
 - `build/idempotency/prove-idempotency-latest.json`
 - `build/latch/prove-latch-approval-latest.json`
 - `build/safety/prove-budget-freshness-latest.json`

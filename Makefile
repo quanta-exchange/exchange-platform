@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke load-10k load-50k load-all dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive verify-audit-chain verify-change-audit-chain pii-log-scan anomaly-detector anomaly-smoke rbac-sod-check policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-latch-approval prove-breakers prove-candles prove-budget-freshness prove-controls-freshness verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-load-regression runbook-crash-recovery runbook-startup-guardrails runbook-game-day-anomaly runbook-audit-tamper runbook-change-workflow runbook-budget-failure exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke load-10k load-50k load-all dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive verify-audit-chain verify-change-audit-chain pii-log-scan anomaly-detector anomaly-smoke rbac-sod-check policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-latch-approval prove-breakers prove-candles prove-budget-freshness prove-controls-freshness prove-exactly-once-million verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-load-regression runbook-crash-recovery runbook-startup-guardrails runbook-game-day-anomaly runbook-audit-tamper runbook-change-workflow runbook-budget-failure exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -113,6 +113,9 @@ prove-budget-freshness:
 
 prove-controls-freshness:
 	./scripts/prove_controls_freshness.sh
+
+prove-exactly-once-million:
+	./scripts/prove_exactly_once_million.sh
 
 verify-service-modes:
 	./scripts/verify_service_modes.sh

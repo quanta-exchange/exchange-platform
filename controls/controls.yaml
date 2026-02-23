@@ -457,6 +457,13 @@
       "title": "Verification summary includes budget failure runbook artifact path",
       "enforced": false,
       "required_evidence": ["scripts/verification_factory.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-076",
+      "title": "Exactly-once million-duplicate proof script and evidence exist",
+      "enforced": false,
+      "max_evidence_age_seconds": 2592000,
+      "required_evidence": ["scripts/prove_exactly_once_million.sh", "scripts/exactly_once_stress.sh", "build/exactly-once/prove-exactly-once-million-latest.json", "README.md", "Makefile"]
     }
   ]
 }

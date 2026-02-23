@@ -92,6 +92,7 @@ evidence = [
     {"id": "invariants_summary", "path": pathlib.Path("build/invariants/invariants-summary.json"), "required": False},
     {"id": "core_invariants", "path": pathlib.Path("build/invariants/core-invariants.json"), "required": False},
     {"id": "exactly_once", "path": pathlib.Path("build/exactly-once/exactly-once-stress.json"), "required": False},
+    {"id": "exactly_once_million", "path": pathlib.Path("build/exactly-once/prove-exactly-once-million-latest.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},
     {"id": "redpanda_bounce", "path": pathlib.Path("build/chaos/redpanda-broker-bounce.json"), "required": False},
@@ -163,6 +164,7 @@ pack = {
         {"id": "G25", "text": "Safety budget freshness proof confirms stale evidence is rejected while fresh evidence passes, reducing false trust in outdated reports."},
         {"id": "G26", "text": "Controls freshness proof verifies stale control evidence is detected and excluded from trust decisions in control catalog checks."},
         {"id": "G27", "text": "Budget failure runbook automatically summarizes violations and recommends next action, improving deterministic incident response."},
+        {"id": "G28", "text": "Exactly-once million-duplicate proof demonstrates idempotent settlement behavior at extreme duplicate-injection volume."},
     ],
 }
 

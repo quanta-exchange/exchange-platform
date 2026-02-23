@@ -324,6 +324,11 @@
       "controlId": "CTRL-075",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Verification summary records budget-failure runbook artifact path so release evidence includes failure diagnostics"
+    },
+    {
+      "controlId": "CTRL-076",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
+      "description": "Exactly-once million-duplicate proof provides high-volume evidence that duplicate settlement attempts still produce single balance effect"
     }
   ]
 }
