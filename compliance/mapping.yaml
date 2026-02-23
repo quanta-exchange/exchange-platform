@@ -299,6 +299,11 @@
       "controlId": "CTRL-070",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.18.1.3"],
       "description": "Compliance evidence pack includes stale-evidence metadata so control degradation is explicitly visible to auditors"
+    },
+    {
+      "controlId": "CTRL-071",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Release gate report includes stale-control counters so promotion decisions have explicit control-health context"
     }
   ]
 }

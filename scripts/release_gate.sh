@@ -116,6 +116,8 @@ with open(verification_summary, "r", encoding="utf-8") as f:
 
 controls_report_path = summary.get("artifacts", {}).get("controls_check_report")
 controls_advisory_missing = None
+controls_advisory_stale = None
+controls_failed_enforced_stale = None
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -124,6 +126,10 @@ if controls_report_path:
         with open(candidate, "r", encoding="utf-8") as f:
             controls_payload = json.load(f)
         controls_advisory_missing = int(controls_payload.get("advisory_missing_count", 0))
+        controls_advisory_stale = int(controls_payload.get("advisory_stale_count", 0))
+        controls_failed_enforced_stale = int(
+            controls_payload.get("failed_enforced_stale_count", 0)
+        )
 
 controls_gate_ok = True
 if strict_controls:
@@ -142,6 +148,8 @@ payload = {
     "run_change_workflow": run_change_workflow,
     "strict_controls": strict_controls,
     "controls_advisory_missing_count": controls_advisory_missing,
+    "controls_advisory_stale_count": controls_advisory_stale,
+    "controls_failed_enforced_stale_count": controls_failed_enforced_stale,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),

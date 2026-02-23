@@ -427,6 +427,12 @@
       "title": "Compliance evidence report includes stale-evidence metadata",
       "enforced": false,
       "required_evidence": ["scripts/compliance_evidence.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-071",
+      "title": "Release gate report exposes stale control counters",
+      "enforced": false,
+      "required_evidence": ["scripts/release_gate.sh", "README.md"]
     }
   ]
 }
