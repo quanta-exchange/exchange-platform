@@ -493,6 +493,7 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
+- governance summary now includes `audit_chain`, `pii_log_scan`, `rbac_sod`, `anomaly_detector` proxies
 
 ### 20) External replay demo
 ```bash

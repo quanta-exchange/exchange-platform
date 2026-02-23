@@ -50,6 +50,10 @@ safety_budget = read_json("build/safety/safety-budget-latest.json")
 snapshot_verify = read_json("build/snapshot/snapshot-verify-latest.json")
 controls = read_json("build/controls/controls-check-latest.json")
 compliance = read_json("build/compliance/compliance-evidence-latest.json")
+audit_chain = read_json("build/audit/verify-audit-chain-latest.json")
+pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
+rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
+anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
 
 sources = {
     "load": load,
@@ -63,6 +67,10 @@ sources = {
     "snapshot_verify": snapshot_verify,
     "controls": controls,
     "compliance": compliance,
+    "audit_chain": audit_chain,
+    "pii_log_scan": pii_log_scan,
+    "rbac_sod": rbac_sod,
+    "anomaly": anomaly,
 }
 
 email_pattern = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -128,6 +136,13 @@ report = {
         "governance_proxy": {
             "controls_ok": bool(controls.get("ok")) if controls else None,
             "compliance_ok": bool(compliance.get("ok")) if compliance else None,
+            "audit_chain_ok": bool(audit_chain.get("ok")) if audit_chain else None,
+            "audit_chain_mode": audit_chain.get("mode") if audit_chain else None,
+            "pii_log_scan_ok": bool(pii_log_scan.get("ok")) if pii_log_scan else None,
+            "pii_log_scan_hit_count": int(pii_log_scan.get("hit_count")) if pii_log_scan and pii_log_scan.get("hit_count") is not None else None,
+            "rbac_sod_ok": bool(rbac_sod.get("ok")) if rbac_sod else None,
+            "anomaly_detector_ok": bool(anomaly.get("ok")) if anomaly else None,
+            "anomaly_detected": bool(anomaly.get("anomaly_detected")) if anomaly else None,
         },
     },
     "pii_scan": {
@@ -146,6 +161,10 @@ report = {
         "snapshot_verify": "build/snapshot/snapshot-verify-latest.json",
         "controls": "build/controls/controls-check-latest.json",
         "compliance": "build/compliance/compliance-evidence-latest.json",
+        "audit_chain": "build/audit/verify-audit-chain-latest.json",
+        "pii_log_scan": "build/security/pii-log-scan-latest.json",
+        "rbac_sod": "build/security/rbac-sod-check-latest.json",
+        "anomaly": "build/anomaly/anomaly-detector-latest.json",
     },
 }
 

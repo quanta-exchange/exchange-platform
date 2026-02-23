@@ -239,6 +239,11 @@
       "controlId": "CTRL-058",
       "frameworks": ["SOC2:CC6.2", "ISO27001:A.5.3"],
       "description": "RBAC SoD checker validates role separation and restricted-permission overlap constraints"
+    },
+    {
+      "controlId": "CTRL-059",
+      "frameworks": ["SOC2:CC3.2", "ISO27001:A.5.33"],
+      "description": "Transparency report exposes governance security proxies (audit-chain, pii-scan, rbac-sod, anomaly) for independent review"
     }
   ]
 }

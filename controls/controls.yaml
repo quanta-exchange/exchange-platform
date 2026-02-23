@@ -347,6 +347,12 @@
       "title": "RBAC segregation-of-duties checker evidence exists",
       "enforced": false,
       "required_evidence": ["scripts/rbac_sod_check.sh", "security/rbac_roles.yaml", "build/security/rbac-sod-check-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-059",
+      "title": "Transparency report includes governance security proxies",
+      "enforced": false,
+      "required_evidence": ["scripts/transparency_report.sh", "build/transparency/transparency-report-latest.json", "README.md"]
     }
   ]
 }
