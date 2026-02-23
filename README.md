@@ -36,7 +36,7 @@ scripts/
   smoke_match.sh          # Gate G1 real match smoke (BUY+SELL crossing)
   load_smoke.sh           # I-0105 load smoke harness
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
-  safety_case.sh          # I-0108 evidence bundle generator
+  safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -111,6 +111,8 @@ Rust protobuf build note (Trading Core):
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
 make safety-case
+# optional full safety-case proof set (exactly-once + reconciliation + chaos 포함)
+make safety-case-extended
 ```
 
 ### 3) Infra up
@@ -153,6 +155,10 @@ This script verifies:
 - after lag recovery, safety latch is manually released via admin API
 - trading returns to non-`CANCEL_ONLY` mode
 
+Success output includes:
+- `smoke_reconciliation_safety_success=true`
+- `smoke_reconciliation_report=build/reconciliation/smoke-reconciliation-safety.json`
+
 ### 8) E2E Smoke (no frontend, real matching path)
 Exact command sequence on a fresh machine:
 ```bash
@@ -172,6 +178,10 @@ This script verifies:
 - all other submissions are blocked as duplicates
 - balances reflect a single settlement effect
 
+Success output includes:
+- `exactly_once_stress_success=true`
+- `exactly_once_report=build/exactly-once/exactly-once-stress.json`
+
 ### 10) Chaos drills (standardized)
 ```bash
 make chaos-full      # core+ledger kill/restart replay drill
@@ -184,7 +194,20 @@ make chaos-redpanda  # broker bounce drill
 - `core_recovery_hash` continuity proof
 - `ledger_duplicate_rows=0`
 - `invariants_ok=true`  
+- `chaos_replay_report=build/chaos/chaos-replay.json`
   - in stub-trade mode, `invariants_warning=negative_balances_present_under_stub_mode` can appear
+
+### 11) Safety case bundle (extended)
+```bash
+make safety-case-extended
+```
+`scripts/safety_case.sh --run-extended-checks`는 다음 증거 파일을 번들에 포함합니다:
+- `build/load/load-smoke.json`
+- `build/dr/dr-report.json`
+- `build/invariants/ledger-invariants.json`
+- `build/exactly-once/exactly-once-stress.json`
+- `build/reconciliation/smoke-reconciliation-safety.json`
+- `build/chaos/chaos-replay.json`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
@@ -248,6 +271,7 @@ Market order liquidity policy (v1):
   - load smoke report
   - DR rehearsal report
   - `make safety-case` artifact bundle + integrity hash
+  - `make safety-case-extended` for exactly-once/reconciliation/chaos evidence 포함 번들
 
 ## Service endpoints (local)
 - Edge Gateway: `http://localhost:8081`

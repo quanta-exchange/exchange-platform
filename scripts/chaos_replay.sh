@@ -30,6 +30,10 @@ CORE_LOG="/tmp/trading-core-chaos-replay.log"
 EDGE_LOG="/tmp/edge-gateway-chaos-replay.log"
 LEDGER_LOG="/tmp/ledger-service-chaos-replay.log"
 KAFKA_CAPTURE="/tmp/chaos-replay-trades-${RUN_ID}.jsonl"
+OUT_DIR="${OUT_DIR:-build/chaos}"
+REPORT_FILE="${REPORT_FILE:-${OUT_DIR}/chaos-replay.json}"
+
+mkdir -p "${OUT_DIR}"
 
 CORE_CFLAGS=""
 CORE_CXXFLAGS=""
@@ -496,12 +500,94 @@ if [[ "${INVARIANT_CHECK_RESULT}" == "fail" || -z "${INVARIANT_CHECK_RESULT}" ]]
   exit 1
 fi
 
+REPORT_FILE="${REPORT_FILE}" \
+RUN_ID="${RUN_ID}" \
+TOTAL_ORDERS="${TOTAL_ORDERS}" \
+N_INITIAL_ORDERS="${N_INITIAL_ORDERS}" \
+N_AFTER_CORE_RESTART="${N_AFTER_CORE_RESTART}" \
+N_WHILE_LEDGER_DOWN="${N_WHILE_LEDGER_DOWN}" \
+N_AFTER_LEDGER_RESTART="${N_AFTER_LEDGER_RESTART}" \
+CHAOS_KILL_CORE="${CHAOS_KILL_CORE}" \
+CHAOS_KILL_LEDGER="${CHAOS_KILL_LEDGER}" \
+RECOVERED_HASH="${RECOVERED_HASH}" \
+RECOVERED_SEQ="${RECOVERED_SEQ}" \
+POST_CORE_SEQ="${POST_CORE_SEQ}" \
+CAPTURED_COUNT="${CAPTURED_COUNT}" \
+UNIQUE_TRADE_IDS="${UNIQUE_TRADE_IDS}" \
+FINAL_LEDGER_COUNT="${FINAL_LEDGER_COUNT}" \
+DUP_ROWS="${DUP_ROWS}" \
+INVARIANT_CHECK_RESULT="${INVARIANT_CHECK_RESULT}" \
+INVARIANTS_JSON="${INVARIANTS_JSON}" \
+CORE_LOG="${CORE_LOG}" \
+EDGE_LOG="${EDGE_LOG}" \
+LEDGER_LOG="${LEDGER_LOG}" \
+KAFKA_CAPTURE="${KAFKA_CAPTURE}" \
+"${PYTHON_BIN}" - <<'PY'
+import json
+import os
+from datetime import datetime, timezone
+
+def as_bool(v: str) -> bool:
+    return str(v).lower() == "true"
+
+invariants_json = os.environ.get("INVARIANTS_JSON", "")
+try:
+    invariants_payload = json.loads(invariants_json) if invariants_json else None
+except Exception:
+    invariants_payload = {"raw": invariants_json}
+
+report = {
+    "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "run_id": os.environ.get("RUN_ID", ""),
+    "ok": True,
+    "scenario": {
+        "kill_core": as_bool(os.environ.get("CHAOS_KILL_CORE", "true")),
+        "kill_ledger": as_bool(os.environ.get("CHAOS_KILL_LEDGER", "true")),
+        "orders": {
+            "initial": int(os.environ.get("N_INITIAL_ORDERS", "0")),
+            "after_core_restart": int(os.environ.get("N_AFTER_CORE_RESTART", "0")),
+            "while_ledger_down": int(os.environ.get("N_WHILE_LEDGER_DOWN", "0")),
+            "after_ledger_restart": int(os.environ.get("N_AFTER_LEDGER_RESTART", "0")),
+            "total": int(os.environ.get("TOTAL_ORDERS", "0")),
+        },
+    },
+    "core_recovery": {
+        "seq_recovered": int(os.environ.get("RECOVERED_SEQ", "0")),
+        "state_hash_recovered": os.environ.get("RECOVERED_HASH", ""),
+        "post_restart_last_seq": int(os.environ.get("POST_CORE_SEQ", "0")),
+    },
+    "ledger": {
+        "trade_rows": int(os.environ.get("FINAL_LEDGER_COUNT", "0")),
+        "duplicate_rows": int(os.environ.get("DUP_ROWS", "0")),
+    },
+    "kafka_capture": {
+        "captured_count": int(os.environ.get("CAPTURED_COUNT", "0")),
+        "unique_trade_ids": int(os.environ.get("UNIQUE_TRADE_IDS", "0")),
+    },
+    "invariants": {
+        "result": os.environ.get("INVARIANT_CHECK_RESULT", ""),
+        "payload": invariants_payload,
+    },
+    "logs": {
+        "core": os.environ.get("CORE_LOG", ""),
+        "edge": os.environ.get("EDGE_LOG", ""),
+        "ledger": os.environ.get("LEDGER_LOG", ""),
+        "kafka_capture": os.environ.get("KAFKA_CAPTURE", ""),
+    },
+}
+
+with open(os.environ["REPORT_FILE"], "w", encoding="utf-8") as f:
+    json.dump(report, f, indent=2, sort_keys=True)
+    f.write("\n")
+PY
+
 echo "chaos_replay_success=true"
 echo "core_recovery_hash=${RECOVERED_HASH}"
 echo "core_recovery_seq=${RECOVERED_SEQ}"
 echo "ledger_trade_rows=${FINAL_LEDGER_COUNT}"
 echo "ledger_duplicate_rows=${DUP_ROWS}"
 echo "invariants_ok=true"
+echo "chaos_replay_report=${REPORT_FILE}"
 if [[ "${INVARIANT_CHECK_RESULT}" == "negative_only_allowed" ]]; then
   echo "invariants_warning=negative_balances_present_under_stub_mode"
 fi

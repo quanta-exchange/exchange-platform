@@ -17,6 +17,21 @@ LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 CORE_RUNTIME_DIR="/tmp/trading-core-reconciliation-smoke-${RUN_ID}"
 CORE_WAL_DIR="${CORE_RUNTIME_DIR}/wal"
 CORE_OUTBOX_DIR="${CORE_RUNTIME_DIR}/outbox"
+OUT_DIR="${OUT_DIR:-build/reconciliation}"
+REPORT_FILE="${REPORT_FILE:-${OUT_DIR}/smoke-reconciliation-safety.json}"
+LAG_THRESHOLD="${LEDGER_RECONCILIATION_LAG_THRESHOLD:-2}"
+
+BREACH_CONFIRMED="false"
+CANCEL_ONLY_REJECTED="false"
+RECOVERY_CONFIRMED="false"
+LATCH_RELEASED="false"
+POST_RELEASE_ACCEPTED="false"
+FAIL_REASON=""
+BREACH_STATUS_JSON=""
+RECOVERY_STATUS_JSON=""
+LATCH_RELEASE_JSON=""
+
+mkdir -p "${OUT_DIR}"
 
 CORE_CFLAGS=""
 CORE_CXXFLAGS=""
@@ -37,7 +52,93 @@ cleanup() {
     kill "${LEDGER_PID}" >/dev/null 2>&1 || true
   fi
 }
-trap cleanup EXIT
+
+write_report() {
+  local exit_code="$1"
+  REPORT_EXIT_CODE="${exit_code}" \
+  RUN_ID="${RUN_ID}" \
+  FAIL_REASON="${FAIL_REASON}" \
+  LAG_THRESHOLD="${LAG_THRESHOLD}" \
+  CORE_PORT="${CORE_PORT}" \
+  EDGE_PORT="${EDGE_PORT}" \
+  LEDGER_PORT="${LEDGER_PORT}" \
+  BREACH_CONFIRMED="${BREACH_CONFIRMED}" \
+  CANCEL_ONLY_REJECTED="${CANCEL_ONLY_REJECTED}" \
+  RECOVERY_CONFIRMED="${RECOVERY_CONFIRMED}" \
+  LATCH_RELEASED="${LATCH_RELEASED}" \
+  POST_RELEASE_ACCEPTED="${POST_RELEASE_ACCEPTED}" \
+  BREACH_STATUS_JSON="${BREACH_STATUS_JSON}" \
+  RECOVERY_STATUS_JSON="${RECOVERY_STATUS_JSON}" \
+  LATCH_RELEASE_JSON="${LATCH_RELEASE_JSON}" \
+  CORE_LOG="${CORE_LOG}" \
+  EDGE_LOG="${EDGE_LOG}" \
+  LEDGER_LOG="${LEDGER_LOG}" \
+  REPORT_FILE="${REPORT_FILE}" \
+  "${PYTHON_BIN:-python3}" - <<'PY'
+import json
+import os
+from datetime import datetime, timezone
+
+def as_bool(value: str) -> bool:
+    return str(value).lower() == "true"
+
+def parse_json(value: str):
+    if not value:
+        return None
+    try:
+        return json.loads(value)
+    except Exception:
+        return {"raw": value}
+
+exit_code = int(os.environ.get("REPORT_EXIT_CODE", "1"))
+ok = exit_code == 0
+report = {
+    "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "run_id": os.environ.get("RUN_ID", ""),
+    "ok": ok,
+    "fail_reason": "" if ok else os.environ.get("FAIL_REASON", "script_failed"),
+    "lag_threshold": int(os.environ.get("LAG_THRESHOLD", "2")),
+    "ports": {
+        "core": int(os.environ.get("CORE_PORT", "0")),
+        "edge": int(os.environ.get("EDGE_PORT", "0")),
+        "ledger": int(os.environ.get("LEDGER_PORT", "0")),
+    },
+    "checks": {
+        "breach_confirmed": as_bool(os.environ.get("BREACH_CONFIRMED", "false")),
+        "cancel_only_rejected": as_bool(os.environ.get("CANCEL_ONLY_REJECTED", "false")),
+        "recovery_confirmed": as_bool(os.environ.get("RECOVERY_CONFIRMED", "false")),
+        "latch_released": as_bool(os.environ.get("LATCH_RELEASED", "false")),
+        "post_release_accepted": as_bool(os.environ.get("POST_RELEASE_ACCEPTED", "false")),
+    },
+    "status_samples": {
+        "breach": parse_json(os.environ.get("BREACH_STATUS_JSON", "")),
+        "recovery": parse_json(os.environ.get("RECOVERY_STATUS_JSON", "")),
+    },
+    "latch_release_response": parse_json(os.environ.get("LATCH_RELEASE_JSON", "")),
+    "logs": {
+        "core": os.environ.get("CORE_LOG", ""),
+        "edge": os.environ.get("EDGE_LOG", ""),
+        "ledger": os.environ.get("LEDGER_LOG", ""),
+    },
+}
+
+report_file = os.environ.get("REPORT_FILE")
+if report_file:
+    with open(report_file, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, sort_keys=True)
+        f.write("\n")
+PY
+}
+
+on_exit() {
+  local exit_code=$?
+  if [[ "${exit_code}" -ne 0 && -z "${FAIL_REASON}" ]]; then
+    FAIL_REASON="script_failed"
+  fi
+  write_report "${exit_code}"
+  cleanup
+}
+trap on_exit EXIT
 
 cd "${ROOT_DIR}"
 
@@ -83,7 +184,7 @@ LEDGER_PORT="${LEDGER_PORT}" \
 LEDGER_GUARD_ENABLED="false" \
 LEDGER_RECONCILIATION_ENABLED="true" \
 LEDGER_RECONCILIATION_INTERVAL_MS="1000" \
-LEDGER_RECONCILIATION_LAG_THRESHOLD="2" \
+LEDGER_RECONCILIATION_LAG_THRESHOLD="${LAG_THRESHOLD}" \
 LEDGER_RECONCILIATION_SAFETY_MODE="CANCEL_ONLY" \
 LEDGER_RECONCILIATION_AUTO_SWITCH="true" \
 LEDGER_RECONCILIATION_LATCH_ALLOW_NEGATIVE="true" \
@@ -101,6 +202,7 @@ done
 if ! (echo > /dev/tcp/localhost/"${CORE_PORT}") >/dev/null 2>&1; then
   echo "trading-core readiness failed"
   cat "${CORE_LOG}"
+  FAIL_REASON="core_not_ready"
   exit 1
 fi
 
@@ -114,6 +216,7 @@ done
 if ! curl -fsS "http://localhost:${LEDGER_PORT}/readyz" >/dev/null 2>&1; then
   echo "ledger-service readiness failed"
   cat "${LEDGER_LOG}"
+  FAIL_REASON="ledger_not_ready"
   exit 1
 fi
 
@@ -135,6 +238,7 @@ done
 if ! curl -fsS "http://localhost:${EDGE_PORT}/readyz" >/dev/null 2>&1; then
   echo "edge-gateway readiness failed"
   cat "${EDGE_LOG}"
+  FAIL_REASON="edge_not_ready"
   exit 1
 fi
 
@@ -187,6 +291,7 @@ sys.exit(1)
 PY
 then
   echo "settlement consumer pause was not fully applied"
+  FAIL_REASON="settlement_pause_failed"
   exit 1
 fi
 
@@ -195,10 +300,9 @@ for i in {1..8}; do
   echo "lag_order_${i}=${order_resp}"
 done
 
-breach_confirmed="false"
 for _ in {1..45}; do
   STATUS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/status?historyLimit=30")"
-  if STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
+  if LAG_THRESHOLD="${LAG_THRESHOLD}" STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
 import json
 import os
 import sys
@@ -211,23 +315,25 @@ lag = int(status.get("lag", 0))
 breach_active = bool(status.get("breachActive", False))
 history = [h for h in data.get("history", []) if h.get("symbol") == "BTC-KRW"]
 safety_triggered = any(bool(h.get("safetyActionTaken", False)) for h in history)
-if lag > 2 and breach_active and safety_triggered:
+if lag > int(os.environ["LAG_THRESHOLD"]) and breach_active and safety_triggered:
     print(f"lag={lag} breachActive={breach_active} safetyTriggered={safety_triggered}")
     sys.exit(0)
 sys.exit(1)
 PY
   then
-    breach_confirmed="true"
+    BREACH_CONFIRMED="true"
+    BREACH_STATUS_JSON="${STATUS_JSON}"
     echo "reconciliation_status=${STATUS_JSON}"
     break
   fi
   sleep 1
 done
 
-if [[ "${breach_confirmed}" != "true" ]]; then
+if [[ "${BREACH_CONFIRMED}" != "true" ]]; then
   echo "reconciliation breach or safety trigger not observed in time"
   echo "--- ledger log ---"
   tail -n 120 "${LEDGER_LOG}" || true
+  FAIL_REASON="reconciliation_breach_not_observed"
   exit 1
 fi
 
@@ -245,8 +351,10 @@ sys.exit(1)
 PY
 then
   echo "expected CANCEL_ONLY rejection after safety mode trigger"
+  FAIL_REASON="cancel_only_rejection_missing"
   exit 1
 fi
+CANCEL_ONLY_REJECTED="true"
 
 RESUME_RESP="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/consumers/settlement/resume")"
 echo "resume_consumer=${RESUME_RESP}"
@@ -263,13 +371,13 @@ sys.exit(1)
 PY
 then
   echo "settlement consumer resume was not fully applied"
+  FAIL_REASON="settlement_resume_failed"
   exit 1
 fi
 
-recovered="false"
 for _ in {1..60}; do
   STATUS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" "http://localhost:${LEDGER_PORT}/v1/admin/reconciliation/status?historyLimit=30")"
-  if STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
+  if LAG_THRESHOLD="${LAG_THRESHOLD}" STATUS_JSON="${STATUS_JSON}" python3 - <<'PY'
 import json
 import os
 import sys
@@ -278,20 +386,22 @@ status = next((s for s in data.get("statuses", []) if s.get("symbol") == "BTC-KR
 if status is None:
     sys.exit(1)
 lag = int(status.get("lag", 0))
-if lag <= 2 and not bool(status.get("mismatch", False)) and not bool(status.get("thresholdBreached", False)):
+if lag <= int(os.environ["LAG_THRESHOLD"]) and not bool(status.get("mismatch", False)) and not bool(status.get("thresholdBreached", False)):
     sys.exit(0)
 sys.exit(1)
 PY
   then
-    recovered="true"
+    RECOVERY_CONFIRMED="true"
+    RECOVERY_STATUS_JSON="${STATUS_JSON}"
     break
   fi
   sleep 1
 done
 
-if [[ "${recovered}" != "true" ]]; then
+if [[ "${RECOVERY_CONFIRMED}" != "true" ]]; then
   echo "reconciliation recovery not observed in time"
   tail -n 120 "${LEDGER_LOG}" || true
+  FAIL_REASON="reconciliation_recovery_not_observed"
   exit 1
 fi
 
@@ -299,6 +409,7 @@ LATCH_RELEASE_RESP="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:
   -H 'Content-Type: application/json' \
   -d '{"approvedBy":"smoke-ops","reason":"smoke_verified","restoreSymbolMode":true}')"
 echo "latch_release=${LATCH_RELEASE_RESP}"
+LATCH_RELEASE_JSON="${LATCH_RELEASE_RESP}"
 if ! RELEASE_JSON="${LATCH_RELEASE_RESP}" python3 - <<'PY'
 import json
 import os
@@ -310,8 +421,10 @@ sys.exit(1)
 PY
 then
   echo "expected successful latch release with mode restore"
+  FAIL_REASON="latch_release_failed"
   exit 1
 fi
+LATCH_RELEASED="true"
 
 POST_RELEASE_ORDER="$(place_order "recon-post-release-${RUN_ID}")"
 echo "post_release_order=${POST_RELEASE_ORDER}"
@@ -326,7 +439,10 @@ sys.exit(0)
 PY
 then
   echo "order still rejected by CANCEL_ONLY after latch release"
+  FAIL_REASON="post_release_still_cancel_only"
   exit 1
 fi
+POST_RELEASE_ACCEPTED="true"
 
 echo "smoke_reconciliation_safety_success=true"
+echo "smoke_reconciliation_report=${REPORT_FILE}"

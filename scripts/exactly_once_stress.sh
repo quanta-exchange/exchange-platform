@@ -10,6 +10,8 @@ PRICE="${PRICE:-100}"
 QTY="${QTY:-1}"
 QUOTE_AMOUNT="${QUOTE_AMOUNT:-100}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+OUT_DIR="${OUT_DIR:-build/exactly-once}"
+REPORT_FILE="${REPORT_FILE:-${OUT_DIR}/exactly-once-stress.json}"
 
 if ! [[ "${REPEATS}" =~ ^[0-9]+$ ]] || [[ "${REPEATS}" -lt 1 ]]; then
   echo "REPEATS must be positive integer" >&2
@@ -19,6 +21,8 @@ if ! [[ "${CONCURRENCY}" =~ ^[0-9]+$ ]] || [[ "${CONCURRENCY}" -lt 1 ]]; then
   echo "CONCURRENCY must be positive integer" >&2
   exit 1
 fi
+
+mkdir -p "${OUT_DIR}"
 
 RUN_ID="$(date +%s)"
 BUYER_ID="exactly-buyer-${RUN_ID}"
@@ -162,12 +166,13 @@ PY
 echo "trade_injection_summary=${RESULT}"
 
 BALANCES="$(admin_get "/v1/admin/balances")"
-export BALANCES BUYER_ID SELLER_ID QUOTE_AMOUNT QTY RESULT
+export BALANCES BUYER_ID SELLER_ID QUOTE_AMOUNT QTY RESULT REPORT_FILE SYMBOL REPEATS CONCURRENCY RUN_ID TRADE_ID
 
 "${PYTHON_BIN}" - <<'PY'
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 summary = json.loads(os.environ["RESULT"])
 balances = json.loads(os.environ["BALANCES"]).get("balances", {})
@@ -175,6 +180,7 @@ buyer = os.environ["BUYER_ID"]
 seller = os.environ["SELLER_ID"]
 quote_amount = int(os.environ["QUOTE_AMOUNT"])
 qty = int(os.environ["QTY"])
+report_file = os.environ["REPORT_FILE"]
 
 expected = {
     f"user:{buyer}:KRW:HOLD:KRW": 0,
@@ -182,21 +188,57 @@ expected = {
     f"user:{buyer}:BTC:AVAILABLE:BTC": qty,
     f"user:{seller}:KRW:AVAILABLE:KRW": quote_amount,
 }
+mismatches = {}
+ok = True
 
 if summary.get("applied_true") != 1:
-    print(f"expected exactly one applied trade, got {summary.get('applied_true')}", file=sys.stderr)
-    sys.exit(1)
+    ok = False
+    mismatches["applied_true"] = {
+        "expected": 1,
+        "actual": summary.get("applied_true"),
+    }
 if summary.get("errors", 0) != 0 or summary.get("other", 0) != 0:
-    print(f"unexpected non-duplicate failures: {summary}", file=sys.stderr)
-    sys.exit(1)
+    ok = False
+    mismatches["submission_errors"] = {
+        "errors": int(summary.get("errors", 0)),
+        "other": int(summary.get("other", 0)),
+    }
 
 for key, want in expected.items():
     got = int(balances.get(key, 0))
     if got != want:
-        print(f"balance mismatch for {key}: want={want} got={got}", file=sys.stderr)
-        sys.exit(1)
+        ok = False
+        mismatches[key] = {"expected": want, "actual": got}
+
+report = {
+    "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "run_id": os.environ["RUN_ID"],
+    "ok": ok,
+    "ledger_base_url": os.environ["LEDGER_BASE_URL"],
+    "symbol": os.environ["SYMBOL"],
+    "trade_id": os.environ["TRADE_ID"],
+    "repeats": int(os.environ["REPEATS"]),
+    "concurrency": int(os.environ["CONCURRENCY"]),
+    "summary": {
+        "applied_true": int(summary.get("applied_true", 0)),
+        "duplicate": int(summary.get("duplicate", 0)),
+        "errors": int(summary.get("errors", 0)),
+        "other": int(summary.get("other", 0)),
+    },
+    "expected_balances": expected,
+    "mismatches": mismatches,
+}
+
+with open(report_file, "w", encoding="utf-8") as f:
+    json.dump(report, f, indent=2, sort_keys=True)
+    f.write("\n")
+
+if not ok:
+    print(f"exactly-once verification failed: {json.dumps(mismatches, sort_keys=True)}", file=sys.stderr)
+    sys.exit(1)
 
 print("exactly_once_stress_success=true")
 print(f"trade_applied_once={summary['applied_true']}")
 print(f"duplicate_blocked={summary['duplicate']}")
+print(f"exactly_once_report={report_file}")
 PY
