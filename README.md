@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -63,6 +63,7 @@ scripts/
   archive_range.sh        # G21 legal archive capture
   verify_archive.sh       # G21 archive checksum verifier
   verify_audit_chain.sh   # G25 tamper-evident audit chain verifier
+  verify_change_audit_chain.sh # G10 change-workflow audit chain verifier
   pii_log_scan.sh         # G20 log PII leak gate
   change_proposal.sh      # G10 change proposal creation
   change_approve.sh       # G10 approval recording
@@ -415,7 +416,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `verify_change_audit_chain_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -522,6 +523,7 @@ Apply success output includes:
 - `change_apply_success=true`
 - `change_apply_log=...`
 - `change_verification_summary=build/verification/<timestamp>/verification-summary.json`
+- `change_audit_file=build/change-audit/audit.log`
 
 ### 23) Break-glass emergency mode
 ```bash
@@ -588,7 +590,21 @@ Outputs:
 - `verify_audit_chain_head=<sha256>`
 - `verify_audit_chain_ok=true|false`
 
-### 26.2) PII log scan gate
+### 26.2) Change audit hash-chain verify
+```bash
+make verify-change-audit-chain
+# require at least one change workflow event:
+./scripts/verify_change_audit_chain.sh --require-events
+# strict change lifecycle check for one change id:
+./scripts/verify_change_audit_chain.sh --require-events --require-change-id <change-id> --require-applied
+```
+Outputs:
+- `verify_change_audit_chain_report=build/change-audit/verify-change-audit-chain-<timestamp>.json`
+- `verify_change_audit_chain_latest=build/change-audit/verify-change-audit-chain-latest.json`
+- `verify_change_audit_chain_head=<sha256>`
+- `verify_change_audit_chain_ok=true|false`
+
+### 26.3) PII log scan gate
 ```bash
 make pii-log-scan
 # dry-run mode (hits are reported but exit 0):
@@ -600,7 +616,7 @@ Outputs:
 - `pii_log_scan_hit_count=<n>`
 - `pii_log_scan_ok=true|false`
 
-`verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.  
+`verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive`/`verify-change-audit-chain` 단계가 자동 포함됩니다.  
 `--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.  
 `--run-startup-guardrails`를 주면 startup guardrails runbook 단계가 추가 실행됩니다.
 

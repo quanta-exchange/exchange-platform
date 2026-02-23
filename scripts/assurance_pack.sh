@@ -77,6 +77,7 @@ evidence = [
     {"id": "game_day_anomaly_runbook", "path": pathlib.Path(rel(game_day_anomaly_runbook)) if game_day_anomaly_runbook else None, "required": False},
     {"id": "audit_chain_tamper_runbook", "path": pathlib.Path(rel(audit_chain_tamper_runbook)) if audit_chain_tamper_runbook else None, "required": False},
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
+    {"id": "verify_change_audit_chain", "path": pathlib.Path("build/change-audit/verify-change-audit-chain-latest.json"), "required": False},
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
     {"id": "anomaly_detector", "path": pathlib.Path("build/anomaly/anomaly-detector-latest.json"), "required": False},
     {"id": "anomaly_smoke", "path": pathlib.Path("build/anomaly/anomaly-smoke-latest.json"), "required": False},
@@ -151,6 +152,7 @@ pack = {
         {"id": "G20", "text": "Anomaly webhook smoke proves detector alerts can be delivered end-to-end to an HTTP receiver."},
         {"id": "G21", "text": "Audit-chain tamper drill demonstrates verification failure on modified audit-log copies, confirming tamper detection path."},
         {"id": "G22", "text": "RBAC SoD check enforces role separation constraints and fails on restricted-permission overlaps."},
+        {"id": "G23", "text": "Change workflow proposal/approval/apply history is captured with a hash chain and independently verifiable for tamper evidence."},
     ],
 }
 

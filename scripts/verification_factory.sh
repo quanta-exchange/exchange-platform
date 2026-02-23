@@ -129,6 +129,9 @@ fi
 if ! run_step "verify-audit-chain" "$ROOT_DIR/scripts/verify_audit_chain.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "verify-change-audit-chain" "$ROOT_DIR/scripts/verify_change_audit_chain.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "pii-log-scan" "$ROOT_DIR/scripts/pii_log_scan.sh"; then
   HAS_FAILURE=true
 fi
@@ -190,6 +193,7 @@ EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
 RBAC_SOD_LOG="$LOG_DIR/rbac-sod-check.log"
 VERIFY_AUDIT_CHAIN_LOG="$LOG_DIR/verify-audit-chain.log"
+VERIFY_CHANGE_AUDIT_CHAIN_LOG="$LOG_DIR/verify-change-audit-chain.log"
 PII_LOG_SCAN_LOG="$LOG_DIR/pii-log-scan.log"
 ANOMALY_DETECTOR_LOG="$LOG_DIR/anomaly-detector.log"
 ANOMALY_SMOKE_LOG="$LOG_DIR/anomaly-smoke.log"
@@ -218,6 +222,7 @@ EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 RBAC_SOD_REPORT="$(extract_value "rbac_sod_check_report" "$RBAC_SOD_LOG")"
 VERIFY_AUDIT_CHAIN_REPORT="$(extract_value "verify_audit_chain_report" "$VERIFY_AUDIT_CHAIN_LOG")"
+VERIFY_CHANGE_AUDIT_CHAIN_REPORT="$(extract_value "verify_change_audit_chain_report" "$VERIFY_CHANGE_AUDIT_CHAIN_LOG")"
 PII_LOG_SCAN_REPORT="$(extract_value "pii_log_scan_report" "$PII_LOG_SCAN_LOG")"
 ANOMALY_DETECTOR_REPORT="$(extract_value "anomaly_report" "$ANOMALY_DETECTOR_LOG")"
 ANOMALY_SMOKE_REPORT="$(extract_value "anomaly_smoke_report" "$ANOMALY_SMOKE_LOG")"
@@ -236,7 +241,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -270,10 +275,11 @@ assurance_json = sys.argv[27]
 run_startup_guardrails = sys.argv[28].lower() == "true"
 startup_guardrails_runbook_dir = sys.argv[29]
 verify_audit_chain_report = sys.argv[30]
-pii_log_scan_report = sys.argv[31]
-anomaly_detector_report = sys.argv[32]
-anomaly_smoke_report = sys.argv[33]
-rbac_sod_report = sys.argv[34]
+verify_change_audit_chain_report = sys.argv[31]
+pii_log_scan_report = sys.argv[32]
+anomaly_detector_report = sys.argv[33]
+anomaly_smoke_report = sys.argv[34]
+rbac_sod_report = sys.argv[35]
 
 steps = []
 ok = True
@@ -311,6 +317,7 @@ summary = {
         "external_replay_report": external_replay_report or None,
         "controls_check_report": controls_report or None,
         "verify_audit_chain_report": verify_audit_chain_report or None,
+        "verify_change_audit_chain_report": verify_change_audit_chain_report or None,
         "pii_log_scan_report": pii_log_scan_report or None,
         "anomaly_detector_report": anomaly_detector_report or None,
         "anomaly_smoke_report": anomaly_smoke_report or None,

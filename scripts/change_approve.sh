@@ -2,9 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib_audit_chain.sh"
 CHANGE_DIR=""
 APPROVER="${APPROVER:-}"
 NOTE="${NOTE:-approved}"
+CHANGE_AUDIT_FILE="${CHANGE_AUDIT_FILE:-$ROOT_DIR/build/change-audit/audit.log}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -81,5 +83,29 @@ with open(meta_file, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
+CHANGE_ID="$(
+  python3 - "$META_FILE" <<'PY'
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    payload = json.load(f)
+print(payload.get("changeId", "unknown"))
+PY
+)"
+
+AUDIT_PAYLOAD="$(
+  python3 - "$CHANGE_ID" "$CHANGE_DIR" "$NOTE" <<'PY'
+import json
+import sys
+print(json.dumps({
+    "changeId": sys.argv[1],
+    "changeDir": sys.argv[2],
+    "approvalNote": sys.argv[3],
+}, separators=(",", ":"), sort_keys=True))
+PY
+)"
+audit_chain_append "$CHANGE_AUDIT_FILE" "change_approved" "$APPROVER" "$NOTE" "$AUDIT_PAYLOAD"
+
 echo "change_approval_recorded=true"
 echo "change_metadata_file=$META_FILE"
+echo "change_audit_file=$CHANGE_AUDIT_FILE"

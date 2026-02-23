@@ -2,8 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib_audit_chain.sh"
 CHANGE_ROOT="${CHANGE_ROOT:-$ROOT_DIR/changes/requests}"
 TEMPLATE_FILE="${TEMPLATE_FILE:-$ROOT_DIR/changes/templates/change-proposal.md}"
+CHANGE_AUDIT_FILE="${CHANGE_AUDIT_FILE:-$ROOT_DIR/build/change-audit/audit.log}"
 
 CHANGE_ID="${CHANGE_ID:-chg-$(date -u +"%Y%m%dT%H%M%SZ")}"
 TITLE="${TITLE:-Untitled Change}"
@@ -121,8 +123,23 @@ with open(meta_file, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
+AUDIT_PAYLOAD="$(
+  python3 - "$CHANGE_ID" "$TITLE" "$RISK_LEVEL" "$CHANGE_DIR" <<'PY'
+import json
+import sys
+print(json.dumps({
+    "changeId": sys.argv[1],
+    "title": sys.argv[2],
+    "riskLevel": sys.argv[3],
+    "changeDir": sys.argv[4],
+}, separators=(",", ":"), sort_keys=True))
+PY
+)"
+audit_chain_append "$CHANGE_AUDIT_FILE" "change_proposal_created" "$REQUESTED_BY" "$SUMMARY" "$AUDIT_PAYLOAD"
+
 echo "change_proposal_created=true"
 echo "change_id=$CHANGE_ID"
 echo "change_dir=$CHANGE_DIR"
 echo "change_proposal_file=$PROPOSAL_FILE"
 echo "change_metadata_file=$META_FILE"
+echo "change_audit_file=$CHANGE_AUDIT_FILE"

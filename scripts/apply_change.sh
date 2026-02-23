@@ -2,9 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib_audit_chain.sh"
 CHANGE_DIR=""
 APPLY_COMMAND=""
 SKIP_VERIFICATION=false
+APPLIED_BY="${APPLIED_BY:-unknown}"
+CHANGE_AUDIT_FILE="${CHANGE_AUDIT_FILE:-$ROOT_DIR/build/change-audit/audit.log}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -19,6 +22,10 @@ while [[ $# -gt 0 ]]; do
     --skip-verification)
       SKIP_VERIFICATION=true
       shift
+      ;;
+    --applied-by)
+      APPLIED_BY="$2"
+      shift 2
       ;;
     *)
       echo "unknown option: $1"
@@ -111,9 +118,35 @@ with open(meta_file, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
+CHANGE_ID="$(
+  python3 - "$META_FILE" <<'PY'
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    payload = json.load(f)
+print(payload.get("changeId", "unknown"))
+PY
+)"
+
+AUDIT_PAYLOAD="$(
+  python3 - "$CHANGE_ID" "$CHANGE_DIR" "$OUT_DIR" "$SKIP_VERIFICATION" "$VERIFICATION_SUMMARY" <<'PY'
+import json
+import sys
+print(json.dumps({
+    "changeId": sys.argv[1],
+    "changeDir": sys.argv[2],
+    "outputDir": sys.argv[3],
+    "verificationSkipped": sys.argv[4].lower() == "true",
+    "verificationSummary": sys.argv[5] or None,
+}, separators=(",", ":"), sort_keys=True))
+PY
+)"
+audit_chain_append "$CHANGE_AUDIT_FILE" "change_applied" "$APPLIED_BY" "$APPLY_COMMAND" "$AUDIT_PAYLOAD"
+
 echo "change_apply_success=true"
 echo "change_apply_log=$APPLY_LOG"
 if [[ "$SKIP_VERIFICATION" == "false" ]]; then
   echo "change_verify_log=$VERIFY_LOG"
   echo "change_verification_summary=$VERIFICATION_SUMMARY"
 fi
+echo "change_audit_file=$CHANGE_AUDIT_FILE"
