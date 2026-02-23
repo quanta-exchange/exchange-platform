@@ -69,6 +69,8 @@ scripts/
   ws_resume_smoke.sh      # WS resume/gap recovery smoke
   ws_resume_client.go     # WS resume helper (SUB/RESUME assertion client)
 runbooks/
+  crash_recovery.sh       # crash recovery runbook-as-code (snapshot+chaos)
+  crash_recovery.md       # crash recovery drill notes
   lag_spike.sh            # reconciliation lag spike automated drill
   ws_drop_spike.sh        # ws drop spike automated drill
 tools/external-replay/
@@ -380,6 +382,7 @@ Success output includes:
 ```bash
 make runbook-lag-spike
 make runbook-ws-drop
+make runbook-crash-recovery
 ```
 Success output includes:
 - `runbook_lag_spike_ok=true` or `runbook_ws_drop_spike_ok=true`

@@ -221,6 +221,12 @@
       "title": "Order lifecycle transition invariant evidence exists",
       "enforced": false,
       "required_evidence": ["build/invariants/core-invariants.json", "scripts/invariants.sh"]
+    },
+    {
+      "id": "CTRL-038",
+      "title": "Crash recovery runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/crash_recovery.sh", "runbooks/crash_recovery.md"]
     }
   ]
 }

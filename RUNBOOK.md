@@ -153,6 +153,7 @@ Gate G1 operational check:
 ### 4.0 Runbook-as-code entrypoints
 - Reconciliation lag drill: `./runbooks/lag_spike.sh`
 - WS drop/slow-consumer drill: `./runbooks/ws_drop_spike.sh`
+- Crash recovery drill: `./runbooks/crash_recovery.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
@@ -199,6 +200,11 @@ Related snapshot rehearsal:
   - executes snapshot + WAL restore rehearsal and emits:
     - `snapshot_verify_ok=true`
     - `snapshot_verify_latest=build/snapshot/snapshot-verify-latest.json`
+
+Runbook-as-code shortcut:
+- `./runbooks/crash_recovery.sh`
+  - defaults `CHAOS_SKIP_LEDGER_ASSERTS=true` for fast drills
+  - set `CHAOS_SKIP_LEDGER_ASSERTS=false` for strict ledger row-count assertions
 
 ---
 
