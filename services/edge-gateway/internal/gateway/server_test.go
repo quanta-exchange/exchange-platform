@@ -292,6 +292,7 @@ func TestOrderLifecycleCreateGetCancel(t *testing.T) {
 func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()
+	s.cfg.EnableSmokeRoutes = true
 
 	body := []byte(`{"tradeId":"trade-1","symbol":"BTC-KRW","price":"100","qty":"2"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/smoke/trades", bytes.NewReader(body))
@@ -328,6 +329,22 @@ func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
 	}
 	if data["volume24h"] != "2" {
 		t.Fatalf("unexpected volume24h: %v", data["volume24h"])
+	}
+}
+
+func TestSmokeTradeRouteDisabledByDefault(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	body := []byte(`{"tradeId":"trade-1","symbol":"BTC-KRW","price":"100","qty":"2"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/smoke/trades", bytes.NewReader(body))
+	for k, vals := range signHeaders(t, http.MethodPost, "/v1/smoke/trades", body, time.Now().UnixMilli()) {
+		req.Header[k] = vals
+	}
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected smoke route forbidden by default, got %d", w.Code)
 	}
 }
 

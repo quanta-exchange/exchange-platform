@@ -42,7 +42,7 @@ LEDGER_PID=$!
 
 EDGE_ADDR=":8081" \
 EDGE_DB_DSN="postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable" \
-go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
+EDGE_ENABLE_SMOKE_ROUTES="true" go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
 EDGE_PID=$!
 
 for _ in {1..60}; do

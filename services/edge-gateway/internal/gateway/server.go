@@ -56,6 +56,7 @@ type Config struct {
 	DisableDB          bool
 	DisableCore        bool
 	SeedMarketData     bool
+	EnableSmokeRoutes  bool
 	SessionTTL         time.Duration
 	WSQueueSize        int
 	WSWriteDelay       time.Duration
@@ -1767,6 +1768,10 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSmokeTrade(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.EnableSmokeRoutes {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "smoke_disabled"})
+		return
+	}
 	var req SmokeTradeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})

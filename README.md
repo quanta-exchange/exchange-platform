@@ -263,7 +263,7 @@ Market order liquidity policy (v1):
   - `POST /v1/orders`
   - `DELETE /v1/orders/{orderId}`
   - `GET /v1/orders/{orderId}`
-  - `POST /v1/smoke/trades`
+  - `POST /v1/smoke/trades` (test-only; requires `EDGE_ENABLE_SMOKE_ROUTES=true`)
   - `GET /v1/markets/{symbol}/trades`
   - `GET /v1/markets/{symbol}/orderbook`
   - `GET /v1/markets/{symbol}/candles`
@@ -315,6 +315,7 @@ Configure auth in env:
 - `EDGE_RATE_LIMIT_PER_MINUTE=1000`
 - `EDGE_DISABLE_CORE=true` (optional: 코어 없이 마켓 조회/WS만 실행)
 - `EDGE_SEED_MARKET_DATA=true` (default: server boot 시 샘플 마켓 데이터 자동 주입)
+- `EDGE_ENABLE_SMOKE_ROUTES=false` (default; test scripts only set `true`)
 - `EDGE_SESSION_TTL_HOURS=24`
 - `EDGE_KAFKA_BROKERS=localhost:29092` (core trade event consume)
 - `EDGE_KAFKA_TRADE_TOPIC=core.trade-events.v1`

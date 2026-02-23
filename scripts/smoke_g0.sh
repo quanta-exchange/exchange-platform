@@ -16,7 +16,7 @@ cd "$ROOT_DIR"
 
 docker compose -f infra/compose/docker-compose.yml up -d postgres redpanda redpanda-init redis clickhouse minio minio-init otel-collector prometheus
 
-EDGE_ADDR=":8081" EDGE_DB_DSN="postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable" go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
+EDGE_ADDR=":8081" EDGE_ENABLE_SMOKE_ROUTES="true" EDGE_DB_DSN="postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable" go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
 EDGE_PID=$!
 
 for _ in {1..30}; do
