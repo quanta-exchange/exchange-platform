@@ -1,0 +1,36 @@
+{
+  "roles": [
+    {
+      "name": "Operator",
+      "permissions": [
+        "view:reconciliation",
+        "run:runbooks",
+        "create:change_proposal"
+      ]
+    },
+    {
+      "name": "Approver",
+      "permissions": [
+        "approve:change",
+        "release:reconciliation_latch",
+        "approve:correction"
+      ]
+    },
+    {
+      "name": "Auditor",
+      "permissions": [
+        "view:audit_logs",
+        "view:evidence_bundle",
+        "view:compliance_reports"
+      ]
+    },
+    {
+      "name": "BreakGlassCustodian",
+      "permissions": [
+        "enable:break_glass",
+        "disable:break_glass",
+        "review:break_glass_audit"
+      ]
+    }
+  ]
+}

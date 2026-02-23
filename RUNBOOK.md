@@ -162,6 +162,7 @@ Gate G1 operational check:
   - enable: `./scripts/break_glass.sh enable --ttl-sec 900 --actor <oncall> --reason <incident>`
   - status: `./scripts/break_glass.sh status`
   - disable: `./scripts/break_glass.sh disable --actor <oncall> --reason <resolved>`
+- Access review report: `./scripts/access_review.sh`
 
 ### 4.1 Crash recovery drill
 Purpose:

@@ -39,7 +39,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->compliance->transparency->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->compliance->transparency->access->budget->assurance)
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
@@ -48,6 +48,7 @@ scripts/
   change_approve.sh       # G10 approval recording
   apply_change.sh         # G10 apply + verification evidence
   break_glass.sh          # G10 emergency privilege with TTL + audit log
+  access_review.sh        # G36 access review report
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
@@ -65,6 +66,8 @@ compliance/
   mapping.yaml            # controls-to-framework mapping
 changes/
   templates/change-proposal.md
+security/
+  rbac_roles.yaml
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -354,6 +357,15 @@ Outputs:
 - `break_glass_enabled=true|false`
 - `break_glass_status={...}`
 - audit log: `build/break-glass/audit.log`
+
+### 24) Access review
+```bash
+make access-review
+```
+Outputs:
+- `access_review_report=build/access/access-review-<timestamp>.json`
+- `access_review_latest=build/access/access-review-latest.json`
+- `access_review_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
