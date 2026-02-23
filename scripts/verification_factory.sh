@@ -114,6 +114,9 @@ fi
 if ! run_step "prove-breakers" "$ROOT_DIR/scripts/prove_breakers.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "prove-candles" "$ROOT_DIR/scripts/prove_candles.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "verify-service-modes" "$ROOT_DIR/scripts/verify_service_modes.sh"; then
   HAS_FAILURE=true
 fi
@@ -148,6 +151,7 @@ PROVE_IDEMPOTENCY_LOG="$LOG_DIR/prove-idempotency.log"
 PROVE_LATCH_APPROVAL_LOG="$LOG_DIR/prove-latch-approval.log"
 MODEL_CHECK_LOG="$LOG_DIR/model-check.log"
 PROVE_BREAKERS_LOG="$LOG_DIR/prove-breakers.log"
+PROVE_CANDLES_LOG="$LOG_DIR/prove-candles.log"
 VERIFY_SERVICE_MODES_LOG="$LOG_DIR/verify-service-modes.log"
 WS_RESUME_SMOKE_LOG="$LOG_DIR/ws-resume-smoke.log"
 SHADOW_VERIFY_LOG="$LOG_DIR/shadow-verify.log"
@@ -167,6 +171,7 @@ PROVE_IDEMPOTENCY_REPORT="$(extract_value "prove_idempotency_report" "$PROVE_IDE
 PROVE_LATCH_APPROVAL_REPORT="$(extract_value "prove_latch_approval_report" "$PROVE_LATCH_APPROVAL_LOG")"
 MODEL_CHECK_REPORT="$(extract_value "model_check_report" "$MODEL_CHECK_LOG")"
 PROVE_BREAKERS_REPORT="$(extract_value "prove_breakers_report" "$PROVE_BREAKERS_LOG")"
+PROVE_CANDLES_REPORT="$(extract_value "prove_candles_report" "$PROVE_CANDLES_LOG")"
 VERIFY_SERVICE_MODES_REPORT="$(extract_value "verify_service_modes_report" "$VERIFY_SERVICE_MODES_LOG")"
 WS_RESUME_SMOKE_REPORT="$(extract_value "ws_resume_smoke_report" "$WS_RESUME_SMOKE_LOG")"
 SHADOW_VERIFY_REPORT="$(extract_value "shadow_verify_report" "$SHADOW_VERIFY_LOG")"
@@ -176,7 +181,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -195,14 +200,15 @@ prove_idempotency_report = sys.argv[12]
 prove_latch_approval_report = sys.argv[13]
 model_check_report = sys.argv[14]
 prove_breakers_report = sys.argv[15]
-verify_service_modes_report = sys.argv[16]
-ws_resume_smoke_report = sys.argv[17]
-shadow_verify_report = sys.argv[18]
-compliance_report = sys.argv[19]
-transparency_report = sys.argv[20]
-access_review_report = sys.argv[21]
-safety_budget_report = sys.argv[22]
-assurance_json = sys.argv[23]
+prove_candles_report = sys.argv[16]
+verify_service_modes_report = sys.argv[17]
+ws_resume_smoke_report = sys.argv[18]
+shadow_verify_report = sys.argv[19]
+compliance_report = sys.argv[20]
+transparency_report = sys.argv[21]
+access_review_report = sys.argv[22]
+safety_budget_report = sys.argv[23]
+assurance_json = sys.argv[24]
 
 steps = []
 ok = True
@@ -239,6 +245,7 @@ summary = {
         "prove_latch_approval_report": prove_latch_approval_report or None,
         "model_check_report": model_check_report or None,
         "prove_breakers_report": prove_breakers_report or None,
+        "prove_candles_report": prove_candles_report or None,
         "verify_service_modes_report": verify_service_modes_report or None,
         "ws_resume_smoke_report": ws_resume_smoke_report or None,
         "shadow_verify_report": shadow_verify_report or None,

@@ -80,6 +80,7 @@ evidence = [
     {"id": "idempotency_scope", "path": pathlib.Path("build/idempotency/prove-idempotency-latest.json"), "required": False},
     {"id": "latch_dual_approval", "path": pathlib.Path("build/latch/prove-latch-approval-latest.json"), "required": False},
     {"id": "circuit_breakers", "path": pathlib.Path("build/breakers/prove-breakers-latest.json"), "required": False},
+    {"id": "candle_correctness", "path": pathlib.Path("build/candles/prove-candles-latest.json"), "required": False},
     {"id": "model_check", "path": pathlib.Path("build/model-check/model-check-latest.json"), "required": False},
     {"id": "service_modes", "path": pathlib.Path("build/service-modes/verify-service-modes-latest.json"), "required": False},
     {"id": "shadow_verify", "path": pathlib.Path("build/shadow/shadow-verify-latest.json"), "required": False},
@@ -125,6 +126,7 @@ pack = {
         {"id": "G9", "text": "Reconciliation latch release can enforce dual approval with distinct approvers."},
         {"id": "G10", "text": "Broker bounce drill confirms event log durability and post-restart produce/consume continuity."},
         {"id": "G11", "text": "WS resume flow replays missed trade ranges and falls back to snapshot when history gaps are detected."},
+        {"id": "G12", "text": "Candle correctness proof confirms canonical rebuild and online aggregation converge under out-of-order and duplicate trades."},
     ],
 }
 

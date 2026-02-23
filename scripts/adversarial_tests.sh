@@ -57,6 +57,7 @@ run_step() {
 status_policy="fail"
 status_ws="fail"
 status_ws_resume="fail"
+status_candles="fail"
 status_exactly_once="skip"
 exactly_once_reason="ledger_not_ready"
 
@@ -72,6 +73,10 @@ if run_step "ws_resume_smoke" "$ROOT_DIR/scripts/ws_resume_smoke.sh"; then
   status_ws_resume="pass"
 fi
 
+if run_step "prove_candles" "$ROOT_DIR/scripts/prove_candles.sh"; then
+  status_candles="pass"
+fi
+
 if curl -fsS "${LEDGER_BASE_URL}/readyz" >/dev/null 2>&1; then
   exactly_once_reason=""
   if run_step "exactly_once_stress" env LEDGER_BASE_URL="${LEDGER_BASE_URL}" REPEATS="${EXACTLY_ONCE_REPEATS}" CONCURRENCY="${EXACTLY_ONCE_CONCURRENCY}" "$ROOT_DIR/scripts/exactly_once_stress.sh"; then
@@ -81,7 +86,7 @@ if curl -fsS "${LEDGER_BASE_URL}/readyz" >/dev/null 2>&1; then
   fi
 fi
 
-python3 - "$REPORT_FILE" "$status_policy" "$status_ws" "$status_ws_resume" "$status_exactly_once" "$exactly_once_reason" "$LOG_DIR" "$LEDGER_BASE_URL" "$EXACTLY_ONCE_REPEATS" "$EXACTLY_ONCE_CONCURRENCY" <<'PY'
+python3 - "$REPORT_FILE" "$status_policy" "$status_ws" "$status_ws_resume" "$status_candles" "$status_exactly_once" "$exactly_once_reason" "$LOG_DIR" "$LEDGER_BASE_URL" "$EXACTLY_ONCE_REPEATS" "$EXACTLY_ONCE_CONCURRENCY" <<'PY'
 import json
 import pathlib
 import sys
@@ -91,17 +96,19 @@ report_file = pathlib.Path(sys.argv[1]).resolve()
 status_policy = sys.argv[2]
 status_ws = sys.argv[3]
 status_ws_resume = sys.argv[4]
-status_exactly_once = sys.argv[5]
-exactly_once_reason = sys.argv[6]
-log_dir = pathlib.Path(sys.argv[7]).resolve()
-ledger_base_url = sys.argv[8]
-exactly_once_repeats = int(sys.argv[9])
-exactly_once_concurrency = int(sys.argv[10])
+status_candles = sys.argv[5]
+status_exactly_once = sys.argv[6]
+exactly_once_reason = sys.argv[7]
+log_dir = pathlib.Path(sys.argv[8]).resolve()
+ledger_base_url = sys.argv[9]
+exactly_once_repeats = int(sys.argv[10])
+exactly_once_concurrency = int(sys.argv[11])
 
 steps = [
     {"name": "policy_smoke", "status": status_policy},
     {"name": "ws_smoke", "status": status_ws},
     {"name": "ws_resume_smoke", "status": status_ws_resume},
+    {"name": "prove_candles", "status": status_candles},
     {
         "name": "exactly_once_stress",
         "status": status_exactly_once,
@@ -113,6 +120,7 @@ ok = (
     status_policy == "pass"
     and status_ws == "pass"
     and status_ws_resume == "pass"
+    and status_candles == "pass"
     and status_exactly_once in {"pass", "skip"}
 )
 
@@ -135,9 +143,9 @@ with open(report_file, "w", encoding="utf-8") as f:
 PY
 
 echo "adversarial_tests_report=${REPORT_FILE}"
-echo "adversarial_tests_ok=$([[ "${status_policy}" == "pass" && "${status_ws}" == "pass" && "${status_ws_resume}" == "pass" && ( "${status_exactly_once}" == "pass" || "${status_exactly_once}" == "skip" ) ]] && echo true || echo false)"
+echo "adversarial_tests_ok=$([[ "${status_policy}" == "pass" && "${status_ws}" == "pass" && "${status_ws_resume}" == "pass" && "${status_candles}" == "pass" && ( "${status_exactly_once}" == "pass" || "${status_exactly_once}" == "skip" ) ]] && echo true || echo false)"
 
-if [[ "${status_policy}" != "pass" || "${status_ws}" != "pass" || "${status_ws_resume}" != "pass" ]]; then
+if [[ "${status_policy}" != "pass" || "${status_ws}" != "pass" || "${status_ws_resume}" != "pass" || "${status_candles}" != "pass" ]]; then
   exit 1
 fi
 if [[ "${status_exactly_once}" == "fail" ]]; then

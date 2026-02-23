@@ -109,6 +109,11 @@
       "controlId": "CTRL-032",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "WS resume replay and gap fallback smoke evidence for market-data recovery correctness"
+    },
+    {
+      "controlId": "CTRL-033",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
+      "description": "Candle correctness proof for deterministic market-data aggregation under out-of-order and duplicate trades"
     }
   ]
 }

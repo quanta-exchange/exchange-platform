@@ -191,6 +191,12 @@
       "title": "WS resume gap-recovery smoke evidence exists",
       "enforced": false,
       "required_evidence": ["build/ws/ws-resume-smoke.json", "scripts/ws_resume_smoke.sh", "scripts/ws_resume_client.go"]
+    },
+    {
+      "id": "CTRL-033",
+      "title": "Candle correctness proof evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/candles/prove-candles-latest.json", "scripts/prove_candles.sh"]
     }
   ]
 }

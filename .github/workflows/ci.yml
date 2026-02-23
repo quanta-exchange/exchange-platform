@@ -366,6 +366,7 @@ jobs:
             build/model-check/**
             build/shadow/**
             build/breakers/**
+            build/candles/**
             build/service-modes/**
             build/ws/**
             build/idempotency/**

@@ -39,7 +39,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->latch-approval->model-check->breakers->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->latch-approval->model-check->breakers->candles->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -49,6 +49,7 @@ scripts/
   prove_idempotency_scope.sh # G4.1 idempotency scope/TTL proof runner
   prove_latch_approval.sh # G4.1 reconciliation latch approval proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
+  prove_candles.sh        # G17 candle correctness proof runner
   verify_service_modes.sh # G26 service mode matrix verification
   model_check.sh          # G28 state-machine model checker
   shadow_verify.sh        # G33 production shadow verification
@@ -273,6 +274,14 @@ Success output includes:
 - `ws_resume_gap_first_type=Snapshot`
 - `ws_resume_smoke_report=build/ws/ws-resume-smoke.json`
 
+### 10.3) Candle correctness proof
+```bash
+make prove-candles
+```
+Success output includes:
+- `prove_candles_ok=true`
+- `prove_candles_latest=build/candles/prove-candles-latest.json`
+
 ### 11) Safety case bundle (extended)
 ```bash
 make safety-case-extended
@@ -291,6 +300,7 @@ make safety-case-extended
 - `build/ws/ws-resume-smoke.json`
 - `build/determinism/prove-determinism-latest.json`
 - `build/breakers/prove-breakers-latest.json`
+- `build/candles/prove-candles-latest.json`
 - `build/service-modes/verify-service-modes-latest.json`
 
 ### 12) Assurance pack (claims + evidence index)
