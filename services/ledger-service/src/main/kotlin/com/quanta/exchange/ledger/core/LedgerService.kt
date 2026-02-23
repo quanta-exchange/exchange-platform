@@ -572,33 +572,21 @@ class LedgerService(
     }
 
     fun applyCorrection(correctionId: String, envelope: EventEnvelope): SettlementResult {
-        val correction = repo.getCorrection(correctionId)
-        if (correction.status == "APPLIED") {
-            return SettlementResult(applied = false, entryId = "le_corr_$correctionId", reason = "already_applied")
-        }
-        if (correction.status != "APPROVED") {
-            return SettlementResult(applied = false, entryId = "le_corr_$correctionId", reason = "not_approved")
-        }
-
-        val applied = when (correction.mode.uppercase()) {
-            "REVERSAL" -> repo.reverseEntry(
-                originalEntryId = correction.originalEntryId,
-                correctionEntryId = "le_corr_$correctionId",
-                correlationId = envelope.correlationId,
-                causationId = envelope.causationId,
-            )
-            else -> throw IllegalArgumentException("mode ${correction.mode} not supported in v1")
-        }
-
-        if (applied) {
-            repo.markCorrectionApplied(correctionId)
+        val result = repo.applyCorrectionAtomic(
+            correctionId = correctionId,
+            correlationId = envelope.correlationId,
+            causationId = envelope.causationId,
+        )
+        if (result.applied) {
             metrics.incrementCorrections()
             refreshCorrectionPendingAge()
             refreshReserveMetrics()
-            return SettlementResult(applied = true, entryId = "le_corr_$correctionId", reason = "applied")
+            return result
         }
-        metrics.incrementUniqueViolation()
-        return SettlementResult(applied = false, entryId = "le_corr_$correctionId", reason = "duplicate")
+        if (result.reason == "duplicate") {
+            metrics.incrementUniqueViolation()
+        }
+        return result
     }
 
     fun listBalances(): Map<String, Long> = repo.listBalances()

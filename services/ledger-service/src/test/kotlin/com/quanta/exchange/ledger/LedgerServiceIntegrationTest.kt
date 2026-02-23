@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
 @SpringBootTest
@@ -477,6 +478,69 @@ class LedgerServiceIntegrationTest {
         assertTrue(!approver1.isNullOrBlank())
         assertTrue(!approver2.isNullOrBlank())
         assertEquals(setOf("ops-b", "ops-c"), setOf(approver1!!, approver2!!))
+    }
+
+    @Test
+    fun concurrentCorrectionApplyRemainsAtomic() {
+        assertTrue(ledgerService.adjustAvailable(adjustment("corr-apply-base", "alice", "USD", 500)))
+        ledgerService.createCorrection(
+            correctionId = "corr-apply-race",
+            originalEntryId = "le_adj_corr-apply-base",
+            mode = "REVERSAL",
+            reason = "apply race check",
+            ticketId = "TKT-APPLY-RACE",
+            requestedBy = "ops-a",
+        )
+        ledgerService.approveCorrection("corr-apply-race", "ops-b")
+        ledgerService.approveCorrection("corr-apply-race", "ops-c")
+
+        val pool = Executors.newFixedThreadPool(2)
+        val start = java.util.concurrent.CountDownLatch(1)
+        val results = CopyOnWriteArrayList<Boolean>()
+        val errorRef = AtomicReference<Throwable?>()
+
+        try {
+            val futures = listOf(1L, 2L).map { seq ->
+                pool.submit {
+                    start.await(2, TimeUnit.SECONDS)
+                    try {
+                        val result = ledgerService.applyCorrection(
+                            correctionId = "corr-apply-race",
+                            envelope = envelope(symbol = "USD-USD", seq = 10_000 + seq),
+                        )
+                        results += result.applied
+                    } catch (ex: Throwable) {
+                        errorRef.compareAndSet(null, ex)
+                    }
+                }
+            }
+            start.countDown()
+            futures.forEach { it.get(5, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+        }
+
+        val error = errorRef.get()
+        if (error != null) {
+            throw AssertionError("concurrent apply failed", error)
+        }
+
+        val appliedCount = results.count { it }
+        assertEquals(1, appliedCount)
+
+        val correctionRows = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM ledger_entries WHERE entry_id = ? AND reference_type = 'CORRECTION'",
+            Long::class.java,
+            "le_corr_corr-apply-race",
+        )!!
+        assertEquals(1L, correctionRows)
+
+        val status = jdbc.queryForObject(
+            "SELECT status FROM correction_requests WHERE correction_id = ?",
+            String::class.java,
+            "corr-apply-race",
+        )!!
+        assertEquals("APPLIED", status)
     }
 
     private fun seedBalancesAndReserves() {

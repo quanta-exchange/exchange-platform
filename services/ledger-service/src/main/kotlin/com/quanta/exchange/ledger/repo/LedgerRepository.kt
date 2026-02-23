@@ -8,6 +8,7 @@ import com.quanta.exchange.ledger.core.ReconciliationEvaluation
 import com.quanta.exchange.ledger.core.ReconciliationHistoryPoint
 import com.quanta.exchange.ledger.core.ReconciliationSafetyState
 import com.quanta.exchange.ledger.core.ReconciliationStatus
+import com.quanta.exchange.ledger.core.SettlementResult
 import com.quanta.exchange.ledger.core.TradeLookup
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.jdbc.core.JdbcTemplate
@@ -565,6 +566,35 @@ class LedgerRepository(
             "UPDATE correction_requests SET status = 'APPLIED', approved_at = COALESCE(approved_at, now()) WHERE correction_id = ?",
             correctionId,
         )
+    }
+
+    @Transactional
+    fun applyCorrectionAtomic(correctionId: String, correlationId: String, causationId: String): SettlementResult {
+        val correction = getCorrectionForUpdate(correctionId)
+        val correctionEntryId = "le_corr_$correctionId"
+        if (correction.status == "APPLIED") {
+            return SettlementResult(applied = false, entryId = correctionEntryId, reason = "already_applied")
+        }
+        if (correction.status != "APPROVED") {
+            return SettlementResult(applied = false, entryId = correctionEntryId, reason = "not_approved")
+        }
+
+        val applied = when (correction.mode.uppercase()) {
+            "REVERSAL" -> reverseEntry(
+                originalEntryId = correction.originalEntryId,
+                correctionEntryId = correctionEntryId,
+                correlationId = correlationId,
+                causationId = causationId,
+            )
+            else -> throw IllegalArgumentException("mode ${correction.mode} not supported in v1")
+        }
+
+        if (!applied) {
+            return SettlementResult(applied = false, entryId = correctionEntryId, reason = "duplicate")
+        }
+
+        markCorrectionApplied(correctionId)
+        return SettlementResult(applied = true, entryId = correctionEntryId, reason = "applied")
     }
 
     fun getCorrection(correctionId: String): CorrectionRequest {
