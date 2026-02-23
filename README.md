@@ -73,6 +73,7 @@ runbooks/
   crash_recovery.md       # crash recovery drill notes
   lag_spike.sh            # reconciliation lag spike automated drill
   ws_drop_spike.sh        # ws drop spike automated drill
+  ws_resume_gap_spike.sh  # ws resume gap spike automated drill
 tools/external-replay/
   external_replay_demo.sh # external verifier demo for safety-case artifacts
 policies/
@@ -384,10 +385,11 @@ Success output includes:
 ```bash
 make runbook-lag-spike
 make runbook-ws-drop
+make runbook-ws-resume-gap
 make runbook-crash-recovery
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_ws_drop_spike_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 

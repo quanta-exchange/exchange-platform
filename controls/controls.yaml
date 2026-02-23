@@ -233,6 +233,12 @@
       "title": "WS resume gap metric + alert coverage evidence exists",
       "enforced": false,
       "required_evidence": ["build/ws/ws-resume-smoke.json", "scripts/ws_resume_smoke.sh", "infra/observability/ws-alert-rules.example.yml", "services/edge-gateway/internal/gateway/server.go"]
+    },
+    {
+      "id": "CTRL-040",
+      "title": "WS resume gap runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/ws_resume_gap_spike.sh", "runbooks/ws_resume_gap_spike.md", "scripts/ws_resume_smoke.sh"]
     }
   ]
 }

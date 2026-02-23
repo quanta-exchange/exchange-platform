@@ -153,6 +153,7 @@ Gate G1 operational check:
 ### 4.0 Runbook-as-code entrypoints
 - Reconciliation lag drill: `./runbooks/lag_spike.sh`
 - WS drop/slow-consumer drill: `./runbooks/ws_drop_spike.sh`
+- WS resume-gap drill: `./runbooks/ws_resume_gap_spike.sh`
 - Crash recovery drill: `./runbooks/crash_recovery.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
 - Change workflow:
@@ -205,6 +206,21 @@ Runbook-as-code shortcut:
 - `./runbooks/crash_recovery.sh`
   - defaults `CHAOS_SKIP_LEDGER_ASSERTS=true` for fast drills
   - set `CHAOS_SKIP_LEDGER_ASSERTS=false` for strict ledger row-count assertions
+
+### 4.2 WS resume-gap drill
+Purpose:
+- verify trade replay-gap signaling (`Missed`/`Snapshot`) and `ws_resume_gaps` metric increments are observable
+- ensure WS resume safety budget gate remains green under controlled gap scenario
+
+Command:
+- `./runbooks/ws_resume_gap_spike.sh`
+
+Success criteria:
+- output includes `runbook_ws_resume_gap_spike_ok=true`
+- runbook output contains:
+  - `ws-resume-smoke.json` (`gap_recovery.result_type`, `metrics.ws_resume_gaps`)
+  - `safety-budget-*.json` with `wsResume` check pass
+  - `status-before.json` / `status-after.json`
 
 ---
 
