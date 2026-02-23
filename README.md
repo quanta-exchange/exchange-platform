@@ -37,6 +37,7 @@ scripts/
   load_smoke.sh           # I-0105 load smoke harness
   load_10k.sh             # staged load profile (10k orders baseline)
   load_50k.sh             # staged load profile (50k orders baseline)
+  load_all.sh             # staged load bundle runner (smoke/10k/50k)
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
@@ -161,6 +162,7 @@ Rust protobuf build note (Trading Core):
 make load-smoke
 make load-10k   # profile defaults can be overridden with LOAD_10K_* env vars
 make load-50k   # profile defaults can be overridden with LOAD_50K_* env vars
+make load-all   # runs smoke -> 10k -> 50k and writes combined report
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
 ./scripts/snapshot_verify.sh
@@ -170,6 +172,10 @@ make safety-case-extended
 ```
 `load-*` profiles assume Trading Core is reachable (`EDGE_CORE_ADDR`, default `localhost:50051`).  
 For gateway-only dry-runs, set `EDGE_DISABLE_CORE=true` and disable threshold gate (`LOAD_CHECK=false`, `LOAD_10K_CHECK=false`, `LOAD_50K_CHECK=false`).
+`make load-all` outputs:
+- `load_all_report=build/load/load-all-<timestamp>.json`
+- `load_all_latest=build/load/load-all-latest.json`
+- `load_all_ok=true|false`
 
 `./scripts/invariants.sh` behavior:
 - always checks ledger invariants (`/v1/admin/invariants/check`)

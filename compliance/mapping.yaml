@@ -154,6 +154,11 @@
       "controlId": "CTRL-041",
       "frameworks": ["SOC2:CC7.1", "ISO27001:A.12.1.1"],
       "description": "Staged load-test profiles and thresholds for repeatable performance baseline checks"
+    },
+    {
+      "controlId": "CTRL-042",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Combined load bundle runner with consolidated pass/fail reporting for smoke/10k/50k profiles"
     }
   ]
 }

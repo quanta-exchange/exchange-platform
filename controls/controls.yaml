@@ -245,6 +245,12 @@
       "title": "Load profile scripts and thresholds exist (smoke/10k/50k)",
       "enforced": false,
       "required_evidence": ["scripts/load_smoke.sh", "scripts/load_10k.sh", "scripts/load_50k.sh", "infra/load/thresholds-smoke.json", "infra/load/thresholds-10k.json", "infra/load/thresholds-50k.json"]
+    },
+    {
+      "id": "CTRL-042",
+      "title": "Load-all bundle runner exists",
+      "enforced": false,
+      "required_evidence": ["scripts/load_all.sh", "build/load/load-all-latest.json"]
     }
   ]
 }

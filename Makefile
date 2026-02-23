@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke load-10k load-50k dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-latch-approval prove-breakers prove-candles verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-crash-recovery exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke load-10k load-50k load-all dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate safety-budget compliance-evidence transparency-report external-replay-demo archive-range verify-archive policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-latch-approval prove-breakers prove-candles verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-crash-recovery exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -11,6 +11,9 @@ load-10k:
 
 load-50k:
 	./scripts/load_50k.sh
+
+load-all:
+	./scripts/load_all.sh
 
 dr-rehearsal:
 	./scripts/dr_rehearsal.sh
