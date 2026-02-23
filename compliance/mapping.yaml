@@ -184,6 +184,11 @@
       "controlId": "CTRL-047",
       "frameworks": ["SOC2:CC6.1", "ISO27001:A.8.9"],
       "description": "Ledger startup enforces production fail-closed guardrails for admin token, kafka enablement, non-loopback broker/core endpoints, and reconciliation latch dual-approval safety settings"
+    },
+    {
+      "controlId": "CTRL-048",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code drill validates startup guardrails across edge/core/ledger and captures before/after operational evidence"
     }
   ]
 }

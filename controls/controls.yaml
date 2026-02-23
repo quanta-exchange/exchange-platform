@@ -281,6 +281,12 @@
       "title": "Ledger-service production fail-closed startup guardrails exist",
       "enforced": false,
       "required_evidence": ["services/ledger-service/src/main/kotlin/com/quanta/exchange/ledger/core/StartupGuardrails.kt", "services/ledger-service/src/test/kotlin/com/quanta/exchange/ledger/StartupGuardrailsTest.kt", "services/ledger-service/src/main/resources/application.yml", "README.md"]
+    },
+    {
+      "id": "CTRL-048",
+      "title": "Startup guardrails runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/startup_guardrails.sh", "runbooks/startup_guardrails.md", "RUNBOOK.md", "README.md", "Makefile"]
     }
   ]
 }

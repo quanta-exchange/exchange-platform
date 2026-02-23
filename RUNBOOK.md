@@ -156,6 +156,7 @@ Gate G1 operational check:
 - WS resume-gap drill: `./runbooks/ws_resume_gap_spike.sh`
 - Load regression drill: `./runbooks/load_regression.sh`
 - Crash recovery drill: `./runbooks/crash_recovery.sh`
+- Startup guardrails drill: `./runbooks/startup_guardrails.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
@@ -237,6 +238,23 @@ Success criteria:
 - runbook output contains:
   - `load-all-*.json` and `load-all-latest.json`
   - `safety-budget-*.json`
+  - `status-before.json` / `status-after.json`
+
+### 4.4 Startup guardrails drill
+Purpose:
+- validate production fail-closed startup guardrails remain enforced for Edge, Trading Core, Ledger
+- catch unsafe config drift (no admin token, loopback brokers/core endpoints, latch approval disabled)
+
+Command:
+- `./runbooks/startup_guardrails.sh`
+- local fallback when rust toolchain cannot build `rdkafka-sys`: `RUNBOOK_ALLOW_CORE_FAIL=true ./runbooks/startup_guardrails.sh`
+
+Success criteria:
+- output includes `runbook_startup_guardrails_ok=true`
+- runbook output contains:
+  - `edge_guardrails_tests_ok=true`
+  - `ledger_guardrails_tests_ok=true`
+  - `core_guardrails_ok=true` (or explicit skip reason when `RUNBOOK_ALLOW_CORE_FAIL=true`)
   - `status-before.json` / `status-after.json`
 
 ---
