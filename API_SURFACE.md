@@ -68,6 +68,7 @@ Errors (examples)
 - `MARKET_HALTED`
 - `TOO_MANY_REQUESTS`
 - `IDEMPOTENCY_CONFLICT` (`409`)
+- `reserve_rollback_failed` (`503`, reserve rollback/persistence failed after upstream order failure)
 
 #### DELETE `/v1/orders/{orderId}`
 Cancel order

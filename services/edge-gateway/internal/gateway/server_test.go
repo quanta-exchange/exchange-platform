@@ -353,6 +353,97 @@ func TestUnknownKeyAuthIsRateLimitedByClient(t *testing.T) {
 	}
 }
 
+func TestTryReserveRejectsNonFiniteNumbers(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	if _, _, err := s.tryReserveForOrder("test-key", OrderRequest{
+		Symbol: "BTC-KRW",
+		Side:   "BUY",
+		Type:   "LIMIT",
+		Price:  "100",
+		Qty:    "NaN",
+	}); err == nil || !strings.Contains(err.Error(), "invalid qty") {
+		t.Fatalf("expected invalid qty for NaN, got %v", err)
+	}
+
+	if _, _, err := s.tryReserveForOrder("test-key", OrderRequest{
+		Symbol: "BTC-KRW",
+		Side:   "BUY",
+		Type:   "LIMIT",
+		Price:  "Inf",
+		Qty:    "1",
+	}); err == nil || !strings.Contains(err.Error(), "invalid price") {
+		t.Fatalf("expected invalid price for Inf, got %v", err)
+	}
+}
+
+func TestApplyReserveRollsBackOnPersistFailure(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	s.state.mu.Lock()
+	s.state.wallets["test-key"] = map[string]walletBalance{
+		"KRW": {Available: 100, Hold: 0},
+	}
+	s.state.mu.Unlock()
+
+	db, err := sql.Open("postgres", "postgres://localhost:1/invalid?sslmode=disable")
+	if err != nil {
+		t.Fatalf("open failing db handle: %v", err)
+	}
+	defer db.Close()
+	s.db = db
+
+	_, applyErr := s.applyReserve("test-key", "KRW", 10)
+	if applyErr == nil {
+		t.Fatalf("expected persist failure")
+	}
+
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	krw := s.state.wallets["test-key"]["KRW"]
+	if krw.Available != 100 || krw.Hold != 0 {
+		t.Fatalf("wallet should be rolled back after persist failure: %+v", krw)
+	}
+	if s.state.walletPersistErrors == 0 {
+		t.Fatalf("expected wallet persist error counter increment")
+	}
+}
+
+func TestReleaseReserveRollsBackOnPersistFailure(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	s.state.mu.Lock()
+	s.state.wallets["test-key"] = map[string]walletBalance{
+		"KRW": {Available: 0, Hold: 25},
+	}
+	s.state.mu.Unlock()
+
+	db, err := sql.Open("postgres", "postgres://localhost:1/invalid?sslmode=disable")
+	if err != nil {
+		t.Fatalf("open failing db handle: %v", err)
+	}
+	defer db.Close()
+	s.db = db
+
+	_, releaseErr := s.releaseReserve("test-key", "KRW", 10)
+	if releaseErr == nil {
+		t.Fatalf("expected persist failure")
+	}
+
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	krw := s.state.wallets["test-key"]["KRW"]
+	if krw.Available != 0 || krw.Hold != 25 {
+		t.Fatalf("wallet should be rolled back after persist failure: %+v", krw)
+	}
+	if s.state.walletPersistErrors == 0 {
+		t.Fatalf("expected wallet persist error counter increment")
+	}
+}
+
 func TestLoginReturns503WhenAuthStoreUnavailable(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()
@@ -587,6 +678,64 @@ func TestTradeApplyDedupTransitions(t *testing.T) {
 	s.commitTradeApply("trade-dedup-1", time.Now().UnixMilli())
 	if s.beginTradeApply("trade-dedup-1") {
 		t.Fatalf("committed trade should not be re-applied")
+	}
+}
+
+func TestConsumeTradeMessageAbortsDedupOnWalletPersistFailure(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	s.state.mu.Lock()
+	s.state.wallets["buyer"] = map[string]walletBalance{
+		"KRW": {Available: 1000, Hold: 0},
+	}
+	s.state.wallets["seller"] = map[string]walletBalance{
+		"BTC": {Available: 0, Hold: 10},
+	}
+	s.state.mu.Unlock()
+
+	db, err := sql.Open("postgres", "postgres://localhost:1/invalid?sslmode=disable")
+	if err != nil {
+		t.Fatalf("open failing db handle: %v", err)
+	}
+	defer db.Close()
+	s.db = db
+
+	raw := []byte(`{
+		"envelope":{
+			"eventId":"evt-persist-fail",
+			"eventVersion":1,
+			"symbol":"BTC-KRW",
+			"seq":20,
+			"occurredAt":"2026-02-23T12:00:00Z",
+			"correlationId":"corr-persist-fail",
+			"causationId":"cause-persist-fail"
+		},
+		"tradeId":"trade-persist-fail",
+		"buyerUserId":"buyer",
+		"sellerUserId":"seller",
+		"price":100,
+		"quantity":1,
+		"quoteAmount":100
+	}`)
+
+	consumeErr := s.consumeTradeMessage(context.Background(), raw)
+	if consumeErr == nil {
+		t.Fatalf("expected consume trade to fail on persist error")
+	}
+	if !strings.Contains(consumeErr.Error(), "persist wallet balance") {
+		t.Fatalf("unexpected consume error: %v", consumeErr)
+	}
+
+	s.state.mu.Lock()
+	_, applied := s.state.appliedTrades["trade-persist-fail"]
+	_, inProgress := s.state.applyingTrades["trade-persist-fail"]
+	s.state.mu.Unlock()
+	if applied {
+		t.Fatalf("trade should not be marked applied on persist failure")
+	}
+	if inProgress {
+		t.Fatalf("trade should not remain in-progress after failure")
 	}
 }
 

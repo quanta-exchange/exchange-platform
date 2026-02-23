@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"regexp"
@@ -285,6 +286,7 @@ type state struct {
 	wsConnsByIP             map[string]int
 	settlementAnomalies     uint64
 	sessionEvictions        uint64
+	walletPersistErrors     uint64
 	tradeConsumerExpected   bool
 	tradeConsumerRunning    bool
 	tradeConsumerErrorMs    int64
@@ -849,6 +851,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	publicRateLimited := s.state.publicRateLimited
 	settlementAnomalies := s.state.settlementAnomalies
 	sessionEvictions := s.state.sessionEvictions
+	walletPersistErrors := s.state.walletPersistErrors
 	tradeConsumerRunning := s.state.tradeConsumerRunning
 	tradeConsumerErrors := s.state.tradeConsumerReadErrors
 	queueLens := make([]int, 0, len(s.state.clients))
@@ -882,6 +885,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_public_rate_limited_total " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_settlement_anomaly_total " + strconv.FormatUint(settlementAnomalies, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_session_eviction_total " + strconv.FormatUint(sessionEvictions, 10) + "\n"))
+	_, _ = w.Write([]byte("edge_wallet_persist_error_total " + strconv.FormatUint(walletPersistErrors, 10) + "\n"))
 	if tradeConsumerRunning {
 		_, _ = w.Write([]byte("edge_trade_consumer_running 1\n"))
 	} else {
@@ -1500,11 +1504,19 @@ func (s *Server) applyReserve(userID string, currency string, amount float64) (w
 	if amount <= 0 {
 		return walletBalance{}, fmt.Errorf("amount must be > 0")
 	}
+	if math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return walletBalance{}, fmt.Errorf("amount must be finite")
+	}
 	currency = strings.ToUpper(strings.TrimSpace(currency))
 
 	s.state.mu.Lock()
-	wallet, ok := s.state.wallets[userID]
-	if !ok {
+	originalWallet, existed := s.state.wallets[userID]
+	var previous map[string]walletBalance
+	var wallet map[string]walletBalance
+	if existed {
+		previous = cloneWallet(originalWallet)
+		wallet = cloneWallet(originalWallet)
+	} else {
 		wallet = defaultWalletBalances()
 	}
 	current := wallet[currency]
@@ -1518,18 +1530,36 @@ func (s *Server) applyReserve(userID string, currency string, amount float64) (w
 	s.state.wallets[userID] = wallet
 	s.state.mu.Unlock()
 
-	s.persistWalletBalance(context.Background(), userID, currency, current)
+	if err := s.persistWalletBalance(context.Background(), userID, currency, current); err != nil {
+		s.state.mu.Lock()
+		if existed {
+			s.state.wallets[userID] = previous
+		} else {
+			delete(s.state.wallets, userID)
+		}
+		s.state.walletPersistErrors++
+		s.state.mu.Unlock()
+		return walletBalance{}, err
+	}
 	return current, nil
 }
 
-func (s *Server) releaseReserve(userID, currency string, amount float64) walletBalance {
+func (s *Server) releaseReserve(userID, currency string, amount float64) (walletBalance, error) {
 	if amount <= 0 {
-		return walletBalance{}
+		return walletBalance{}, nil
+	}
+	if math.IsNaN(amount) || math.IsInf(amount, 0) {
+		return walletBalance{}, fmt.Errorf("amount must be finite")
 	}
 	currency = strings.ToUpper(strings.TrimSpace(currency))
 	s.state.mu.Lock()
-	wallet, ok := s.state.wallets[userID]
-	if !ok {
+	originalWallet, existed := s.state.wallets[userID]
+	var previous map[string]walletBalance
+	var wallet map[string]walletBalance
+	if existed {
+		previous = cloneWallet(originalWallet)
+		wallet = cloneWallet(originalWallet)
+	} else {
 		wallet = defaultWalletBalances()
 	}
 	current := wallet[currency]
@@ -1544,8 +1574,18 @@ func (s *Server) releaseReserve(userID, currency string, amount float64) walletB
 	s.state.wallets[userID] = wallet
 	s.state.mu.Unlock()
 
-	s.persistWalletBalance(context.Background(), userID, currency, current)
-	return current
+	if err := s.persistWalletBalance(context.Background(), userID, currency, current); err != nil {
+		s.state.mu.Lock()
+		if existed {
+			s.state.wallets[userID] = previous
+		} else {
+			delete(s.state.wallets, userID)
+		}
+		s.state.walletPersistErrors++
+		s.state.mu.Unlock()
+		return walletBalance{}, err
+	}
+	return current, nil
 }
 
 func (s *Server) tryReserveForOrder(userID string, req OrderRequest) (string, float64, error) {
@@ -1555,7 +1595,7 @@ func (s *Server) tryReserveForOrder(userID string, req OrderRequest) (string, fl
 	}
 
 	qty, err := strconv.ParseFloat(strings.TrimSpace(req.Qty), 64)
-	if err != nil || qty <= 0 {
+	if err != nil || qty <= 0 || math.IsNaN(qty) || math.IsInf(qty, 0) {
 		return "", 0, fmt.Errorf("invalid qty")
 	}
 
@@ -1568,7 +1608,7 @@ func (s *Server) tryReserveForOrder(userID string, req OrderRequest) (string, fl
 			}
 		} else {
 			price, err = strconv.ParseFloat(strings.TrimSpace(req.Price), 64)
-			if err != nil || price <= 0 {
+			if err != nil || price <= 0 || math.IsNaN(price) || math.IsInf(price, 0) {
 				return "", 0, fmt.Errorf("invalid price")
 			}
 		}
@@ -1634,11 +1674,11 @@ func (s *Server) loadWalletFromDB(ctx context.Context, userID string) map[string
 	return out
 }
 
-func (s *Server) persistWalletBalance(ctx context.Context, userID, currency string, bal walletBalance) {
+func (s *Server) persistWalletBalance(ctx context.Context, userID, currency string, bal walletBalance) error {
 	if s.db == nil {
-		return
+		return nil
 	}
-	_, _ = s.db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		`INSERT INTO web_wallet_balances(user_id, currency, available, hold) VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (user_id, currency) DO UPDATE SET
@@ -1650,6 +1690,10 @@ func (s *Server) persistWalletBalance(ctx context.Context, userID, currency stri
 		bal.Available,
 		bal.Hold,
 	)
+	if err != nil {
+		return fmt.Errorf("persist wallet balance: %w", err)
+	}
+	return nil
 }
 
 func defaultWalletBalances() map[string]walletBalance {
@@ -1815,7 +1859,10 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	coreResp, err := s.coreClient.PlaceOrder(coreCtx, coreReq)
 	if err != nil {
 		if reserveCurrency != "" && reserveAmount > 0 {
-			s.releaseReserve(apiKey, reserveCurrency, reserveAmount)
+			if _, releaseErr := s.releaseReserve(apiKey, reserveCurrency, reserveAmount); releaseErr != nil {
+				writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "reserve_rollback_failed"})
+				return
+			}
 		}
 		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "core_unavailable"})
 		return
@@ -1834,7 +1881,10 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		terminalAt = time.Now().UnixMilli()
 	}
 	if (!coreResp.Accepted || statusUpper == "REJECTED" || statusUpper == "CANCELED") && reserveCurrency != "" && reserveAmount > 0 {
-		s.releaseReserve(apiKey, reserveCurrency, reserveAmount)
+		if _, releaseErr := s.releaseReserve(apiKey, reserveCurrency, reserveAmount); releaseErr != nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "reserve_rollback_failed"})
+			return
+		}
 		reserveCurrency = ""
 		reserveAmount = 0
 	}
@@ -1983,7 +2033,10 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		s.state.mu.Unlock()
 
 		if releaseAmount > 0 && record.ReserveCurrency != "" && record.OwnerUserID != "" {
-			s.releaseReserve(record.OwnerUserID, record.ReserveCurrency, releaseAmount)
+			if _, releaseErr := s.releaseReserve(record.OwnerUserID, record.ReserveCurrency, releaseAmount); releaseErr != nil {
+				writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "reserve_release_failed"})
+				return
+			}
 		}
 	}
 
@@ -2369,9 +2422,15 @@ func (s *Server) consumeTradeMessage(ctx context.Context, raw []byte) error {
 		}
 	}()
 
-	s.applyTradeSettlement(payload.BuyerUserID, payload.SellerUserID, symbol, qty, quoteAmount)
-	s.applyOrderFill(payload.MakerOrderID, qty, price, seq)
-	s.applyOrderFill(payload.TakerOrderID, qty, price, seq)
+	if err := s.applyTradeSettlement(payload.BuyerUserID, payload.SellerUserID, symbol, qty, quoteAmount); err != nil {
+		return fmt.Errorf("apply settlement: %w", err)
+	}
+	if err := s.applyOrderFill(payload.MakerOrderID, qty, price, seq); err != nil {
+		return fmt.Errorf("apply maker fill: %w", err)
+	}
+	if err := s.applyOrderFill(payload.TakerOrderID, qty, price, seq); err != nil {
+		return fmt.Errorf("apply taker fill: %w", err)
+	}
 
 	_, err := s.ingestSmokeTrade(ctx, SmokeTradeRequest{
 		TradeID: payload.TradeID,
@@ -2432,27 +2491,82 @@ type walletPersistUpdate struct {
 	balance  walletBalance
 }
 
-func (s *Server) applyTradeSettlement(buyerUserID, sellerUserID, symbol string, qty, quoteAmount int64) {
+type walletSnapshot struct {
+	exists bool
+	wallet map[string]walletBalance
+}
+
+func (s *Server) captureWalletSnapshotsLocked(userIDs ...string) map[string]walletSnapshot {
+	snapshots := make(map[string]walletSnapshot, len(userIDs))
+	for _, userID := range userIDs {
+		if strings.TrimSpace(userID) == "" {
+			continue
+		}
+		if _, seen := snapshots[userID]; seen {
+			continue
+		}
+		wallet, exists := s.state.wallets[userID]
+		snapshot := walletSnapshot{exists: exists}
+		if exists {
+			snapshot.wallet = cloneWallet(wallet)
+		}
+		snapshots[userID] = snapshot
+	}
+	return snapshots
+}
+
+func (s *Server) restoreWalletSnapshotsLocked(snapshots map[string]walletSnapshot) {
+	for userID, snapshot := range snapshots {
+		if snapshot.exists {
+			s.state.wallets[userID] = cloneWallet(snapshot.wallet)
+		} else {
+			delete(s.state.wallets, userID)
+		}
+	}
+}
+
+func (s *Server) applyTradeSettlement(buyerUserID, sellerUserID, symbol string, qty, quoteAmount int64) error {
 	base, quote, ok := parseSymbol(symbol)
 	if !ok {
-		return
+		return fmt.Errorf("invalid symbol")
 	}
 	qtyF := float64(qty)
 	quoteF := float64(quoteAmount)
 
 	updates := make([]walletPersistUpdate, 0, 4)
 	s.state.mu.Lock()
+	snapshots := s.captureWalletSnapshotsLocked(buyerUserID, sellerUserID)
 	if buyerUserID != "" {
+		before := len(updates)
 		updates = append(updates, s.settleBuyerLocked(buyerUserID, base, quote, qtyF, quoteF)...)
+		if len(updates) == before {
+			s.restoreWalletSnapshotsLocked(snapshots)
+			s.state.mu.Unlock()
+			return fmt.Errorf("insufficient buyer balance")
+		}
 	}
 	if sellerUserID != "" {
+		before := len(updates)
 		updates = append(updates, s.settleSellerLocked(sellerUserID, base, quote, qtyF, quoteF)...)
+		if len(updates) == before {
+			s.restoreWalletSnapshotsLocked(snapshots)
+			s.state.mu.Unlock()
+			return fmt.Errorf("insufficient seller balance")
+		}
 	}
 	s.state.mu.Unlock()
 
 	for _, update := range updates {
-		s.persistWalletBalance(context.Background(), update.userID, update.currency, update.balance)
+		if err := s.persistWalletBalance(context.Background(), update.userID, update.currency, update.balance); err != nil {
+			s.state.mu.Lock()
+			s.restoreWalletSnapshotsLocked(snapshots)
+			s.state.settlementAnomalies++
+			s.state.walletPersistErrors++
+			s.state.mu.Unlock()
+			return err
+		}
 	}
+	return nil
 }
 
 func (s *Server) settleBuyerLocked(userID, base, quote string, qty, quoteAmount float64) []walletPersistUpdate {
@@ -2537,10 +2651,10 @@ type reserveRelease struct {
 	amount   float64
 }
 
-func (s *Server) applyOrderFill(orderID string, fillQty, fillPrice int64, seq uint64) {
+func (s *Server) applyOrderFill(orderID string, fillQty, fillPrice int64, seq uint64) error {
 	orderID = strings.TrimSpace(orderID)
 	if orderID == "" {
-		return
+		return nil
 	}
 
 	var release *reserveRelease
@@ -2584,8 +2698,11 @@ func (s *Server) applyOrderFill(orderID string, fillQty, fillPrice int64, seq ui
 	s.state.mu.Unlock()
 
 	if release != nil {
-		s.releaseReserve(release.userID, release.currency, release.amount)
+		if _, err := s.releaseReserve(release.userID, release.currency, release.amount); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func isTerminalOrderStatus(status string) bool {

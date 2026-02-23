@@ -401,6 +401,7 @@ Reconciliation metrics (ledger `/metrics`):
 Edge readiness/consumer metrics (`/metrics`):
 - `edge_trade_consumer_running`
 - `edge_trade_consumer_read_error_total`
+- `edge_wallet_persist_error_total` (wallet persistence failures with in-memory rollback)
 
 Ledger `/readyz` failure statuses:
 - `db_unready`
