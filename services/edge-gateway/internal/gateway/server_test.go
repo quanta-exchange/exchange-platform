@@ -1091,6 +1091,61 @@ func TestSessionOrderRejectsInsufficientBalance(t *testing.T) {
 	}
 }
 
+func TestSessionAuthRateLimitOnProtectedRoutes(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:                true,
+		WSQueueSize:              8,
+		SeedMarketData:           true,
+		SessionTTL:               2 * time.Hour,
+		RateLimitPerMinute:       1,
+		CoreAddr:                 coreAddr,
+		CoreTimeout:              2 * time.Second,
+		PublicRateLimitPerMinute: 100,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer func() { _ = s.Close() }()
+
+	signupBody := []byte(`{"email":"ratelimit-session@example.com","password":"password1234"}`)
+	signupReq := httptest.NewRequest(http.MethodPost, "/v1/auth/signup", bytes.NewReader(signupBody))
+	signupW := httptest.NewRecorder()
+	s.Router().ServeHTTP(signupW, signupReq)
+	if signupW.Code != http.StatusOK {
+		t.Fatalf("signup failed: %d body=%s", signupW.Code, signupW.Body.String())
+	}
+
+	var signupResp AuthSessionResponse
+	if err := json.Unmarshal(signupW.Body.Bytes(), &signupResp); err != nil {
+		t.Fatalf("decode signup response: %v", err)
+	}
+
+	orderBody := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"1000000","qty":"0.01","timeInForce":"GTC"}`)
+	orderReq1 := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(orderBody))
+	orderReq1.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	orderReq1.Header.Set("Idempotency-Key", "sess-rate-1")
+	orderW1 := httptest.NewRecorder()
+	s.Router().ServeHTTP(orderW1, orderReq1)
+	if orderW1.Code != http.StatusOK {
+		t.Fatalf("first session order failed: %d body=%s", orderW1.Code, orderW1.Body.String())
+	}
+
+	orderReq2 := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(orderBody))
+	orderReq2.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	orderReq2.Header.Set("Idempotency-Key", "sess-rate-2")
+	orderW2 := httptest.NewRecorder()
+	s.Router().ServeHTTP(orderW2, orderReq2)
+	if orderW2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second session order to be rate limited, got %d body=%s", orderW2.Code, orderW2.Body.String())
+	}
+	if !strings.Contains(orderW2.Body.String(), "TOO_MANY_REQUESTS") {
+		t.Fatalf("unexpected second order error body: %s", orderW2.Body.String())
+	}
+}
+
 func TestSessionMaxPerUserEvictsOldestSession(t *testing.T) {
 	coreAddr, shutdownCore := startTestCore(t)
 	defer shutdownCore()

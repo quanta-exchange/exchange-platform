@@ -971,6 +971,12 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid session"})
 				return
 			}
+			now := time.Now().UnixMilli()
+			if !s.allowRate("session:"+session.UserID, now) {
+				s.authFail("session_rate_limit")
+				writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "TOO_MANY_REQUESTS"})
+				return
+			}
 			ctx := context.WithValue(r.Context(), apiKeyContextKey, session.UserID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
