@@ -43,6 +43,14 @@ if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
   LEDGER_ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
 fi
 
+ledger_admin_curl() {
+  if [[ "${#LEDGER_ADMIN_HEADERS[@]}" -gt 0 ]]; then
+    curl "${LEDGER_ADMIN_HEADERS[@]}" "$@"
+    return
+  fi
+  curl "$@"
+}
+
 cleanup() {
   if [[ -n "${KAFKA_PID:-}" ]] && kill -0 "${KAFKA_PID}" >/dev/null 2>&1; then
     kill "${KAFKA_PID}" >/dev/null 2>&1 || true
@@ -289,7 +297,7 @@ PY
 echo "[checkpoint-d] waiting for ledger REST to reflect tradeId=${TRADE_ID}"
 found="false"
 for _ in {1..60}; do
-  code="$(curl -s "${LEDGER_ADMIN_HEADERS[@]}" -o /dev/null -w '%{http_code}' "${LEDGER_BASE_URL}/v1/admin/trades/${TRADE_ID}")"
+  code="$(ledger_admin_curl -s -o /dev/null -w '%{http_code}' "${LEDGER_BASE_URL}/v1/admin/trades/${TRADE_ID}")"
   if [[ "${code}" == "200" ]]; then
     found="true"
     break

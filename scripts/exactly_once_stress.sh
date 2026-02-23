@@ -94,11 +94,11 @@ post_json() {
 
 admin_get() {
   local path="$1"
-  local -a headers=()
   if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
-    headers+=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
+    curl -fsS -H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}" "${LEDGER_BASE_URL}${path}"
+    return
   fi
-  curl -fsS "${headers[@]}" "${LEDGER_BASE_URL}${path}"
+  curl -fsS "${LEDGER_BASE_URL}${path}"
 }
 
 echo "[exactly-once] reserve buyer quote hold"

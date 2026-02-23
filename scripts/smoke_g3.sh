@@ -24,6 +24,14 @@ if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
   ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
 fi
 
+ledger_admin_curl() {
+  if [[ "${#ADMIN_HEADERS[@]}" -gt 0 ]]; then
+    curl -fsS "${ADMIN_HEADERS[@]}" "$@"
+    return
+  fi
+  curl -fsS "$@"
+}
+
 docker compose -f infra/compose/docker-compose.yml up -d postgres redpanda redpanda-init redis clickhouse minio minio-init otel-collector prometheus
 
 docker compose -f infra/compose/docker-compose.yml exec -T postgres \
@@ -75,13 +83,11 @@ fi
 TS="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 RUN_ID="$(date -u +%s)"
 
-curl -fsS -X POST "http://localhost:8082/v1/admin/adjustments" \
-  "${ADMIN_HEADERS[@]}" \
+ledger_admin_curl -X POST "http://localhost:8082/v1/admin/adjustments" \
   -H 'Content-Type: application/json' \
   -d "{\"envelope\":{\"eventId\":\"evt-seed-1-$RUN_ID\",\"eventVersion\":1,\"symbol\":\"BTC-KRW\",\"seq\":1,\"occurredAt\":\"$TS\",\"correlationId\":\"corr-seed-1-$RUN_ID\",\"causationId\":\"cause-seed-1-$RUN_ID\"},\"referenceId\":\"seed-buyer-g3-$RUN_ID\",\"userId\":\"buyer\",\"currency\":\"KRW\",\"amountDelta\":200000000}" >/dev/null
 
-curl -fsS -X POST "http://localhost:8082/v1/admin/adjustments" \
-  "${ADMIN_HEADERS[@]}" \
+ledger_admin_curl -X POST "http://localhost:8082/v1/admin/adjustments" \
   -H 'Content-Type: application/json' \
   -d "{\"envelope\":{\"eventId\":\"evt-seed-2-$RUN_ID\",\"eventVersion\":1,\"symbol\":\"BTC-KRW\",\"seq\":2,\"occurredAt\":\"$TS\",\"correlationId\":\"corr-seed-2-$RUN_ID\",\"causationId\":\"cause-seed-2-$RUN_ID\"},\"referenceId\":\"seed-seller-g3-$RUN_ID\",\"userId\":\"seller\",\"currency\":\"BTC\",\"amountDelta\":10000}" >/dev/null
 

@@ -106,6 +106,14 @@ if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
   ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
 fi
 
+admin_curl() {
+  if [[ "${#ADMIN_HEADERS[@]}" -gt 0 ]]; then
+    curl -fsS "${ADMIN_HEADERS[@]}" "$@"
+    return
+  fi
+  curl -fsS "$@"
+}
+
 ledger_trade_count() {
   docker compose -f "${COMPOSE_FILE}" exec -T postgres \
     psql -U exchange -d "${LEDGER_DB_NAME}" -tAc "SELECT COUNT(*) FROM ledger_entries WHERE reference_type = 'TRADE';" \
@@ -504,7 +512,7 @@ if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
     exit 1
   fi
 
-  INVARIANTS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/invariants/check")"
+  INVARIANTS_JSON="$(admin_curl -X POST "http://localhost:${LEDGER_PORT}/v1/admin/invariants/check")"
   INVARIANT_CHECK_RESULT="$(
   INVARIANT_PAYLOAD="${INVARIANTS_JSON}" ALLOW_NEGATIVE="${ALLOW_NEGATIVE_BALANCE_INVARIANT}" "${PYTHON_BIN}" - <<'PY'
 import json

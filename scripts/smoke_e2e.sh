@@ -35,6 +35,14 @@ if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
   LEDGER_ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
 fi
 
+ledger_admin_curl() {
+  if [[ "${#LEDGER_ADMIN_HEADERS[@]}" -gt 0 ]]; then
+    curl "${LEDGER_ADMIN_HEADERS[@]}" "$@"
+    return
+  fi
+  curl "$@"
+}
+
 docker compose -f "${COMPOSE_FILE}" up -d
 
 echo "Waiting for Redpanda..."
@@ -116,7 +124,7 @@ PY
 echo "Waiting for ledger entry for trade ${trade_id}..."
 found="false"
 for _ in {1..30}; do
-  status="$(curl -s "${LEDGER_ADMIN_HEADERS[@]}" -o /dev/null -w '%{http_code}' http://localhost:8082/v1/admin/trades/${trade_id})"
+  status="$(ledger_admin_curl -s -o /dev/null -w '%{http_code}' "http://localhost:8082/v1/admin/trades/${trade_id}")"
   if [[ "${status}" == "200" ]]; then
     found="true"
     break

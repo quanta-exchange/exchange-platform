@@ -19,7 +19,15 @@ if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
   ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
 fi
 
-LEDGER_RESULT="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "${LEDGER_BASE_URL}/v1/admin/invariants/check")"
+curl_with_admin_headers() {
+  if [[ "${#ADMIN_HEADERS[@]}" -gt 0 ]]; then
+    curl -fsS "${ADMIN_HEADERS[@]}" "$@"
+    return
+  fi
+  curl -fsS "$@"
+}
+
+LEDGER_RESULT="$(curl_with_admin_headers -X POST "${LEDGER_BASE_URL}/v1/admin/invariants/check")"
 LEDGER_FILE="${OUT_DIR}/ledger-invariants.json"
 echo "${LEDGER_RESULT}" > "${LEDGER_FILE}"
 
