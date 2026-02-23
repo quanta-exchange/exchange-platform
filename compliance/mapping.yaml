@@ -249,6 +249,11 @@
       "controlId": "CTRL-060",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.12.4.2"],
       "description": "Change workflow events are hash-chained and verifiable so proposal/approval/apply history remains tamper-evident"
+    },
+    {
+      "controlId": "CTRL-061",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
+      "description": "Change audit-chain health is included in safety budgets and operational status/transparency summaries for continuous monitoring"
     }
   ]
 }

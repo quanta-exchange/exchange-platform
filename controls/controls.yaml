@@ -359,6 +359,12 @@
       "title": "Change workflow audit chain verification evidence exists",
       "enforced": false,
       "required_evidence": ["scripts/change_proposal.sh", "scripts/change_approve.sh", "scripts/apply_change.sh", "scripts/verify_change_audit_chain.sh", "build/change-audit/verify-change-audit-chain-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-061",
+      "title": "Change audit-chain posture is surfaced in safety budgets and operations summaries",
+      "enforced": false,
+      "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
     }
   ]
 }

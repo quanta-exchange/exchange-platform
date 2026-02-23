@@ -166,17 +166,18 @@ for key, budget in budgets.items():
         if bool(budget.get("mustReleaseLatch", False)) and not bool(checks.get("latch_released", False)):
             entry["ok"] = False
             entry["details"].append("latch_not_released")
-    elif key == "auditChain":
+    elif key in {"auditChain", "changeAuditChain"}:
         must_ok = bool(budget.get("mustBeOk", True))
         chain_ok = bool(payload.get("ok", False))
         mode = str(payload.get("mode", ""))
+        chain_label = "audit_chain" if key == "auditChain" else "change_audit_chain"
         if must_ok and not chain_ok:
             entry["ok"] = False
-            entry["details"].append("audit_chain_not_ok")
+            entry["details"].append(f"{chain_label}_not_ok")
         allowed_modes = budget.get("allowedModes")
         if allowed_modes and mode and mode not in allowed_modes:
             entry["ok"] = False
-            entry["details"].append(f"audit_chain_mode_not_allowed={mode}")
+            entry["details"].append(f"{chain_label}_mode_not_allowed={mode}")
     elif key == "piiLogScan":
         must_ok = bool(budget.get("mustBeOk", True))
         scan_ok = bool(payload.get("ok", False))

@@ -434,7 +434,7 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
-- when reports exist, budget checks include `auditChain`, `piiLogScan`, `anomaly` gates
+- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly` gates
 
 ### 17) System status snapshot
 ```bash
@@ -444,7 +444,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.pii_log_scan` snapshots when latest artifacts exist
+- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan` snapshots when latest artifacts exist
 
 ### 17.1) Anomaly detector
 ```bash
@@ -494,7 +494,7 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
-- governance summary now includes `audit_chain`, `pii_log_scan`, `rbac_sod`, `anomaly_detector` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `rbac_sod`, `anomaly_detector` proxies
 
 ### 20) External replay demo
 ```bash

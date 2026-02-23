@@ -51,6 +51,7 @@ snapshot_verify = read_json("build/snapshot/snapshot-verify-latest.json")
 controls = read_json("build/controls/controls-check-latest.json")
 compliance = read_json("build/compliance/compliance-evidence-latest.json")
 audit_chain = read_json("build/audit/verify-audit-chain-latest.json")
+change_audit_chain = read_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
 rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
 anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
@@ -68,6 +69,7 @@ sources = {
     "controls": controls,
     "compliance": compliance,
     "audit_chain": audit_chain,
+    "change_audit_chain": change_audit_chain,
     "pii_log_scan": pii_log_scan,
     "rbac_sod": rbac_sod,
     "anomaly": anomaly,
@@ -138,6 +140,8 @@ report = {
             "compliance_ok": bool(compliance.get("ok")) if compliance else None,
             "audit_chain_ok": bool(audit_chain.get("ok")) if audit_chain else None,
             "audit_chain_mode": audit_chain.get("mode") if audit_chain else None,
+            "change_audit_chain_ok": bool(change_audit_chain.get("ok")) if change_audit_chain else None,
+            "change_audit_chain_mode": change_audit_chain.get("mode") if change_audit_chain else None,
             "pii_log_scan_ok": bool(pii_log_scan.get("ok")) if pii_log_scan else None,
             "pii_log_scan_hit_count": int(pii_log_scan.get("hit_count")) if pii_log_scan and pii_log_scan.get("hit_count") is not None else None,
             "rbac_sod_ok": bool(rbac_sod.get("ok")) if rbac_sod else None,
@@ -162,6 +166,7 @@ report = {
         "controls": "build/controls/controls-check-latest.json",
         "compliance": "build/compliance/compliance-evidence-latest.json",
         "audit_chain": "build/audit/verify-audit-chain-latest.json",
+        "change_audit_chain": "build/change-audit/verify-change-audit-chain-latest.json",
         "pii_log_scan": "build/security/pii-log-scan-latest.json",
         "rbac_sod": "build/security/rbac-sod-check-latest.json",
         "anomaly": "build/anomaly/anomaly-detector-latest.json",

@@ -249,6 +249,7 @@ if not kafka_status.get("up"):
 
 controls_latest = read_latest_json("build/controls/controls-check-latest.json")
 audit_chain_latest = read_latest_json("build/audit/verify-audit-chain-latest.json")
+change_audit_chain_latest = read_latest_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
@@ -299,6 +300,15 @@ report = {
                 "head_hash": (audit_chain_latest.get("payload") or {}).get("head_hash"),
                 "entry_count": (audit_chain_latest.get("payload") or {}).get("entry_count"),
                 "error": audit_chain_latest.get("error"),
+            },
+            "change_audit_chain": {
+                "present": change_audit_chain_latest.get("present", False),
+                "path": change_audit_chain_latest.get("path"),
+                "ok": (change_audit_chain_latest.get("payload") or {}).get("ok"),
+                "mode": (change_audit_chain_latest.get("payload") or {}).get("mode"),
+                "head_hash": (change_audit_chain_latest.get("payload") or {}).get("head_hash"),
+                "entry_count": (change_audit_chain_latest.get("payload") or {}).get("entry_count"),
+                "error": change_audit_chain_latest.get("error"),
             },
             "pii_log_scan": {
                 "present": pii_scan_latest.get("present", False),
