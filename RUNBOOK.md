@@ -165,6 +165,7 @@ Gate G1 operational check:
 - PII log scan gate: `./scripts/pii_log_scan.sh`
 - Anomaly detector probe: `./scripts/anomaly_detector.sh`
 - Anomaly webhook smoke: `./scripts/anomaly_detector_smoke.sh`
+- RBAC SoD check: `./scripts/rbac_sod_check.sh`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`

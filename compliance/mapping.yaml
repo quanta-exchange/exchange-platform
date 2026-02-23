@@ -234,6 +234,11 @@
       "controlId": "CTRL-057",
       "frameworks": ["SOC2:CC7.1", "ISO27001:A.12.1.1"],
       "description": "Safety budget gate evaluates audit-chain, pii-scan, and anomaly-detector reports as additional operational safety budgets"
+    },
+    {
+      "controlId": "CTRL-058",
+      "frameworks": ["SOC2:CC6.2", "ISO27001:A.5.3"],
+      "description": "RBAC SoD checker validates role separation and restricted-permission overlap constraints"
     }
   ]
 }

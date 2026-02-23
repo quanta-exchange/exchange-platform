@@ -341,6 +341,12 @@
       "title": "Safety budget evaluates audit chain, pii scan, and anomaly reports",
       "enforced": false,
       "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-058",
+      "title": "RBAC segregation-of-duties checker evidence exists",
+      "enforced": false,
+      "required_evidence": ["scripts/rbac_sod_check.sh", "security/rbac_roles.yaml", "build/security/rbac-sod-check-latest.json", "README.md", "Makefile"]
     }
   ]
 }

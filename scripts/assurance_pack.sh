@@ -80,6 +80,7 @@ evidence = [
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
     {"id": "anomaly_detector", "path": pathlib.Path("build/anomaly/anomaly-detector-latest.json"), "required": False},
     {"id": "anomaly_smoke", "path": pathlib.Path("build/anomaly/anomaly-smoke-latest.json"), "required": False},
+    {"id": "rbac_sod_check", "path": pathlib.Path("build/security/rbac-sod-check-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
     {"id": "invariants", "path": pathlib.Path("build/invariants/ledger-invariants.json"), "required": True},
     {"id": "invariants_summary", "path": pathlib.Path("build/invariants/invariants-summary.json"), "required": False},
@@ -149,6 +150,7 @@ pack = {
         {"id": "G19", "text": "Anomaly detector and game-day drill provide reproducible incident signal evidence with recommended safety-action classification."},
         {"id": "G20", "text": "Anomaly webhook smoke proves detector alerts can be delivered end-to-end to an HTTP receiver."},
         {"id": "G21", "text": "Audit-chain tamper drill demonstrates verification failure on modified audit-log copies, confirming tamper detection path."},
+        {"id": "G22", "text": "RBAC SoD check enforces role separation constraints and fails on restricted-permission overlaps."},
     ],
 }
 

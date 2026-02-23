@@ -47,6 +47,7 @@ scripts/
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
   anomaly_detector_smoke.sh # G13 anomaly detector webhook smoke
+  rbac_sod_check.sh       # G32 segregation-of-duties RBAC checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
@@ -540,6 +541,15 @@ Outputs:
 - `access_review_report=build/access/access-review-<timestamp>.json`
 - `access_review_latest=build/access/access-review-latest.json`
 - `access_review_ok=true|false`
+
+### 24.1) RBAC SoD check
+```bash
+make rbac-sod-check
+```
+Outputs:
+- `rbac_sod_check_report=build/security/rbac-sod-check-<timestamp>.json`
+- `rbac_sod_check_latest=build/security/rbac-sod-check-latest.json`
+- `rbac_sod_check_ok=true|false`
 
 ### 25) Release gate
 ```bash
