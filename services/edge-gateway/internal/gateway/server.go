@@ -502,7 +502,10 @@ func New(cfg Config) (*Server, error) {
 		cfg.OTelServiceName = "edge-gateway"
 	}
 	if cfg.OTelSampleRatio <= 0 {
-		cfg.OTelSampleRatio = 1.0
+		cfg.OTelSampleRatio = 0.1
+	}
+	if cfg.OTelSampleRatio > 1.0 {
+		return nil, fmt.Errorf("otel sample ratio must be in (0,1], got %f", cfg.OTelSampleRatio)
 	}
 	if cfg.SessionTTL <= 0 {
 		cfg.SessionTTL = 24 * time.Hour

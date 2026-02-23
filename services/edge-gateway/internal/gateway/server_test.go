@@ -1337,6 +1337,53 @@ func TestOTelEnvironmentDefaultAndOverride(t *testing.T) {
 	}
 }
 
+func TestNewRejectsInvalidOTelSampleRatio(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	_, err := New(Config{
+		DisableDB:          true,
+		WSQueueSize:        8,
+		APISecrets:         map[string]string{"test-key": testAPISecret},
+		TimestampSkew:      30 * time.Second,
+		ReplayTTL:          2 * time.Minute,
+		RateLimitPerMinute: 100,
+		CoreAddr:           coreAddr,
+		CoreTimeout:        2 * time.Second,
+		OTelSampleRatio:    1.5,
+	})
+	if err == nil {
+		t.Fatalf("expected invalid otel sample ratio to fail")
+	}
+	if !strings.Contains(err.Error(), "otel sample ratio must be in (0,1]") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNewDefaultsOTelSampleRatioWhenUnset(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:          true,
+		WSQueueSize:        8,
+		APISecrets:         map[string]string{"test-key": testAPISecret},
+		TimestampSkew:      30 * time.Second,
+		ReplayTTL:          2 * time.Minute,
+		RateLimitPerMinute: 100,
+		CoreAddr:           coreAddr,
+		CoreTimeout:        2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer s.Close()
+
+	if got := s.cfg.OTelSampleRatio; got != 0.1 {
+		t.Fatalf("expected default otel sample ratio 0.1, got %f", got)
+	}
+}
+
 func TestWSClientIPParsing(t *testing.T) {
 	if got := wsClientIP("127.0.0.1:8080"); got != "127.0.0.1" {
 		t.Fatalf("unexpected parsed client ip: %s", got)
