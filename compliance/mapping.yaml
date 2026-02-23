@@ -479,6 +479,11 @@
       "controlId": "CTRL-096",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Safety budget tracks deterministic replay proof freshness and consistency so stale or divergent replay evidence is detected before trust decisions"
+    },
+    {
+      "controlId": "CTRL-097",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Safety budget tracks compliance evidence mapping coverage and requires full-mapping mode so control-to-framework drift is surfaced as a budget violation"
     }
   ]
 }

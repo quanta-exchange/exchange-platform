@@ -589,6 +589,12 @@
       "title": "Safety budget tracks deterministic replay evidence freshness and consistency",
       "enforced": false,
       "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-097",
+      "title": "Safety budget tracks compliance mapping coverage and full-mapping mode",
+      "enforced": false,
+      "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "scripts/compliance_evidence.sh", "README.md"]
     }
   ]
 }

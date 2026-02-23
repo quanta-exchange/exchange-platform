@@ -91,6 +91,15 @@
       "mustBeOk": true,
       "mustDetectTamper": true
     },
+    "complianceEvidence": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRequireFullMapping": true,
+      "minCoverageRatio": 1.0,
+      "maxUnmappedControls": 0,
+      "maxUnmappedEnforcedControls": 0
+    },
     "chaosNetworkPartition": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -130,6 +139,7 @@
     "anomaly": "build/anomaly/anomaly-detector-latest.json",
     "policySmoke": "build/policy-smoke/policy-smoke-latest.json",
     "policyTamper": "build/policy/prove-policy-tamper-latest.json",
+    "complianceEvidence": "build/compliance/compliance-evidence-latest.json",
     "chaosNetworkPartition": "build/chaos/network-partition-latest.json",
     "chaosRedpandaBounce": "build/chaos/redpanda-broker-bounce-latest.json",
     "adversarial": "build/adversarial/adversarial-tests-latest.json"

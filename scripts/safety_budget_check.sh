@@ -304,6 +304,44 @@ for key, budget in budgets.items():
         if bool(budget.get("mustDetectTamper", True)) and not tamper_detected:
             entry["ok"] = False
             entry["details"].append("policy_tamper_not_detected")
+    elif key == "complianceEvidence":
+        must_ok = bool(budget.get("mustBeOk", True))
+        compliance_ok = bool(payload.get("ok", False))
+        require_full_mapping = bool(payload.get("require_full_mapping", False))
+        mapping_coverage_ratio = float(payload.get("mapping_coverage_ratio", 0.0) or 0.0)
+        unmapped_controls_count = int(payload.get("unmapped_controls_count", 0) or 0)
+        unmapped_enforced_controls_count = int(
+            payload.get("unmapped_enforced_controls_count", 0) or 0
+        )
+        if must_ok and not compliance_ok:
+            entry["ok"] = False
+            entry["details"].append("compliance_evidence_not_ok")
+        if bool(budget.get("mustRequireFullMapping", True)) and not require_full_mapping:
+            entry["ok"] = False
+            entry["details"].append("compliance_evidence_not_full_mapping_mode")
+        min_coverage_ratio = float(budget.get("minCoverageRatio", 1.0))
+        if mapping_coverage_ratio < min_coverage_ratio:
+            entry["ok"] = False
+            entry["details"].append(
+                f"compliance_mapping_coverage_ratio={mapping_coverage_ratio} < {min_coverage_ratio}"
+            )
+        max_unmapped_controls = int(
+            budget.get("maxUnmappedControls", 0)
+        )
+        if unmapped_controls_count > max_unmapped_controls:
+            entry["ok"] = False
+            entry["details"].append(
+                f"compliance_unmapped_controls_count={unmapped_controls_count} > {max_unmapped_controls}"
+            )
+        max_unmapped_enforced_controls = int(
+            budget.get("maxUnmappedEnforcedControls", 0)
+        )
+        if unmapped_enforced_controls_count > max_unmapped_enforced_controls:
+            entry["ok"] = False
+            entry["details"].append(
+                "compliance_unmapped_enforced_controls_count="
+                f"{unmapped_enforced_controls_count} > {max_unmapped_enforced_controls}"
+            )
     elif key == "chaosNetworkPartition":
         must_ok = bool(budget.get("mustBeOk", True))
         partition_ok = bool(payload.get("ok", False))
