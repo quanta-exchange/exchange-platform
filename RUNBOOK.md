@@ -154,6 +154,10 @@ Gate G1 operational check:
 - Reconciliation lag drill: `./runbooks/lag_spike.sh`
 - WS drop/slow-consumer drill: `./runbooks/ws_drop_spike.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
+- Change workflow:
+  - create proposal: `./scripts/change_proposal.sh ...`
+  - record approval: `./scripts/change_approve.sh ...`
+  - apply change (with verification): `./scripts/apply_change.sh ...`
 
 ### 4.1 Crash recovery drill
 Purpose:

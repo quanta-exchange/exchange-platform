@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory safety-budget compliance-evidence transparency-report external-replay-demo policy-sign policy-verify policy-smoke adversarial-tests runbook-lag-spike runbook-ws-drop exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory safety-budget compliance-evidence transparency-report external-replay-demo policy-sign policy-verify policy-smoke adversarial-tests change-proposal change-approve apply-change runbook-lag-spike runbook-ws-drop exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -53,6 +53,15 @@ policy-smoke:
 
 adversarial-tests:
 	./scripts/adversarial_tests.sh
+
+change-proposal:
+	./scripts/change_proposal.sh --title "default change" --requested-by "ops"
+
+change-approve:
+	@echo "usage: ./scripts/change_approve.sh --change-dir changes/requests/<id> --approver <name> [--note ...]"
+
+apply-change:
+	@echo "usage: ./scripts/apply_change.sh --change-dir changes/requests/<id> --command '...'"
 
 runbook-lag-spike:
 	./runbooks/lag_spike.sh

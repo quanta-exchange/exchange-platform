@@ -44,6 +44,9 @@ scripts/
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
+  change_proposal.sh      # G10 change proposal creation
+  change_approve.sh       # G10 approval recording
+  apply_change.sh         # G10 apply + verification evidence
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
@@ -59,6 +62,8 @@ safety/
   budgets.yaml            # safety budget thresholds
 compliance/
   mapping.yaml            # controls-to-framework mapping
+changes/
+  templates/change-proposal.md
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -325,6 +330,18 @@ make adversarial-tests
 Success output includes:
 - `adversarial_tests_report=build/adversarial/<timestamp>/adversarial-tests.json`
 - `adversarial_tests_ok=true|false`
+
+### 22) Change management flow
+```bash
+./scripts/change_proposal.sh --title "fee policy tweak" --risk-level HIGH --requested-by alice --summary "adjust maker fee"
+./scripts/change_approve.sh --change-dir changes/requests/<change-id> --approver bob --note "ops review"
+./scripts/change_approve.sh --change-dir changes/requests/<change-id> --approver carol --note "risk review"
+./scripts/apply_change.sh --change-dir changes/requests/<change-id> --command "echo apply-ok"
+```
+Apply success output includes:
+- `change_apply_success=true`
+- `change_apply_log=...`
+- `change_verification_summary=build/verification/<timestamp>/verification-summary.json`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
