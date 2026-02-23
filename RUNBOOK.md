@@ -162,6 +162,7 @@ Gate G1 operational check:
 - Change workflow drill: `./runbooks/change_workflow.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
+  - with change workflow drill: `./scripts/verification_factory.sh --run-change-workflow`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - Change audit-chain verify: `./scripts/verify_change_audit_chain.sh --require-events`
 - PII log scan gate: `./scripts/pii_log_scan.sh`

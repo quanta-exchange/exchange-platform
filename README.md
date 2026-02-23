@@ -412,13 +412,15 @@ make verification-factory
 ./scripts/verification_factory.sh --run-load-profiles
 # include startup guardrails runbook in same gate:
 ./scripts/verification_factory.sh --run-startup-guardrails
+# include change-workflow runbook in same gate:
+./scripts/verification_factory.sh --run-change-workflow
 # local fallback for core cargo environment:
 VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --run-startup-guardrails
 ```
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `verify_change_audit_chain_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `verify_change_audit_chain_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -572,6 +574,8 @@ make release-gate
 ./scripts/release_gate.sh --run-load-profiles
 # include startup guardrails runbook in gate:
 ./scripts/release_gate.sh --run-startup-guardrails
+# include change-workflow runbook in gate:
+./scripts/release_gate.sh --run-change-workflow
 # fail gate on advisory control gaps too:
 ./scripts/release_gate.sh --strict-controls
 ```

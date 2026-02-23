@@ -259,6 +259,11 @@
       "controlId": "CTRL-062",
       "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
       "description": "Runbook-as-code drill validates end-to-end change proposal/approval/apply flow with deterministic change-audit-chain verification evidence"
+    },
+    {
+      "controlId": "CTRL-063",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification/release gates can explicitly include change workflow drill evidence in promotion decisions"
     }
   ]
 }

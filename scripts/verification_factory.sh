@@ -7,6 +7,7 @@ RUN_CHECKS=false
 RUN_EXTENDED_CHECKS=false
 RUN_LOAD_PROFILES=false
 RUN_STARTUP_GUARDRAILS=false
+RUN_CHANGE_WORKFLOW=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -28,6 +29,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-startup-guardrails)
       RUN_STARTUP_GUARDRAILS=true
+      shift
+      ;;
+    --run-change-workflow)
+      RUN_CHANGE_WORKFLOW=true
       shift
       ;;
     *)
@@ -101,6 +106,11 @@ fi
 if [[ "$RUN_STARTUP_GUARDRAILS" == "true" ]]; then
   STARTUP_ALLOW_CORE_FAIL="${VERIFICATION_STARTUP_ALLOW_CORE_FAIL:-true}"
   if ! run_step "runbook-startup-guardrails" env RUNBOOK_ALLOW_CORE_FAIL="$STARTUP_ALLOW_CORE_FAIL" "$ROOT_DIR/runbooks/startup_guardrails.sh"; then
+    HAS_FAILURE=true
+  fi
+fi
+if [[ "$RUN_CHANGE_WORKFLOW" == "true" ]]; then
+  if ! run_step "runbook-change-workflow" "$ROOT_DIR/runbooks/change_workflow.sh"; then
     HAS_FAILURE=true
   fi
 fi
@@ -187,6 +197,7 @@ fi
 SAFETY_LOG="$LOG_DIR/safety-case.log"
 LOAD_ALL_LOG="$LOG_DIR/load-all.log"
 STARTUP_GUARDRAILS_LOG="$LOG_DIR/runbook-startup-guardrails.log"
+CHANGE_WORKFLOW_LOG="$LOG_DIR/runbook-change-workflow.log"
 ARCHIVE_LOG="$LOG_DIR/archive-range.log"
 VERIFY_ARCHIVE_LOG="$LOG_DIR/verify-archive.log"
 EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
@@ -216,6 +227,7 @@ SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
 SAFETY_ARTIFACT="$(extract_value "safety_case_artifact" "$SAFETY_LOG")"
 LOAD_ALL_REPORT="$(extract_value "load_all_report" "$LOAD_ALL_LOG")"
 STARTUP_GUARDRAILS_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$STARTUP_GUARDRAILS_LOG")"
+CHANGE_WORKFLOW_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$CHANGE_WORKFLOW_LOG")"
 ARCHIVE_RANGE_MANIFEST="$(extract_value "archive_manifest" "$ARCHIVE_LOG")"
 VERIFY_ARCHIVE_SHA="$(extract_value "verify_archive_sha256" "$VERIFY_ARCHIVE_LOG")"
 EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL_REPLAY_LOG")"
@@ -241,7 +253,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -274,12 +286,14 @@ safety_budget_report = sys.argv[26]
 assurance_json = sys.argv[27]
 run_startup_guardrails = sys.argv[28].lower() == "true"
 startup_guardrails_runbook_dir = sys.argv[29]
-verify_audit_chain_report = sys.argv[30]
-verify_change_audit_chain_report = sys.argv[31]
-pii_log_scan_report = sys.argv[32]
-anomaly_detector_report = sys.argv[33]
-anomaly_smoke_report = sys.argv[34]
-rbac_sod_report = sys.argv[35]
+run_change_workflow = sys.argv[30].lower() == "true"
+change_workflow_runbook_dir = sys.argv[31]
+verify_audit_chain_report = sys.argv[32]
+verify_change_audit_chain_report = sys.argv[33]
+pii_log_scan_report = sys.argv[34]
+anomaly_detector_report = sys.argv[35]
+anomaly_smoke_report = sys.argv[36]
+rbac_sod_report = sys.argv[37]
 
 steps = []
 ok = True
@@ -306,12 +320,14 @@ summary = {
     "run_extended_checks": run_extended_checks,
     "run_load_profiles": run_load_profiles,
     "run_startup_guardrails": run_startup_guardrails,
+    "run_change_workflow": run_change_workflow,
     "steps": steps,
     "artifacts": {
         "safety_case_manifest": safety_manifest or None,
         "safety_case_artifact": safety_artifact or None,
         "load_all_report": load_all_report or None,
         "startup_guardrails_runbook_dir": startup_guardrails_runbook_dir or None,
+        "change_workflow_runbook_dir": change_workflow_runbook_dir or None,
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,
         "external_replay_report": external_replay_report or None,
