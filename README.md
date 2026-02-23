@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/adversarial-runbook + safety->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -93,6 +93,8 @@ runbooks/
   change_workflow.md      # change workflow drill notes
   budget_failure.sh       # safety budget failure diagnosis automated drill
   budget_failure.md       # safety budget failure drill notes
+  adversarial_reliability.sh # adversarial reliability automated drill
+  adversarial_reliability.md # adversarial reliability drill notes
   startup_guardrails.sh   # startup guardrails verification drill
   startup_guardrails.md   # startup guardrails drill notes
   ws_drop_spike.sh        # ws drop spike automated drill
@@ -435,13 +437,15 @@ make verification-factory
 ./scripts/verification_factory.sh --run-startup-guardrails
 # include change-workflow runbook in same gate:
 ./scripts/verification_factory.sh --run-change-workflow
+# include adversarial reliability runbook in same gate:
+./scripts/verification_factory.sh --run-adversarial
 # local fallback for core cargo environment:
 VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --run-startup-guardrails
 ```
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -517,9 +521,10 @@ make runbook-game-day-anomaly
 make runbook-audit-tamper
 make runbook-change-workflow
 make runbook-budget-failure
+make runbook-adversarial-reliability
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_adversarial_reliability_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 
@@ -557,7 +562,20 @@ make adversarial-tests
 ```
 Success output includes:
 - `adversarial_tests_report=build/adversarial/<timestamp>/adversarial-tests.json`
+- `adversarial_tests_latest=build/adversarial/adversarial-tests-latest.json`
 - `adversarial_tests_ok=true|false`
+
+Runbook shortcut:
+```bash
+make runbook-adversarial-reliability
+# allow drill to continue even if adversarial bundle fails:
+RUNBOOK_ALLOW_ADVERSARIAL_FAIL=true make runbook-adversarial-reliability
+```
+Outputs:
+- `runbook_adversarial_reliability_ok=true|false`
+- `adversarial_failed_step_count=<n>`
+- `adversarial_recommended_action=...`
+- `runbook_output_dir=build/runbooks/adversarial-reliability-<timestamp>`
 
 ### 22) Change management flow
 ```bash
@@ -620,6 +638,8 @@ make release-gate
 ./scripts/release_gate.sh --run-startup-guardrails
 # include change-workflow runbook in gate:
 ./scripts/release_gate.sh --run-change-workflow
+# include adversarial reliability runbook in gate:
+./scripts/release_gate.sh --run-adversarial
 # fail gate on advisory control gaps too:
 ./scripts/release_gate.sh --strict-controls
 ```
@@ -629,6 +649,7 @@ Outputs:
 - `release_gate_ok=true|false`
 - report includes control health counters: `controls_advisory_missing_count`, `controls_advisory_stale_count`, `controls_failed_enforced_stale_count`
 - report includes safety budget context: `safety_budget_ok`, `safety_budget_violations`
+- report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 
 ### 26) Legal archive capture + verify
 ```bash
@@ -680,6 +701,7 @@ Outputs:
 `verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive`/`verify-change-audit-chain` 단계가 자동 포함됩니다.  
 `--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.  
 `--run-startup-guardrails`를 주면 startup guardrails runbook 단계가 추가 실행됩니다.
+`--run-adversarial`를 주면 adversarial reliability runbook 단계가 추가 실행됩니다.
 
 ### 27) Determinism proof
 ```bash

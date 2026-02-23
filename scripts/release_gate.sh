@@ -8,6 +8,7 @@ RUN_EXTENDED_CHECKS=false
 RUN_LOAD_PROFILES=false
 RUN_STARTUP_GUARDRAILS=false
 RUN_CHANGE_WORKFLOW=false
+RUN_ADVERSARIAL=false
 STRICT_CONTROLS=false
 
 while [[ $# -gt 0 ]]; do
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-change-workflow)
       RUN_CHANGE_WORKFLOW=true
+      shift
+      ;;
+    --run-adversarial)
+      RUN_ADVERSARIAL=true
       shift
       ;;
     --strict-controls)
@@ -68,6 +73,9 @@ fi
 if [[ "$RUN_CHANGE_WORKFLOW" == "true" ]]; then
   VERIFY_CMD+=("--run-change-workflow")
 fi
+if [[ "$RUN_ADVERSARIAL" == "true" ]]; then
+  VERIFY_CMD+=("--run-adversarial")
+fi
 
 set +e
 VERIFY_OUTPUT="$("${VERIFY_CMD[@]}" 2>&1)"
@@ -92,7 +100,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$STRICT_CONTROLS" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$STRICT_CONTROLS" <<'PY'
 import json
 import pathlib
 import sys
@@ -109,7 +117,8 @@ run_extended_checks = sys.argv[8].lower() == "true"
 run_load_profiles = sys.argv[9].lower() == "true"
 run_startup_guardrails = sys.argv[10].lower() == "true"
 run_change_workflow = sys.argv[11].lower() == "true"
-strict_controls = sys.argv[12].lower() == "true"
+run_adversarial = sys.argv[12].lower() == "true"
+strict_controls = sys.argv[13].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -121,6 +130,8 @@ controls_advisory_stale = None
 controls_failed_enforced_stale = None
 safety_budget_ok = None
 safety_budget_violations = []
+adversarial_tests_ok = None
+adversarial_failed_steps = []
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -142,6 +153,20 @@ if budget_report_path:
             budget_payload = json.load(f)
         safety_budget_ok = bool(budget_payload.get("ok", False))
         safety_budget_violations = list(budget_payload.get("violations", []) or [])
+adversarial_report_path = summary.get("artifacts", {}).get("adversarial_tests_report")
+if adversarial_report_path:
+    candidate = pathlib.Path(adversarial_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            adversarial_payload = json.load(f)
+        adversarial_tests_ok = bool(adversarial_payload.get("ok", False))
+        adversarial_failed_steps = [
+            str(step.get("name"))
+            for step in (adversarial_payload.get("steps", []) or [])
+            if step.get("status") == "fail"
+        ]
 
 controls_gate_ok = True
 if strict_controls:
@@ -158,16 +183,20 @@ payload = {
     "run_load_profiles": run_load_profiles,
     "run_startup_guardrails": run_startup_guardrails,
     "run_change_workflow": run_change_workflow,
+    "run_adversarial": run_adversarial,
     "strict_controls": strict_controls,
     "controls_advisory_missing_count": controls_advisory_missing,
     "controls_advisory_stale_count": controls_advisory_stale,
     "controls_failed_enforced_stale_count": controls_failed_enforced_stale,
     "safety_budget_ok": safety_budget_ok,
     "safety_budget_violations": safety_budget_violations,
+    "adversarial_tests_ok": adversarial_tests_ok,
+    "adversarial_failed_steps": adversarial_failed_steps,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),
     "verification_run_change_workflow": bool(summary.get("run_change_workflow", False)),
+    "verification_run_adversarial": bool(summary.get("run_adversarial", False)),
     "verification_summary": str(verification_summary),
     "verification_step_count": len(summary.get("steps", [])),
     "failed_steps": [s.get("name") for s in summary.get("steps", []) if s.get("status") != "pass"],

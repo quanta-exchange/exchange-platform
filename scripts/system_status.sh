@@ -254,6 +254,7 @@ change_audit_chain_latest = read_latest_json("build/change-audit/verify-change-a
 pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
 safety_budget_latest = read_latest_json("build/safety/safety-budget-latest.json")
 budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-latest.json")
+adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
@@ -334,6 +335,27 @@ report = {
                 "violations_count": len((safety_budget_latest.get("payload") or {}).get("violations", []) or []),
                 "freshness_default_max_age_seconds": (safety_budget_latest.get("payload") or {}).get("freshness_default_max_age_seconds"),
                 "error": safety_budget_latest.get("error"),
+            },
+            "adversarial_tests": {
+                "present": adversarial_latest.get("present", False),
+                "path": adversarial_latest.get("path"),
+                "ok": (adversarial_latest.get("payload") or {}).get("ok"),
+                "failed_step_count": len(
+                    [
+                        step
+                        for step in ((adversarial_latest.get("payload") or {}).get("steps", []) or [])
+                        if isinstance(step, dict) and step.get("status") == "fail"
+                    ]
+                ),
+                "exactly_once_status": next(
+                    (
+                        step.get("status")
+                        for step in ((adversarial_latest.get("payload") or {}).get("steps", []) or [])
+                        if isinstance(step, dict) and step.get("name") == "exactly_once_stress"
+                    ),
+                    None,
+                ),
+                "error": adversarial_latest.get("error"),
             },
             "proofs": {
                 "controls_freshness": {

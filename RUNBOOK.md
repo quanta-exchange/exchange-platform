@@ -161,9 +161,11 @@ Gate G1 operational check:
 - Audit-chain tamper drill: `./runbooks/audit_chain_tamper.sh`
 - Change workflow drill: `./runbooks/change_workflow.sh`
 - Budget failure drill: `./runbooks/budget_failure.sh`
+- Adversarial reliability drill: `./runbooks/adversarial_reliability.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
   - with change workflow drill: `./scripts/verification_factory.sh --run-change-workflow`
+  - with adversarial drill: `./scripts/verification_factory.sh --run-adversarial`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - Change audit-chain verify: `./scripts/verify_change_audit_chain.sh --require-events`
 - PII log scan gate: `./scripts/pii_log_scan.sh`
@@ -328,6 +330,22 @@ Success criteria:
 - output includes `runbook_budget_failure_ok=true`
 - runbook output contains:
   - `budget-failure-summary.json` (`budget_ok`, `violation_count`, `recommended_action`)
+  - `status-before.json` / `status-after.json`
+
+### 4.9 Adversarial reliability drill
+Purpose:
+- 적대적 입력 시나리오(policy/ws-resume/candle/snapshot/exactly-once)를 단일 번들로 재검증
+- 실패 시 권고 액션을 자동 산출하고 safety budget 상태를 함께 확인
+
+Command:
+- `./runbooks/adversarial_reliability.sh`
+- 실패 허용 진단 모드: `RUNBOOK_ALLOW_ADVERSARIAL_FAIL=true ./runbooks/adversarial_reliability.sh`
+
+Success criteria:
+- output includes `runbook_adversarial_reliability_ok=true`
+- runbook output contains:
+  - `adversarial-reliability-summary.json` (`adversarial_ok`, `failed_step_count`, `recommended_action`)
+  - `adversarial/adversarial-tests-latest.json`
   - `status-before.json` / `status-after.json`
 
 ---

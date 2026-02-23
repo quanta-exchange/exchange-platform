@@ -270,6 +270,42 @@ for key, budget in budgets.items():
         if bool(budget.get("mustNotDetectAnomaly", False)) and anomaly_detected:
             entry["ok"] = False
             entry["details"].append("anomaly_detected")
+    elif key == "adversarial":
+        must_ok = bool(budget.get("mustBeOk", True))
+        adversarial_ok = bool(payload.get("ok", False))
+        if must_ok and not adversarial_ok:
+            entry["ok"] = False
+            entry["details"].append("adversarial_bundle_not_ok")
+
+        steps = payload.get("steps", []) if isinstance(payload, dict) else []
+        status_by_name = {}
+        if isinstance(steps, list):
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                name = str(step.get("name", ""))
+                if not name:
+                    continue
+                status_by_name[name] = str(step.get("status", ""))
+
+        required_steps = budget.get("mustPassSteps", [])
+        if isinstance(required_steps, list):
+            for step_name in required_steps:
+                name = str(step_name)
+                status = status_by_name.get(name)
+                if status != "pass":
+                    entry["ok"] = False
+                    entry["details"].append(
+                        f"adversarial_step_{name}_status={status or 'missing'}"
+                    )
+
+        exactly_once_status = status_by_name.get("exactly_once_stress")
+        if (
+            exactly_once_status == "skip"
+            and not bool(budget.get("allowExactlyOnceSkip", True))
+        ):
+            entry["ok"] = False
+            entry["details"].append("adversarial_exactly_once_skip_not_allowed")
 
     if not entry["ok"]:
         violations.append(f"{key}:{';'.join(entry['details'])}")

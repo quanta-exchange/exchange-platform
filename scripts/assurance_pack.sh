@@ -71,6 +71,7 @@ game_day_anomaly_runbook = newest(root.glob("build/runbooks/game-day-anomaly-*/g
 audit_chain_tamper_runbook = newest(root.glob("build/runbooks/audit-chain-tamper-*/audit-chain-tamper.log"))
 change_workflow_runbook = newest(root.glob("build/runbooks/change-workflow-*/change-workflow.log"))
 budget_failure_runbook = newest(root.glob("build/runbooks/budget-failure-*/budget-failure.log"))
+adversarial_reliability_runbook = newest(root.glob("build/runbooks/adversarial-reliability-*/adversarial-reliability.log"))
 
 evidence = [
     {"id": "load_smoke", "path": pathlib.Path("build/load/load-smoke.json"), "required": True},
@@ -80,6 +81,7 @@ evidence = [
     {"id": "audit_chain_tamper_runbook", "path": pathlib.Path(rel(audit_chain_tamper_runbook)) if audit_chain_tamper_runbook else None, "required": False},
     {"id": "change_workflow_runbook", "path": pathlib.Path(rel(change_workflow_runbook)) if change_workflow_runbook else None, "required": False},
     {"id": "budget_failure_runbook", "path": pathlib.Path(rel(budget_failure_runbook)) if budget_failure_runbook else None, "required": False},
+    {"id": "adversarial_reliability_runbook", "path": pathlib.Path(rel(adversarial_reliability_runbook)) if adversarial_reliability_runbook else None, "required": False},
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "verify_change_audit_chain", "path": pathlib.Path("build/change-audit/verify-change-audit-chain-latest.json"), "required": False},
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
@@ -106,6 +108,7 @@ evidence = [
     {"id": "model_check", "path": pathlib.Path("build/model-check/model-check-latest.json"), "required": False},
     {"id": "service_modes", "path": pathlib.Path("build/service-modes/verify-service-modes-latest.json"), "required": False},
     {"id": "shadow_verify", "path": pathlib.Path("build/shadow/shadow-verify-latest.json"), "required": False},
+    {"id": "adversarial_tests", "path": pathlib.Path("build/adversarial/adversarial-tests-latest.json"), "required": False},
     {"id": "ws_resume_smoke", "path": pathlib.Path("build/ws/ws-resume-smoke.json"), "required": False},
     {"id": "safety_case_manifest", "path": pathlib.Path(rel(safety_case_manifest)) if safety_case_manifest else None, "required": True},
     {"id": "safety_case_artifact", "path": pathlib.Path(rel(safety_case_artifact)) if safety_case_artifact else None, "required": True},
@@ -165,6 +168,7 @@ pack = {
         {"id": "G26", "text": "Controls freshness proof verifies stale control evidence is detected and excluded from trust decisions in control catalog checks."},
         {"id": "G27", "text": "Budget failure runbook automatically summarizes violations and recommends next action, improving deterministic incident response."},
         {"id": "G28", "text": "Exactly-once million-duplicate proof demonstrates idempotent settlement behavior at extreme duplicate-injection volume."},
+        {"id": "G29", "text": "Adversarial reliability bundle validates policy/ws/candle/snapshot/exactly-once defenses under hostile input patterns and records deterministic runbook evidence."},
     ],
 }
 

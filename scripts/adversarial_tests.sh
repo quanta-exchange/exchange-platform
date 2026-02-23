@@ -36,6 +36,7 @@ TS_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
 RUN_DIR="$OUT_DIR/$TS_ID"
 LOG_DIR="$RUN_DIR/logs"
 REPORT_FILE="$RUN_DIR/adversarial-tests.json"
+LATEST_FILE="$OUT_DIR/adversarial-tests-latest.json"
 mkdir -p "$LOG_DIR"
 
 run_step() {
@@ -150,7 +151,10 @@ with open(report_file, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
+cp "$REPORT_FILE" "$LATEST_FILE"
+
 echo "adversarial_tests_report=${REPORT_FILE}"
+echo "adversarial_tests_latest=${LATEST_FILE}"
 echo "adversarial_tests_ok=$([[ "${status_policy}" == "pass" && "${status_ws}" == "pass" && "${status_ws_resume}" == "pass" && "${status_candles}" == "pass" && "${status_snapshot_verify}" == "pass" && ( "${status_exactly_once}" == "pass" || "${status_exactly_once}" == "skip" ) ]] && echo true || echo false)"
 
 if [[ "${status_policy}" != "pass" || "${status_ws}" != "pass" || "${status_ws_resume}" != "pass" || "${status_candles}" != "pass" || "${status_snapshot_verify}" != "pass" ]]; then

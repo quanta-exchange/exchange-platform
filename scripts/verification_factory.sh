@@ -8,6 +8,7 @@ RUN_EXTENDED_CHECKS=false
 RUN_LOAD_PROFILES=false
 RUN_STARTUP_GUARDRAILS=false
 RUN_CHANGE_WORKFLOW=false
+RUN_ADVERSARIAL=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -33,6 +34,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-change-workflow)
       RUN_CHANGE_WORKFLOW=true
+      shift
+      ;;
+    --run-adversarial)
+      RUN_ADVERSARIAL=true
       shift
       ;;
     *)
@@ -181,6 +186,9 @@ fi
 if ! run_step "ws-resume-smoke" "$ROOT_DIR/scripts/ws_resume_smoke.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "adversarial-tests" "$ROOT_DIR/scripts/adversarial_tests.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "shadow-verify" "$ROOT_DIR/scripts/shadow_verify.sh"; then
   HAS_FAILURE=true
 fi
@@ -198,6 +206,11 @@ if ! run_step "safety-budget" "$ROOT_DIR/scripts/safety_budget_check.sh"; then
 fi
 if ! run_step "runbook-budget-failure" "$ROOT_DIR/runbooks/budget_failure.sh"; then
   HAS_FAILURE=true
+fi
+if [[ "$RUN_ADVERSARIAL" == "true" ]]; then
+  if ! run_step "runbook-adversarial-reliability" env RUNBOOK_ALLOW_BUDGET_FAIL=true "$ROOT_DIR/runbooks/adversarial_reliability.sh"; then
+    HAS_FAILURE=true
+  fi
 fi
 if ! run_step "assurance-pack" "$ROOT_DIR/scripts/assurance_pack.sh"; then
   HAS_FAILURE=true
@@ -227,12 +240,14 @@ PROVE_CANDLES_LOG="$LOG_DIR/prove-candles.log"
 SNAPSHOT_VERIFY_LOG="$LOG_DIR/snapshot-verify.log"
 VERIFY_SERVICE_MODES_LOG="$LOG_DIR/verify-service-modes.log"
 WS_RESUME_SMOKE_LOG="$LOG_DIR/ws-resume-smoke.log"
+ADVERSARIAL_TESTS_LOG="$LOG_DIR/adversarial-tests.log"
 SHADOW_VERIFY_LOG="$LOG_DIR/shadow-verify.log"
 COMPLIANCE_LOG="$LOG_DIR/compliance-evidence.log"
 TRANSPARENCY_LOG="$LOG_DIR/transparency-report.log"
 ACCESS_REVIEW_LOG="$LOG_DIR/access-review.log"
 SAFETY_BUDGET_LOG="$LOG_DIR/safety-budget.log"
 BUDGET_FAILURE_RUNBOOK_LOG="$LOG_DIR/runbook-budget-failure.log"
+ADVERSARIAL_RUNBOOK_LOG="$LOG_DIR/runbook-adversarial-reliability.log"
 ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
 SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
@@ -260,15 +275,17 @@ PROVE_CANDLES_REPORT="$(extract_value "prove_candles_report" "$PROVE_CANDLES_LOG
 SNAPSHOT_VERIFY_REPORT="$(extract_value "snapshot_verify_report" "$SNAPSHOT_VERIFY_LOG")"
 VERIFY_SERVICE_MODES_REPORT="$(extract_value "verify_service_modes_report" "$VERIFY_SERVICE_MODES_LOG")"
 WS_RESUME_SMOKE_REPORT="$(extract_value "ws_resume_smoke_report" "$WS_RESUME_SMOKE_LOG")"
+ADVERSARIAL_TESTS_REPORT="$(extract_value "adversarial_tests_latest" "$ADVERSARIAL_TESTS_LOG")"
 SHADOW_VERIFY_REPORT="$(extract_value "shadow_verify_report" "$SHADOW_VERIFY_LOG")"
 COMPLIANCE_REPORT="$(extract_value "compliance_evidence_report" "$COMPLIANCE_LOG")"
 TRANSPARENCY_REPORT="$(extract_value "transparency_report_file" "$TRANSPARENCY_LOG")"
 ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG")"
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 BUDGET_FAILURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$BUDGET_FAILURE_RUNBOOK_LOG")"
+ADVERSARIAL_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$ADVERSARIAL_RUNBOOK_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -295,23 +312,26 @@ prove_candles_report = sys.argv[20]
 snapshot_verify_report = sys.argv[21]
 verify_service_modes_report = sys.argv[22]
 ws_resume_smoke_report = sys.argv[23]
-shadow_verify_report = sys.argv[24]
-compliance_report = sys.argv[25]
-transparency_report = sys.argv[26]
-access_review_report = sys.argv[27]
-safety_budget_report = sys.argv[28]
-assurance_json = sys.argv[29]
-run_startup_guardrails = sys.argv[30].lower() == "true"
-startup_guardrails_runbook_dir = sys.argv[31]
-run_change_workflow = sys.argv[32].lower() == "true"
-change_workflow_runbook_dir = sys.argv[33]
-budget_failure_runbook_dir = sys.argv[34]
-verify_audit_chain_report = sys.argv[35]
-verify_change_audit_chain_report = sys.argv[36]
-pii_log_scan_report = sys.argv[37]
-anomaly_detector_report = sys.argv[38]
-anomaly_smoke_report = sys.argv[39]
-rbac_sod_report = sys.argv[40]
+adversarial_tests_report = sys.argv[24]
+shadow_verify_report = sys.argv[25]
+compliance_report = sys.argv[26]
+transparency_report = sys.argv[27]
+access_review_report = sys.argv[28]
+safety_budget_report = sys.argv[29]
+assurance_json = sys.argv[30]
+run_startup_guardrails = sys.argv[31].lower() == "true"
+startup_guardrails_runbook_dir = sys.argv[32]
+run_change_workflow = sys.argv[33].lower() == "true"
+change_workflow_runbook_dir = sys.argv[34]
+budget_failure_runbook_dir = sys.argv[35]
+run_adversarial = sys.argv[36].lower() == "true"
+adversarial_runbook_dir = sys.argv[37]
+verify_audit_chain_report = sys.argv[38]
+verify_change_audit_chain_report = sys.argv[39]
+pii_log_scan_report = sys.argv[40]
+anomaly_detector_report = sys.argv[41]
+anomaly_smoke_report = sys.argv[42]
+rbac_sod_report = sys.argv[43]
 
 steps = []
 ok = True
@@ -339,6 +359,7 @@ summary = {
     "run_load_profiles": run_load_profiles,
     "run_startup_guardrails": run_startup_guardrails,
     "run_change_workflow": run_change_workflow,
+    "run_adversarial": run_adversarial,
     "steps": steps,
     "artifacts": {
         "safety_case_manifest": safety_manifest or None,
@@ -347,6 +368,7 @@ summary = {
         "startup_guardrails_runbook_dir": startup_guardrails_runbook_dir or None,
         "change_workflow_runbook_dir": change_workflow_runbook_dir or None,
         "budget_failure_runbook_dir": budget_failure_runbook_dir or None,
+        "adversarial_runbook_dir": adversarial_runbook_dir or None,
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,
         "external_replay_report": external_replay_report or None,
@@ -367,6 +389,7 @@ summary = {
         "snapshot_verify_report": snapshot_verify_report or None,
         "verify_service_modes_report": verify_service_modes_report or None,
         "ws_resume_smoke_report": ws_resume_smoke_report or None,
+        "adversarial_tests_report": adversarial_tests_report or None,
         "shadow_verify_report": shadow_verify_report or None,
         "compliance_evidence_report": compliance_report or None,
         "transparency_report": transparency_report or None,

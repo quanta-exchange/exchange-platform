@@ -72,6 +72,13 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true,
       "mustNotDetectAnomaly": true
+    },
+    "adversarial": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustPassSteps": ["policy_smoke", "ws_smoke", "ws_resume_smoke", "prove_candles", "snapshot_verify"],
+      "allowExactlyOnceSkip": true
     }
   },
   "reports": {
@@ -86,6 +93,7 @@
     "auditChain": "build/audit/verify-audit-chain-latest.json",
     "changeAuditChain": "build/change-audit/verify-change-audit-chain-latest.json",
     "piiLogScan": "build/security/pii-log-scan-latest.json",
-    "anomaly": "build/anomaly/anomaly-detector-latest.json"
+    "anomaly": "build/anomaly/anomaly-detector-latest.json",
+    "adversarial": "build/adversarial/adversarial-tests-latest.json"
   }
 }

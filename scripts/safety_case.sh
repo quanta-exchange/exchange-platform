@@ -101,6 +101,7 @@ if [[ "$RUN_EXTENDED_CHECKS" == "true" ]]; then
   run_cmd "snapshot-verify" ./scripts/snapshot_verify.sh
   run_cmd "verify-service-modes" ./scripts/verify_service_modes.sh
   run_cmd "ws-resume-smoke" ./scripts/ws_resume_smoke.sh
+  run_cmd "adversarial-tests" ./scripts/adversarial_tests.sh
 fi
 
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
@@ -146,6 +147,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/candles/prove-candles-latest.json"
   "build/snapshot/snapshot-verify-latest.json"
   "build/service-modes/verify-service-modes-latest.json"
+  "build/adversarial/adversarial-tests-latest.json"
 )
 
 declare -a OPTIONAL_BASE_EVIDENCE=(

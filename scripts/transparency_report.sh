@@ -57,6 +57,7 @@ pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
 rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
 anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
 budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
+adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 
 sources = {
     "load": load,
@@ -77,6 +78,7 @@ sources = {
     "rbac_sod": rbac_sod,
     "anomaly": anomaly,
     "budget_freshness": budget_freshness,
+    "adversarial": adversarial,
 }
 
 email_pattern = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -153,6 +155,24 @@ report = {
             "rbac_sod_ok": bool(rbac_sod.get("ok")) if rbac_sod else None,
             "anomaly_detector_ok": bool(anomaly.get("ok")) if anomaly else None,
             "anomaly_detected": bool(anomaly.get("anomaly_detected")) if anomaly else None,
+            "adversarial_ok": bool(adversarial.get("ok")) if adversarial else None,
+            "adversarial_failed_step_count": (
+                len([s for s in (adversarial.get("steps", []) or []) if isinstance(s, dict) and s.get("status") == "fail"])
+                if adversarial
+                else None
+            ),
+            "adversarial_exactly_once_status": (
+                next(
+                    (
+                        s.get("status")
+                        for s in (adversarial.get("steps", []) or [])
+                        if isinstance(s, dict) and s.get("name") == "exactly_once_stress"
+                    ),
+                    None,
+                )
+                if adversarial
+                else None
+            ),
             "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
             "budget_freshness_proof_ok": bool(budget_freshness.get("ok")) if budget_freshness else None,
         },
@@ -180,6 +200,7 @@ report = {
         "rbac_sod": "build/security/rbac-sod-check-latest.json",
         "anomaly": "build/anomaly/anomaly-detector-latest.json",
         "budget_freshness": "build/safety/prove-budget-freshness-latest.json",
+        "adversarial": "build/adversarial/adversarial-tests-latest.json",
     },
 }
 

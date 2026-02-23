@@ -334,6 +334,21 @@
       "controlId": "CTRL-077",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Change workflow runbook supports full verification mode during apply, ensuring high-risk change drills can exercise complete gate checks"
+    },
+    {
+      "controlId": "CTRL-078",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Adversarial reliability bundle consolidates hostile-input resiliency checks (policy/ws/candle/snapshot/exactly-once) into a freshness-tracked evidence artifact"
+    },
+    {
+      "controlId": "CTRL-079",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for adversarial reliability drills and emits deterministic diagnostic summaries with recommended actions"
+    },
+    {
+      "controlId": "CTRL-080",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification and release gates can explicitly include adversarial reliability runbook execution in promotion decisions"
     }
   ]
 }
