@@ -515,6 +515,15 @@ class LedgerRepository(
         )
     }
 
+    fun ledgerEntryExists(entryId: String): Boolean {
+        val count = jdbc.queryForObject(
+            "SELECT COUNT(1) FROM ledger_entries WHERE entry_id = ?",
+            Long::class.java,
+            entryId,
+        ) ?: 0L
+        return count > 0
+    }
+
     @Transactional
     fun approveCorrection(correctionId: String, approver: String): CorrectionRequest {
         val current = getCorrection(correctionId)

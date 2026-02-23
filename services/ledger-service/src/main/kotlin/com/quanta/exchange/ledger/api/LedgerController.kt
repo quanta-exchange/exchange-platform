@@ -296,14 +296,18 @@ class LedgerController(
 
     @PostMapping("/admin/corrections/requests")
     fun createCorrection(@RequestBody req: CreateCorrectionDto): Map<String, Any> {
-        ledgerService.createCorrection(
-            correctionId = req.correctionId,
-            originalEntryId = req.originalEntryId,
-            mode = req.mode,
-            reason = req.reason,
-            ticketId = req.ticketId,
-            requestedBy = req.requestedBy,
-        )
+        try {
+            ledgerService.createCorrection(
+                correctionId = req.correctionId,
+                originalEntryId = req.originalEntryId,
+                mode = req.mode,
+                reason = req.reason,
+                ticketId = req.ticketId,
+                requestedBy = req.requestedBy,
+            )
+        } catch (ex: IllegalArgumentException) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, ex.message ?: "invalid_correction_request")
+        }
         return mapOf("status" to "PENDING", "correctionId" to req.correctionId)
     }
 

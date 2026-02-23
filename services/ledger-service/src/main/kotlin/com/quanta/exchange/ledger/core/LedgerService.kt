@@ -556,7 +556,12 @@ class LedgerService(
         ticketId: String,
         requestedBy: String,
     ) {
-        repo.createCorrectionRequest(correctionId, originalEntryId, mode.uppercase(), reason, ticketId, requestedBy)
+        val normalizedEntryId = originalEntryId.trim()
+        require(normalizedEntryId.isNotEmpty()) { "original_entry_required" }
+        val normalizedMode = mode.trim().uppercase()
+        require(normalizedMode == "REVERSAL") { "unsupported_correction_mode" }
+        require(repo.ledgerEntryExists(normalizedEntryId)) { "original_entry_not_found" }
+        repo.createCorrectionRequest(correctionId, normalizedEntryId, normalizedMode, reason, ticketId, requestedBy)
         refreshCorrectionPendingAge()
     }
 

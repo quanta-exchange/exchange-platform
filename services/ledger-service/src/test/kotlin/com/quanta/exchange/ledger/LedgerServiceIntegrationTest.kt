@@ -9,6 +9,7 @@ import com.quanta.exchange.ledger.core.SafetyMode
 import com.quanta.exchange.ledger.core.TradeExecuted
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -391,6 +392,37 @@ class LedgerServiceIntegrationTest {
         assertTrue(result.applied)
         val balances = ledgerService.listBalances()
         assertEquals(0L, balances["user:alice:USD:AVAILABLE:USD"])
+    }
+
+    @Test
+    fun correctionCreationRejectsUnknownOriginalEntry() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ledgerService.createCorrection(
+                correctionId = "corr-missing-entry",
+                originalEntryId = "le_missing_entry",
+                mode = "REVERSAL",
+                reason = "bad request",
+                ticketId = "TKT-404",
+                requestedBy = "ops-a",
+            )
+        }
+        assertEquals("original_entry_not_found", error.message)
+    }
+
+    @Test
+    fun correctionCreationRejectsUnsupportedMode() {
+        assertTrue(ledgerService.adjustAvailable(adjustment("corr-mode-base", "alice", "USD", 500)))
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ledgerService.createCorrection(
+                correctionId = "corr-bad-mode",
+                originalEntryId = "le_adj_corr-mode-base",
+                mode = "ADJUSTMENT",
+                reason = "unsupported mode",
+                ticketId = "TKT-405",
+                requestedBy = "ops-a",
+            )
+        }
+        assertEquals("unsupported_correction_mode", error.message)
     }
 
     private fun seedBalancesAndReserves() {
