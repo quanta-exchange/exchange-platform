@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$ROOT_DIR/build/verification"
 RUN_CHECKS=false
 RUN_EXTENDED_CHECKS=false
+RUN_LOAD_PROFILES=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-extended-checks)
       RUN_EXTENDED_CHECKS=true
+      shift
+      ;;
+    --run-load-profiles)
+      RUN_LOAD_PROFILES=true
       shift
       ;;
     *)
@@ -83,6 +88,11 @@ HAS_FAILURE=false
 if ! run_step "safety-case" "${SAFETY_CASE_CMD[@]}"; then
   HAS_FAILURE=true
 fi
+if [[ "$RUN_LOAD_PROFILES" == "true" ]]; then
+  if ! run_step "load-all" "$ROOT_DIR/scripts/load_all.sh"; then
+    HAS_FAILURE=true
+  fi
+fi
 ARCHIVE_MANIFEST=""
 if run_step "archive-range" "$ROOT_DIR/scripts/archive_range.sh" --source-file "$ROOT_DIR/build/load/load-smoke.json"; then
   ARCHIVE_MANIFEST="$(extract_value "archive_manifest" "$LOG_DIR/archive-range.log")"
@@ -146,6 +156,7 @@ if ! run_step "assurance-pack" "$ROOT_DIR/scripts/assurance_pack.sh"; then
 fi
 
 SAFETY_LOG="$LOG_DIR/safety-case.log"
+LOAD_ALL_LOG="$LOG_DIR/load-all.log"
 ARCHIVE_LOG="$LOG_DIR/archive-range.log"
 VERIFY_ARCHIVE_LOG="$LOG_DIR/verify-archive.log"
 EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
@@ -167,6 +178,7 @@ ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
 SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
 SAFETY_ARTIFACT="$(extract_value "safety_case_artifact" "$SAFETY_LOG")"
+LOAD_ALL_REPORT="$(extract_value "load_all_report" "$LOAD_ALL_LOG")"
 ARCHIVE_RANGE_MANIFEST="$(extract_value "archive_manifest" "$ARCHIVE_LOG")"
 VERIFY_ARCHIVE_SHA="$(extract_value "verify_archive_sha256" "$VERIFY_ARCHIVE_LOG")"
 EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL_REPLAY_LOG")"
@@ -186,7 +198,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -194,27 +206,29 @@ summary_path = sys.argv[1]
 run_id = sys.argv[2]
 run_checks = sys.argv[3].lower() == "true"
 run_extended_checks = sys.argv[4].lower() == "true"
-steps_tsv = sys.argv[5]
-safety_manifest = sys.argv[6]
-safety_artifact = sys.argv[7]
-archive_manifest = sys.argv[8]
-archive_sha = sys.argv[9]
-external_replay_report = sys.argv[10]
-controls_report = sys.argv[11]
-prove_idempotency_report = sys.argv[12]
-prove_latch_approval_report = sys.argv[13]
-model_check_report = sys.argv[14]
-prove_breakers_report = sys.argv[15]
-prove_candles_report = sys.argv[16]
-snapshot_verify_report = sys.argv[17]
-verify_service_modes_report = sys.argv[18]
-ws_resume_smoke_report = sys.argv[19]
-shadow_verify_report = sys.argv[20]
-compliance_report = sys.argv[21]
-transparency_report = sys.argv[22]
-access_review_report = sys.argv[23]
-safety_budget_report = sys.argv[24]
-assurance_json = sys.argv[25]
+run_load_profiles = sys.argv[5].lower() == "true"
+steps_tsv = sys.argv[6]
+safety_manifest = sys.argv[7]
+safety_artifact = sys.argv[8]
+load_all_report = sys.argv[9]
+archive_manifest = sys.argv[10]
+archive_sha = sys.argv[11]
+external_replay_report = sys.argv[12]
+controls_report = sys.argv[13]
+prove_idempotency_report = sys.argv[14]
+prove_latch_approval_report = sys.argv[15]
+model_check_report = sys.argv[16]
+prove_breakers_report = sys.argv[17]
+prove_candles_report = sys.argv[18]
+snapshot_verify_report = sys.argv[19]
+verify_service_modes_report = sys.argv[20]
+ws_resume_smoke_report = sys.argv[21]
+shadow_verify_report = sys.argv[22]
+compliance_report = sys.argv[23]
+transparency_report = sys.argv[24]
+access_review_report = sys.argv[25]
+safety_budget_report = sys.argv[26]
+assurance_json = sys.argv[27]
 
 steps = []
 ok = True
@@ -239,10 +253,12 @@ summary = {
     "ok": ok,
     "run_checks": run_checks,
     "run_extended_checks": run_extended_checks,
+    "run_load_profiles": run_load_profiles,
     "steps": steps,
     "artifacts": {
         "safety_case_manifest": safety_manifest or None,
         "safety_case_artifact": safety_artifact or None,
+        "load_all_report": load_all_report or None,
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,
         "external_replay_report": external_replay_report or None,

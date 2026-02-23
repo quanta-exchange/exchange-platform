@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all + safety->controls->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -364,10 +364,13 @@ Success output includes:
 ### 14) Verification factory (single command gate)
 ```bash
 make verification-factory
+# include staged load profiles in same gate:
+./scripts/verification_factory.sh --run-load-profiles
 ```
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
+- summary includes `run_load_profiles=true|false` and (when enabled) `artifacts.load_all_report`
 
 ### 15) Signed policy smoke
 ```bash
@@ -492,7 +495,8 @@ Outputs:
 - `archive_manifest=build/archive/<timestamp>/manifest.json`
 - `verify_archive_ok=true`
 
-`verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.
+`verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.  
+`--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.
 
 ### 27) Determinism proof
 ```bash
