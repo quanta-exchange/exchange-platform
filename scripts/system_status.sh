@@ -264,6 +264,7 @@ change_audit_chain_latest = read_latest_json("build/change-audit/verify-change-a
 pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
 safety_budget_latest = read_latest_json("build/safety/safety-budget-latest.json")
 budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-latest.json")
+proof_health_latest = read_latest_json("build/metrics/proof-health-latest.json")
 policy_smoke_latest = read_latest_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest.json")
 network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
@@ -558,6 +559,21 @@ report = {
                     "path": budget_freshness_latest.get("path"),
                     "ok": (budget_freshness_latest.get("payload") or {}).get("ok"),
                     "error": budget_freshness_latest.get("error"),
+                },
+                "proof_health": {
+                    "present": proof_health_latest.get("present", False),
+                    "path": proof_health_latest.get("path"),
+                    "ok": (proof_health_latest.get("payload") or {}).get("ok"),
+                    "tracked_count": (proof_health_latest.get("payload") or {}).get(
+                        "tracked_count"
+                    ),
+                    "present_count": (proof_health_latest.get("payload") or {}).get(
+                        "present_count"
+                    ),
+                    "failing_count": (proof_health_latest.get("payload") or {}).get(
+                        "failing_count"
+                    ),
+                    "error": proof_health_latest.get("error"),
                 },
                 "mapping_integrity": {
                     "present": mapping_integrity_latest.get("present", False),

@@ -655,6 +655,12 @@
       "title": "Runbook-as-code exists for idempotency+latch failures and can be executed in verification/release contexts",
       "enforced": false,
       "required_evidence": ["runbooks/idempotency_latch_failure.sh", "runbooks/idempotency_latch_failure.md", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "README.md", "RUNBOOK.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-108",
+      "title": "Proof and runbook health are exported as Prometheus metrics with alert examples",
+      "enforced": false,
+      "required_evidence": ["scripts/proof_health_metrics.sh", "infra/observability/proof-alert-rules.example.yml", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md", "Makefile"]
     }
   ]
 }

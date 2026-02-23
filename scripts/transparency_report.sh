@@ -62,6 +62,7 @@ pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
 rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
 anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
 budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
+proof_health = read_json("build/metrics/proof-health-latest.json")
 policy_smoke = read_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
 network_partition = read_json("build/chaos/network-partition-latest.json")
@@ -95,6 +96,7 @@ sources = {
     "rbac_sod": rbac_sod,
     "anomaly": anomaly,
     "budget_freshness": budget_freshness,
+    "proof_health": proof_health,
     "policy_smoke": policy_smoke,
     "policy_tamper": policy_tamper,
     "network_partition": network_partition,
@@ -256,6 +258,8 @@ report = {
             "idempotency_latch_runbook_idempotency_ok": bool(idempotency_latch_runbook.get("idempotency_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_latch_ok": bool(idempotency_latch_runbook.get("latch_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook.get("recommended_action") if idempotency_latch_runbook else None,
+            "proof_health_ok": bool(proof_health.get("ok")) if proof_health else None,
+            "proof_health_failing_count": int(proof_health.get("failing_count")) if proof_health and proof_health.get("failing_count") is not None else None,
             "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
             "budget_freshness_proof_ok": bool(budget_freshness.get("ok")) if budget_freshness else None,
         },
@@ -288,6 +292,7 @@ report = {
         "rbac_sod": "build/security/rbac-sod-check-latest.json",
         "anomaly": "build/anomaly/anomaly-detector-latest.json",
         "budget_freshness": "build/safety/prove-budget-freshness-latest.json",
+        "proof_health": "build/metrics/proof-health-latest.json",
         "policy_smoke": "build/policy-smoke/policy-smoke-latest.json",
         "policy_tamper": "build/policy/prove-policy-tamper-latest.json",
         "network_partition": "build/chaos/network-partition-latest.json",

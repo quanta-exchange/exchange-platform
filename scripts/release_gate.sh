@@ -247,6 +247,8 @@ exactly_once_runbook_recommended_action = None
 mapping_integrity_ok = None
 mapping_integrity_runbook_proof_ok = None
 mapping_integrity_runbook_recommended_action = None
+proof_health_ok = None
+proof_health_failing_count = None
 idempotency_latch_runbook_idempotency_ok = None
 idempotency_latch_runbook_latch_ok = None
 idempotency_latch_runbook_recommended_action = None
@@ -416,6 +418,16 @@ if mapping_integrity_report_path:
         with open(candidate, "r", encoding="utf-8") as f:
             mapping_integrity_payload = json.load(f)
         mapping_integrity_ok = bool(mapping_integrity_payload.get("ok", False))
+proof_health_report_path = summary.get("artifacts", {}).get("proof_health_metrics_report")
+if proof_health_report_path:
+    candidate = pathlib.Path(proof_health_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            proof_health_payload = json.load(f)
+        proof_health_ok = bool(proof_health_payload.get("ok", False))
+        proof_health_failing_count = proof_health_payload.get("failing_count")
 mapping_integrity_runbook_dir = summary.get("artifacts", {}).get(
     "mapping_integrity_runbook_dir"
 )
@@ -521,6 +533,8 @@ payload = {
     "mapping_integrity_ok": mapping_integrity_ok,
     "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
     "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook_recommended_action,
+    "proof_health_ok": proof_health_ok,
+    "proof_health_failing_count": proof_health_failing_count,
     "idempotency_latch_runbook_idempotency_ok": idempotency_latch_runbook_idempotency_ok,
     "idempotency_latch_runbook_latch_ok": idempotency_latch_runbook_latch_ok,
     "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook_recommended_action,

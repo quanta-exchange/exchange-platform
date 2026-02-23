@@ -50,6 +50,7 @@ scripts/
   rbac_sod_check.sh       # G32 segregation-of-duties RBAC checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
+  proof_health_metrics.sh # proof/runbook artifact health -> Prometheus textfile exporter
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
   prove_idempotency_scope.sh # G4.1 idempotency scope/TTL proof runner
@@ -488,7 +489,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_exactly_once_runbook=true|false`, `run_mapping_integrity_runbook=true|false`, `run_idempotency_latch_runbook=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `exactly_once_runbook_dir`, `mapping_integrity_runbook_dir`, `idempotency_latch_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_idempotency_report`, `prove_latch_approval_report`, `prove_exactly_once_million_report`, `prove_mapping_integrity_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_exactly_once_runbook=true|false`, `run_mapping_integrity_runbook=true|false`, `run_idempotency_latch_runbook=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `exactly_once_runbook_dir`, `mapping_integrity_runbook_dir`, `idempotency_latch_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_idempotency_report`, `prove_latch_approval_report`, `prove_exactly_once_million_report`, `prove_mapping_integrity_report`, `proof_health_metrics_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -599,7 +600,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.evidence_pack`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `mapping_integrity`)
+- report includes `checks.compliance.evidence_pack`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`)
 
 ### 17.1) Anomaly detector
 ```bash
@@ -677,7 +678,19 @@ Success output includes:
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
 - integrity summary includes `idempotency_scope_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `idempotency_latch_runbook`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `idempotency_latch_runbook`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+
+### 20.1) Proof health metrics exporter
+```bash
+make proof-health-metrics
+```
+Success output includes:
+- `proof_health_metrics_report=build/metrics/proof-health-<timestamp>.json`
+- `proof_health_metrics_latest=build/metrics/proof-health-latest.json`
+- `proof_health_metrics_prom=build/metrics/proof-health-<timestamp>.prom`
+- `proof_health_metrics_prom_latest=build/metrics/proof-health-latest.prom`
+- `proof_health_metrics_ok=true|false`
+- alert examples: `infra/observability/proof-alert-rules.example.yml`
 
 ### 20) External replay demo
 ```bash
@@ -906,6 +919,7 @@ Outputs:
 - report includes exactly-once runbook context: `exactly_once_runbook_proof_ok`, `exactly_once_runbook_proof_repeats`, `exactly_once_runbook_recommended_action`
 - report includes mapping-integrity runbook context: `mapping_integrity_runbook_proof_ok`, `mapping_integrity_runbook_recommended_action`
 - report includes idempotency+latch runbook context: `idempotency_latch_runbook_idempotency_ok`, `idempotency_latch_runbook_latch_ok`, `idempotency_latch_runbook_recommended_action`
+- report includes proof-health context: `proof_health_ok`, `proof_health_failing_count`
 - report includes mapping-integrity context: `mapping_integrity_ok`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 

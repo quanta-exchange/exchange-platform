@@ -1,0 +1,38 @@
+groups:
+  - name: proof-health-alerts
+    rules:
+      - alert: ProofArtifactMissing
+        expr: proof_health_artifact_present == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proof artifact missing"
+          description: "Latest proof artifact is missing for {{ $labels.proof }}."
+
+      - alert: ProofArtifactFailed
+        expr: proof_health_artifact_ok == 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proof artifact reports failure"
+          description: "Latest proof artifact for {{ $labels.proof }} reports non-ok."
+
+      - alert: ProofArtifactStale
+        expr: proof_health_artifact_age_seconds > 604800
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proof artifact stale"
+          description: "Proof artifact for {{ $labels.proof }} is older than 7 days."
+
+      - alert: RunbookRequiresOperatorAction
+        expr: proof_health_runbook_recommended_action{action!="NO_ACTION"} == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Runbook recommends follow-up action"
+          description: "Runbook {{ $labels.runbook }} recommends {{ $labels.action }}."
