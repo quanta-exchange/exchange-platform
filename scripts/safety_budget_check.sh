@@ -372,6 +372,12 @@ for key, budget in budgets.items():
                 "compliance_unmapped_enforced_controls_count="
                 f"{unmapped_enforced_controls_count} > {max_unmapped_enforced_controls}"
             )
+    elif key == "mappingIntegrity":
+        must_ok = bool(budget.get("mustBeOk", True))
+        mapping_integrity_ok = bool(payload.get("ok", False))
+        if must_ok and not mapping_integrity_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_integrity_not_ok")
     elif key == "chaosNetworkPartition":
         must_ok = bool(budget.get("mustBeOk", True))
         partition_ok = bool(payload.get("ok", False))

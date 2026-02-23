@@ -249,6 +249,9 @@ if not kafka_status.get("up"):
 
 controls_latest = read_latest_json("build/controls/controls-check-latest.json")
 compliance_latest = read_latest_json("build/compliance/compliance-evidence-latest.json")
+mapping_integrity_latest = read_latest_json(
+    "build/compliance/prove-mapping-integrity-latest.json"
+)
 controls_freshness_latest = read_latest_json("build/controls/prove-controls-freshness-latest.json")
 determinism_latest = read_latest_json("build/determinism/prove-determinism-latest.json")
 exactly_once_million_latest = read_latest_json(
@@ -486,6 +489,12 @@ report = {
                     "path": budget_freshness_latest.get("path"),
                     "ok": (budget_freshness_latest.get("payload") or {}).get("ok"),
                     "error": budget_freshness_latest.get("error"),
+                },
+                "mapping_integrity": {
+                    "present": mapping_integrity_latest.get("present", False),
+                    "path": mapping_integrity_latest.get("path"),
+                    "ok": (mapping_integrity_latest.get("payload") or {}).get("ok"),
+                    "error": mapping_integrity_latest.get("error"),
                 },
             },
         },

@@ -53,6 +53,7 @@ snapshot_verify = read_json("build/snapshot/snapshot-verify-latest.json")
 controls = read_json("build/controls/controls-check-latest.json")
 controls_freshness = read_json("build/controls/prove-controls-freshness-latest.json")
 compliance = read_json("build/compliance/compliance-evidence-latest.json")
+mapping_integrity = read_json("build/compliance/prove-mapping-integrity-latest.json")
 audit_chain = read_json("build/audit/verify-audit-chain-latest.json")
 change_audit_chain = read_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
@@ -81,6 +82,7 @@ sources = {
     "controls": controls,
     "controls_freshness": controls_freshness,
     "compliance": compliance,
+    "mapping_integrity": mapping_integrity,
     "audit_chain": audit_chain,
     "change_audit_chain": change_audit_chain,
     "pii_log_scan": pii_log_scan,
@@ -170,6 +172,7 @@ report = {
             "compliance_unmapped_controls_count": int(compliance.get("unmapped_controls_count")) if compliance and compliance.get("unmapped_controls_count") is not None else None,
             "compliance_unmapped_enforced_controls_count": int(compliance.get("unmapped_enforced_controls_count")) if compliance and compliance.get("unmapped_enforced_controls_count") is not None else None,
             "compliance_mapping_coverage_ratio": float(compliance.get("mapping_coverage_ratio")) if compliance and compliance.get("mapping_coverage_ratio") is not None else None,
+            "mapping_integrity_ok": bool(mapping_integrity.get("ok")) if mapping_integrity else None,
             "audit_chain_ok": bool(audit_chain.get("ok")) if audit_chain else None,
             "audit_chain_mode": audit_chain.get("mode") if audit_chain else None,
             "change_audit_chain_ok": bool(change_audit_chain.get("ok")) if change_audit_chain else None,
@@ -259,6 +262,7 @@ report = {
         "controls": "build/controls/controls-check-latest.json",
         "controls_freshness": "build/controls/prove-controls-freshness-latest.json",
         "compliance": "build/compliance/compliance-evidence-latest.json",
+        "mapping_integrity": "build/compliance/prove-mapping-integrity-latest.json",
         "audit_chain": "build/audit/verify-audit-chain-latest.json",
         "change_audit_chain": "build/change-audit/verify-change-audit-chain-latest.json",
         "pii_log_scan": "build/security/pii-log-scan-latest.json",

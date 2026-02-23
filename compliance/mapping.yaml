@@ -509,6 +509,11 @@
       "controlId": "CTRL-102",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Compliance evidence and safety budget checks detect duplicate control mappings so controls-to-framework integrity drift is blocked before release trust decisions"
+    },
+    {
+      "controlId": "CTRL-103",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Mapping integrity proof is executed in verification flow and surfaced in release/status/transparency contexts so mapping-schema regressions are detected with deterministic evidence"
     }
   ]
 }

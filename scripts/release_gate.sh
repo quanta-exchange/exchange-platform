@@ -220,6 +220,7 @@ exactly_once_million_concurrency = None
 exactly_once_runbook_proof_ok = None
 exactly_once_runbook_proof_repeats = None
 exactly_once_runbook_recommended_action = None
+mapping_integrity_ok = None
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -355,6 +356,15 @@ if exactly_once_runbook_dir:
         exactly_once_runbook_proof_ok = bool(runbook_payload.get("proof_ok", False))
         exactly_once_runbook_proof_repeats = runbook_payload.get("proof_repeats")
         exactly_once_runbook_recommended_action = runbook_payload.get("recommended_action")
+mapping_integrity_report_path = summary.get("artifacts", {}).get("prove_mapping_integrity_report")
+if mapping_integrity_report_path:
+    candidate = pathlib.Path(mapping_integrity_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            mapping_integrity_payload = json.load(f)
+        mapping_integrity_ok = bool(mapping_integrity_payload.get("ok", False))
 
 controls_gate_ok = True
 if strict_controls:
@@ -412,6 +422,7 @@ payload = {
     "exactly_once_runbook_proof_ok": exactly_once_runbook_proof_ok,
     "exactly_once_runbook_proof_repeats": exactly_once_runbook_proof_repeats,
     "exactly_once_runbook_recommended_action": exactly_once_runbook_recommended_action,
+    "mapping_integrity_ok": mapping_integrity_ok,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),
