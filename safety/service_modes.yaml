@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "modes": [
+    {
+      "mode": "NORMAL",
+      "implemented": true,
+      "allow": ["PLACE_ORDER", "CANCEL_ORDER", "CANCEL_ALL", "SET_MODE"]
+    },
+    {
+      "mode": "CANCEL_ONLY",
+      "implemented": true,
+      "allow": ["CANCEL_ORDER", "CANCEL_ALL", "SET_MODE"]
+    },
+    {
+      "mode": "SOFT_HALT",
+      "implemented": true,
+      "allow": ["CANCEL_ORDER", "CANCEL_ALL", "SET_MODE"]
+    },
+    {
+      "mode": "HARD_HALT",
+      "implemented": true,
+      "allow": ["CANCEL_ORDER", "CANCEL_ALL", "SET_MODE"]
+    },
+    {
+      "mode": "TRADE_HALT",
+      "implemented": false,
+      "allow": []
+    },
+    {
+      "mode": "WITHDRAW_HALT",
+      "implemented": false,
+      "allow": []
+    },
+    {
+      "mode": "READ_ONLY",
+      "implemented": false,
+      "allow": []
+    }
+  ]
+}

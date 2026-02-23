@@ -39,7 +39,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->model-check->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->model-check->breakers->service-modes->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -47,6 +47,7 @@ scripts/
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
+  verify_service_modes.sh # G26 service mode matrix verification
   model_check.sh          # G28 state-machine model checker
   shadow_verify.sh        # G33 production shadow verification
   archive_range.sh        # G21 legal archive capture
@@ -150,7 +151,7 @@ Rust protobuf build note (Trading Core):
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
 make safety-case
-# optional full safety-case proof set (exactly-once + reconciliation + chaos + determinism + breakers 포함)
+# optional full safety-case proof set (exactly-once + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
 make safety-case-extended
 ```
 
@@ -258,6 +259,7 @@ make safety-case-extended
 - `build/ws/ws-smoke.json`
 - `build/determinism/prove-determinism-latest.json`
 - `build/breakers/prove-breakers-latest.json`
+- `build/service-modes/verify-service-modes-latest.json`
 
 ### 12) Assurance pack (claims + evidence index)
 ```bash
@@ -423,6 +425,15 @@ Outputs:
 - `prove_breakers_report=build/breakers/prove-breakers-<timestamp>.json`
 - `prove_breakers_latest=build/breakers/prove-breakers-latest.json`
 - `prove_breakers_ok=true|false`
+
+### 27.2) Service-mode matrix verification
+```bash
+make verify-service-modes
+```
+Outputs:
+- `verify_service_modes_report=build/service-modes/verify-service-modes-<timestamp>.json`
+- `verify_service_modes_latest=build/service-modes/verify-service-modes-latest.json`
+- `verify_service_modes_ok=true|false`
 
 ### 28) State-machine model check
 ```bash

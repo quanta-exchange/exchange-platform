@@ -991,6 +991,77 @@ fn volatility_guard_transitions_to_cancel_only() {
 }
 
 #[test]
+fn service_mode_hard_halt_blocks_new_orders() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let mode_resp = core
+        .set_symbol_mode(set_mode_req(
+            "mode-hard-halt",
+            "idem-mode-hard-halt",
+            proto::SymbolMode::HardHalt,
+            "ops-halt",
+        ))
+        .unwrap();
+    assert!(mode_resp.accepted);
+
+    let blocked = core
+        .place_order(place_req(
+            "mode-halt-order",
+            "idem-mode-halt-order",
+            "u1",
+            "mode-halt-o1",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(!blocked.accepted);
+    assert_eq!(blocked.reject_code, RejectCode::MarketHalted.as_str());
+}
+
+#[test]
+fn service_mode_cancel_only_allows_cancels() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let placed = core
+        .place_order(place_req(
+            "mode-pre-place",
+            "idem-mode-pre-place",
+            "u1",
+            "mode-cancel-only-o1",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(placed.accepted);
+
+    let mode_resp = core
+        .set_symbol_mode(set_mode_req(
+            "mode-cancel-only",
+            "idem-mode-cancel-only",
+            proto::SymbolMode::CancelOnly,
+            "ops-cancel-only",
+        ))
+        .unwrap();
+    assert!(mode_resp.accepted);
+
+    let cancel = core
+        .cancel_order(cancel_req(
+            "mode-cancel-only-cancel",
+            "idem-mode-cancel-only-cancel",
+            "u1",
+            "mode-cancel-only-o1",
+        ))
+        .unwrap();
+    assert!(cancel.accepted);
+}
+
+#[test]
 fn cancel_all_clears_book() {
     let tmp = TempDir::new().unwrap();
     let mut core = make_engine(&tmp, FencingCoordinator::new());

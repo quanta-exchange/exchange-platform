@@ -155,6 +155,12 @@
       "title": "Circuit-breaker proof evidence exists",
       "enforced": false,
       "required_evidence": ["build/breakers/prove-breakers-latest.json", "scripts/prove_breakers.sh"]
+    },
+    {
+      "id": "CTRL-027",
+      "title": "Service-mode matrix verification evidence exists",
+      "enforced": false,
+      "required_evidence": ["safety/service_modes.yaml", "build/service-modes/verify-service-modes-latest.json", "scripts/verify_service_modes.sh"]
     }
   ]
 }

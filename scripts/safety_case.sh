@@ -95,6 +95,7 @@ if [[ "$RUN_EXTENDED_CHECKS" == "true" ]]; then
   run_cmd "chaos-replay" ./scripts/chaos_replay.sh
   run_cmd "prove-determinism" env RUNS="${PROVE_DETERMINISM_RUNS}" ./scripts/prove_determinism.sh
   run_cmd "prove-breakers" ./scripts/prove_breakers.sh
+  run_cmd "verify-service-modes" ./scripts/verify_service_modes.sh
 fi
 
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
@@ -130,6 +131,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/ws/ws-smoke.json"
   "build/determinism/prove-determinism-latest.json"
   "build/breakers/prove-breakers-latest.json"
+  "build/service-modes/verify-service-modes-latest.json"
 )
 
 declare -a EVIDENCE_FILES=()

@@ -363,6 +363,7 @@ jobs:
             build/model-check/**
             build/shadow/**
             build/breakers/**
+            build/service-modes/**
 
   security-baseline:
     runs-on: ubuntu-latest
