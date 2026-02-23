@@ -595,6 +595,12 @@
       "title": "Safety budget tracks compliance mapping coverage and full-mapping mode",
       "enforced": false,
       "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "scripts/compliance_evidence.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-098",
+      "title": "Verification and safety budget can evaluate million-duplicate exactly-once proof",
+      "enforced": false,
+      "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/prove_exactly_once_million.sh", "README.md"]
     }
   ]
 }

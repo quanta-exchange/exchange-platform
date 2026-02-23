@@ -30,6 +30,13 @@
       "minExecutedRuns": 1,
       "maxDistinctHashes": 1
     },
+    "exactlyOnceMillion": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "minRepeats": 1000000,
+      "enforceAtOrAboveMinRepeats": true
+    },
     "invariantsSummary": {
       "required": false,
       "mustClickhouseBeOkWhenChecked": true,
@@ -128,6 +135,7 @@
     "dr": "build/dr/dr-report.json",
     "invariants": "build/invariants/ledger-invariants.json",
     "determinism": "build/determinism/prove-determinism-latest.json",
+    "exactlyOnceMillion": "build/exactly-once/prove-exactly-once-million-latest.json",
     "invariantsSummary": "build/invariants/invariants-summary.json",
     "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",
     "ws": "build/ws/ws-smoke.json",

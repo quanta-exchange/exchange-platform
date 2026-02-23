@@ -196,6 +196,28 @@ for key, budget in budgets.items():
             entry["details"].append(
                 f"determinism_distinct_hashes={len(distinct_hashes)} > {max_distinct_hashes}"
             )
+    elif key == "exactlyOnceMillion":
+        must_ok = bool(budget.get("mustBeOk", True))
+        exactly_once_ok = bool(payload.get("ok", False))
+        repeats = int(payload.get("repeats", 0))
+        runner_exit_code = int(payload.get("runner_exit_code", 1))
+        min_repeats = int(budget.get("minRepeats", 1_000_000))
+        enforce_at_or_above_min = bool(budget.get("enforceAtOrAboveMinRepeats", True))
+        should_enforce = repeats >= min_repeats if enforce_at_or_above_min else True
+        if should_enforce:
+            if must_ok and not exactly_once_ok:
+                entry["ok"] = False
+                entry["details"].append("exactly_once_million_not_ok")
+            if repeats < min_repeats:
+                entry["ok"] = False
+                entry["details"].append(f"exactly_once_million_repeats={repeats} < {min_repeats}")
+            if runner_exit_code != 0:
+                entry["ok"] = False
+                entry["details"].append(f"exactly_once_million_runner_exit_code={runner_exit_code}")
+        else:
+            entry["details"].append(
+                f"exactly_once_million_skipped_below_min_repeats={repeats}<{min_repeats}"
+            )
     elif key == "invariantsSummary":
         must_clickhouse_ok = bool(budget.get("mustClickhouseBeOkWhenChecked", True))
         must_core_ok = bool(budget.get("mustCoreBeOkWhenChecked", True))
