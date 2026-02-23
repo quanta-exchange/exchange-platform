@@ -117,6 +117,7 @@ impl TradingCoreService for CoreGrpcService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let core_env = getenv("CORE_ENV", "local");
     let addr: SocketAddr = getenv("CORE_GRPC_ADDR", "0.0.0.0:50051").parse()?;
     let symbol = getenv("CORE_SYMBOL", "BTC-KRW");
     let wal_dir = getenv("CORE_WAL_DIR", "/tmp/trading-core/wal");
@@ -126,6 +127,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let publish_retries = getenv_usize("CORE_PUBLISH_RETRIES", 3);
     let recent_events_limit = getenv_usize("CORE_RECENT_EVENTS_LIMIT", 4096);
     let stub_trades = getenv_bool("CORE_STUB_TRADES", false);
+    if let Err(reason) = validate_runtime_guardrails(
+        &core_env,
+        &wal_dir,
+        &outbox_dir,
+        stub_trades,
+        &kafka_brokers,
+    ) {
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, reason).into());
+    }
 
     let mut cfg = CoreConfig::default();
     cfg.symbol = symbol;
@@ -172,6 +182,52 @@ fn getenv_bool(key: &str, fallback: bool) -> bool {
         .ok()
         .and_then(|v| v.parse::<bool>().ok())
         .unwrap_or(fallback)
+}
+
+fn is_production_environment(env: &str) -> bool {
+    matches!(
+        env.trim().to_ascii_lowercase().as_str(),
+        "prod" | "production" | "live"
+    )
+}
+
+fn is_tmp_path(path: &str) -> bool {
+    let normalized = path.trim().to_ascii_lowercase();
+    normalized == "/tmp" || normalized.starts_with("/tmp/")
+}
+
+fn has_localhost_broker(brokers: &str) -> bool {
+    brokers
+        .split(',')
+        .map(str::trim)
+        .any(|b| b.starts_with("localhost:") || b.starts_with("127.0.0.1:"))
+}
+
+fn validate_runtime_guardrails(
+    core_env: &str,
+    wal_dir: &str,
+    outbox_dir: &str,
+    stub_trades: bool,
+    kafka_brokers: &str,
+) -> Result<(), String> {
+    if !is_production_environment(core_env) {
+        return Ok(());
+    }
+    if stub_trades {
+        return Err("production guardrail: CORE_STUB_TRADES must be false".to_string());
+    }
+    if is_tmp_path(wal_dir) {
+        return Err("production guardrail: CORE_WAL_DIR must not point to /tmp".to_string());
+    }
+    if is_tmp_path(outbox_dir) {
+        return Err("production guardrail: CORE_OUTBOX_DIR must not point to /tmp".to_string());
+    }
+    if has_localhost_broker(kafka_brokers) {
+        return Err(
+            "production guardrail: CORE_KAFKA_BROKERS must not use localhost/127.0.0.1".to_string(),
+        );
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -298,5 +354,71 @@ mod tests {
         .unwrap();
 
         assert!(published.load(Ordering::SeqCst) > baseline);
+    }
+
+    #[test]
+    fn runtime_guardrails_allow_local_defaults() {
+        let res = validate_runtime_guardrails(
+            "local",
+            "/tmp/trading-core/wal",
+            "/tmp/trading-core/outbox",
+            true,
+            "localhost:29092",
+        );
+        assert!(res.is_ok(), "local mode should allow development defaults");
+    }
+
+    #[test]
+    fn runtime_guardrails_reject_prod_stub_trades() {
+        let err = validate_runtime_guardrails(
+            "prod",
+            "/var/lib/trading-core/wal",
+            "/var/lib/trading-core/outbox",
+            true,
+            "kafka:9092",
+        )
+        .unwrap_err();
+        assert!(err.contains("CORE_STUB_TRADES"));
+    }
+
+    #[test]
+    fn runtime_guardrails_reject_prod_tmp_dirs() {
+        let err = validate_runtime_guardrails(
+            "production",
+            "/tmp/trading-core/wal",
+            "/var/lib/trading-core/outbox",
+            false,
+            "kafka:9092",
+        )
+        .unwrap_err();
+        assert!(err.contains("CORE_WAL_DIR"));
+    }
+
+    #[test]
+    fn runtime_guardrails_reject_prod_localhost_kafka() {
+        let err = validate_runtime_guardrails(
+            "prod",
+            "/var/lib/trading-core/wal",
+            "/var/lib/trading-core/outbox",
+            false,
+            "localhost:29092,redpanda:9092",
+        )
+        .unwrap_err();
+        assert!(err.contains("CORE_KAFKA_BROKERS"));
+    }
+
+    #[test]
+    fn runtime_guardrails_accept_valid_prod_configuration() {
+        let res = validate_runtime_guardrails(
+            "prod",
+            "/var/lib/trading-core/wal",
+            "/var/lib/trading-core/outbox",
+            false,
+            "redpanda-0:9092,redpanda-1:9092",
+        );
+        assert!(
+            res.is_ok(),
+            "valid production settings should pass guardrails"
+        );
     }
 }

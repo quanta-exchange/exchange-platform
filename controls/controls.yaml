@@ -269,6 +269,12 @@
       "title": "Edge production fail-closed startup guardrails exist",
       "enforced": false,
       "required_evidence": ["services/edge-gateway/internal/gateway/server.go", "services/edge-gateway/internal/gateway/server_test.go", "services/edge-gateway/cmd/edge-gateway/main.go", "README.md"]
+    },
+    {
+      "id": "CTRL-046",
+      "title": "Trading-core production fail-closed startup guardrails exist",
+      "enforced": false,
+      "required_evidence": ["services/trading-core/src/bin/trading-core.rs", "README.md"]
     }
   ]
 }

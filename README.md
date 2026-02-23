@@ -143,6 +143,14 @@ npm run dev
   - API secrets are not configured
   - WS origin allowlist is empty
 
+### Production startup guardrails (Trading Core)
+- Enable guardrails with `CORE_ENV=prod` (accepted aliases: `production`, `live`).
+- In production mode, trading-core startup fails if any of these are true:
+  - `CORE_STUB_TRADES=true`
+  - `CORE_WAL_DIR` points to `/tmp`
+  - `CORE_OUTBOX_DIR` points to `/tmp`
+  - `CORE_KAFKA_BROKERS` contains `localhost:*` or `127.0.0.1:*`
+
 ### 1) Contracts
 If `buf` is installed locally:
 ```bash
