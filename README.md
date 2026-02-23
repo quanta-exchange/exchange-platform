@@ -54,6 +54,7 @@ scripts/
   apply_change.sh         # G10 apply + verification evidence
   break_glass.sh          # G10 emergency privilege with TTL + audit log
   access_review.sh        # G36 access review report
+  system_status.sh        # G13 runbook status snapshot (core/edge/ledger/kafka/ws metrics)
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
@@ -298,7 +299,16 @@ Success output includes:
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
 
-### 17) Runbook-as-code drills
+### 17) System status snapshot
+```bash
+make system-status
+```
+Success output includes:
+- `system_status_report=build/status/system-status-<timestamp>.json`
+- `system_status_latest=build/status/system-status-latest.json`
+- `system_status_ok=true|false`
+
+### 18) Runbook-as-code drills
 ```bash
 make runbook-lag-spike
 make runbook-ws-drop
@@ -306,8 +316,9 @@ make runbook-ws-drop
 Success output includes:
 - `runbook_lag_spike_ok=true` or `runbook_ws_drop_spike_ok=true`
 - `runbook_output_dir=build/runbooks/...`
+- `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 
-### 18) Compliance evidence pack
+### 19) Compliance evidence pack
 ```bash
 make compliance-evidence
 ```
@@ -316,7 +327,7 @@ Success output includes:
 - `compliance_evidence_latest=build/compliance/compliance-evidence-latest.json`
 - `compliance_evidence_ok=true|false`
 
-### 19) Transparency report
+### 20) Transparency report
 ```bash
 make transparency-report
 ```

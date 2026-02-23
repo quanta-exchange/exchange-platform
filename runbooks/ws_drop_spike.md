@@ -11,6 +11,8 @@
 ```
 
 ## What It Does
-1. slow-client WS smoke를 실행해 backpressure 정책(drop/close)을 검증
-2. safety budget 체크로 WS 예산 준수 여부를 기록
-3. 결과 리포트를 `build/runbooks/ws-drop-spike-<timestamp>/`에 저장
+1. 실행 전 `system_status.sh`로 core/edge/ledger/kafka/ws 상태 스냅샷(`status-before.json`)을 저장
+2. slow-client WS smoke를 실행해 backpressure 정책(drop/close)을 검증
+3. safety budget 체크로 WS 예산 준수 여부를 기록
+4. 실행 후 `system_status.sh` 스냅샷(`status-after.json`)을 저장
+5. 결과 리포트를 `build/runbooks/ws-drop-spike-<timestamp>/`에 저장
