@@ -1008,6 +1008,72 @@ func TestPruneOrdersLockedBoundsTotalRecordCount(t *testing.T) {
 	}
 }
 
+func TestSettleBuyerLockedRejectsInsufficientQuoteWithoutCreditingBase(t *testing.T) {
+	s := &Server{
+		state: &state{
+			wallets: map[string]map[string]walletBalance{
+				"buyer": {
+					"KRW": {Available: 1, Hold: 0},
+					"BTC": {Available: 0, Hold: 0},
+				},
+			},
+		},
+	}
+
+	s.state.mu.Lock()
+	updates := s.settleBuyerLocked("buyer", "BTC", "KRW", 2, 10)
+	krw := s.state.wallets["buyer"]["KRW"]
+	btc := s.state.wallets["buyer"]["BTC"]
+	anomalies := s.state.settlementAnomalies
+	s.state.mu.Unlock()
+
+	if len(updates) != 0 {
+		t.Fatalf("expected no settlement updates on insufficient quote balance")
+	}
+	if krw.Available != 1 || krw.Hold != 0 {
+		t.Fatalf("unexpected KRW mutation on failed settle: %+v", krw)
+	}
+	if btc.Available != 0 || btc.Hold != 0 {
+		t.Fatalf("unexpected BTC credit on failed settle: %+v", btc)
+	}
+	if anomalies != 1 {
+		t.Fatalf("expected one settlement anomaly, got %d", anomalies)
+	}
+}
+
+func TestSettleSellerLockedRejectsInsufficientBaseWithoutCreditingQuote(t *testing.T) {
+	s := &Server{
+		state: &state{
+			wallets: map[string]map[string]walletBalance{
+				"seller": {
+					"BTC": {Available: 0.2, Hold: 0},
+					"KRW": {Available: 0, Hold: 0},
+				},
+			},
+		},
+	}
+
+	s.state.mu.Lock()
+	updates := s.settleSellerLocked("seller", "BTC", "KRW", 1, 100)
+	btc := s.state.wallets["seller"]["BTC"]
+	krw := s.state.wallets["seller"]["KRW"]
+	anomalies := s.state.settlementAnomalies
+	s.state.mu.Unlock()
+
+	if len(updates) != 0 {
+		t.Fatalf("expected no settlement updates on insufficient base balance")
+	}
+	if btc.Available != 0.2 || btc.Hold != 0 {
+		t.Fatalf("unexpected BTC mutation on failed settle: %+v", btc)
+	}
+	if krw.Available != 0 || krw.Hold != 0 {
+		t.Fatalf("unexpected KRW credit on failed settle: %+v", krw)
+	}
+	if anomalies != 1 {
+		t.Fatalf("expected one settlement anomaly, got %d", anomalies)
+	}
+}
+
 func TestHandleResumeReplaysTradesOnlyForTradeSubscription(t *testing.T) {
 	s := &Server{
 		state: &state{
@@ -1165,12 +1231,13 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 				c2: {},
 				c3: {},
 			},
-			slowConsumerCloses: 2,
-			wsPolicyCloses:     4,
-			wsRateLimitCloses:  3,
-			wsConnRejects:      5,
-			wsDroppedMsgs:      7,
-			publicRateLimited:  6,
+			slowConsumerCloses:  2,
+			wsPolicyCloses:      4,
+			wsRateLimitCloses:   3,
+			wsConnRejects:       5,
+			wsDroppedMsgs:       7,
+			publicRateLimited:   6,
+			settlementAnomalies: 8,
 			authFailReason: map[string]uint64{
 				"unknown_key":   3,
 				"bad_signature": 2,
@@ -1199,11 +1266,13 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("ws_command_rate_limit_closes", "3")
 	assertMetric("ws_connection_rejects", "5")
 	assertMetric("public_rate_limited", "6")
+	assertMetric("settlement_anomalies", "8")
 	assertMetric("edge_auth_fail_total", "5")
 	assertMetric("edge_ws_close_policy_total", "4")
 	assertMetric("edge_ws_close_ratelimit_total", "3")
 	assertMetric("edge_ws_connection_reject_total", "5")
 	assertMetric("edge_public_rate_limited_total", "6")
+	assertMetric("edge_settlement_anomaly_total", "8")
 	assertMetric("edge_auth_fail_reason_total{reason=\"bad_signature\"}", "2")
 	assertMetric("edge_auth_fail_reason_total{reason=\"unknown_key\"}", "3")
 }

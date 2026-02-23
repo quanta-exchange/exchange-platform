@@ -262,17 +262,18 @@ type state struct {
 	wallets         map[string]map[string]walletBalance
 	appliedTrades   map[string]int64
 
-	ordersTotal        uint64
-	tradesTotal        uint64
-	slowConsumerCloses uint64
-	wsDroppedMsgs      uint64
-	replayDetected     uint64
-	publicRateLimited  uint64
-	wsPolicyCloses     uint64
-	wsRateLimitCloses  uint64
-	nextOrderGcAtMs    int64
-	wsConnRejects      uint64
-	wsConnsByIP        map[string]int
+	ordersTotal         uint64
+	tradesTotal         uint64
+	slowConsumerCloses  uint64
+	wsDroppedMsgs       uint64
+	replayDetected      uint64
+	publicRateLimited   uint64
+	wsPolicyCloses      uint64
+	wsRateLimitCloses   uint64
+	nextOrderGcAtMs     int64
+	wsConnRejects       uint64
+	wsConnsByIP         map[string]int
+	settlementAnomalies uint64
 }
 
 type wsSubscription struct {
@@ -772,6 +773,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	droppedMsgs := s.state.wsDroppedMsgs
 	replayDetected := s.state.replayDetected
 	publicRateLimited := s.state.publicRateLimited
+	settlementAnomalies := s.state.settlementAnomalies
 	queueLens := make([]int, 0, len(s.state.clients))
 	for c := range s.state.clients {
 		queueLens = append(queueLens, c.queueLen())
@@ -801,6 +803,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_ws_close_ratelimit_total " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_connection_reject_total " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_public_rate_limited_total " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
+	_, _ = w.Write([]byte("edge_settlement_anomaly_total " + strconv.FormatUint(settlementAnomalies, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
 	for _, reason := range reasons {
 		line := fmt.Sprintf(
@@ -819,6 +822,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ws_command_rate_limit_closes " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_connection_rejects " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
 	_, _ = w.Write([]byte("public_rate_limited " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
+	_, _ = w.Write([]byte("settlement_anomalies " + strconv.FormatUint(settlementAnomalies, 10) + "\n"))
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -2254,6 +2258,10 @@ func (s *Server) settleBuyerLocked(userID, base, quote string, qty, quoteAmount 
 	}
 
 	quoteBal := wallet[quote]
+	if quoteBal.Hold+quoteBal.Available+1e-9 < quoteAmount {
+		s.state.settlementAnomalies++
+		return nil
+	}
 	remaining := quoteAmount
 	if quoteBal.Hold >= remaining {
 		quoteBal.Hold -= remaining
@@ -2288,6 +2296,10 @@ func (s *Server) settleSellerLocked(userID, base, quote string, qty, quoteAmount
 	}
 
 	baseBal := wallet[base]
+	if baseBal.Hold+baseBal.Available+1e-9 < qty {
+		s.state.settlementAnomalies++
+		return nil
+	}
 	remaining := qty
 	if baseBal.Hold >= remaining {
 		baseBal.Hold -= remaining
