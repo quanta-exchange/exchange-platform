@@ -1896,6 +1896,9 @@ func TestHandleResumeTradesGapSendsMissedThenSnapshot(t *testing.T) {
 	}
 
 	s.handleResume(c, wsSubscription{channel: "trades", symbol: "BTC-KRW"}, 10)
+	if got := s.state.wsResumeGaps; got != 1 {
+		t.Fatalf("expected ws resume gap counter increment, got %d", got)
+	}
 
 	if got := len(c.send); got != 2 {
 		t.Fatalf("expected missed+snapshot on trade gap, got %d", got)
@@ -2053,6 +2056,7 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 			wsRateLimitCloses:   3,
 			wsConnRejects:       5,
 			wsDroppedMsgs:       7,
+			wsResumeGaps:        4,
 			publicRateLimited:   6,
 			settlementAnomalies: 8,
 			sessionEvictions:    9,
@@ -2079,6 +2083,7 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("ws_active_conns", "3")
 	assertMetric("ws_send_queue_p99", "4")
 	assertMetric("ws_dropped_msgs", "7")
+	assertMetric("ws_resume_gaps", "4")
 	assertMetric("ws_slow_closes", "2")
 	assertMetric("ws_policy_closes", "4")
 	assertMetric("ws_command_rate_limit_closes", "3")

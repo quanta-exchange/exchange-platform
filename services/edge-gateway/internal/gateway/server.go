@@ -296,6 +296,7 @@ type state struct {
 	tradesTotal             uint64
 	slowConsumerCloses      uint64
 	wsDroppedMsgs           uint64
+	wsResumeGaps            uint64
 	replayDetected          uint64
 	publicRateLimited       uint64
 	wsPolicyCloses          uint64
@@ -956,6 +957,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	wsRateLimitCloses := s.state.wsRateLimitCloses
 	wsConnRejects := s.state.wsConnRejects
 	droppedMsgs := s.state.wsDroppedMsgs
+	resumeGaps := s.state.wsResumeGaps
 	replayDetected := s.state.replayDetected
 	publicRateLimited := s.state.publicRateLimited
 	settlementAnomalies := s.state.settlementAnomalies
@@ -1014,6 +1016,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ws_active_conns " + strconv.Itoa(clients) + "\n"))
 	_, _ = w.Write([]byte("ws_send_queue_p99 " + strconv.Itoa(queueP99) + "\n"))
 	_, _ = w.Write([]byte("ws_dropped_msgs " + strconv.FormatUint(droppedMsgs, 10) + "\n"))
+	_, _ = w.Write([]byte("ws_resume_gaps " + strconv.FormatUint(resumeGaps, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_slow_closes " + strconv.FormatUint(slowClose, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_policy_closes " + strconv.FormatUint(policyClose, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_command_rate_limit_closes " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
@@ -3158,6 +3161,9 @@ func (s *Server) handleResume(c *client, sub wsSubscription, lastSeq uint64) {
 	}
 	if !found || lastSeq+1 < oldest {
 		if sub.channel == "trades" {
+			s.state.mu.Lock()
+			s.state.wsResumeGaps++
+			s.state.mu.Unlock()
 			s.sendToClient(c, WSMessage{
 				Type:    "Missed",
 				Channel: sub.channel,
