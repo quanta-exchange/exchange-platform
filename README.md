@@ -466,13 +466,16 @@ make verification-factory
 ./scripts/verification_factory.sh --run-network-partition
 # include adversarial reliability runbook in same gate:
 ./scripts/verification_factory.sh --run-adversarial
+# enforce (default) or relax compliance mapping coverage:
+./scripts/verification_factory.sh --compliance-require-full-mapping
+./scripts/verification_factory.sh --compliance-allow-partial-mapping
 # local fallback for core cargo environment:
 VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --run-startup-guardrails
 ```
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_determinism=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_determinism=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -573,11 +576,16 @@ Success output includes:
 ### 19) Compliance evidence pack
 ```bash
 make compliance-evidence
+# default: full catalog mapping required
+./scripts/compliance_evidence.sh --require-full-mapping
+# optional local diagnostic mode (do not fail on unmapped non-enforced controls)
+./scripts/compliance_evidence.sh --allow-partial-mapping
 ```
 Success output includes:
 - `compliance_evidence_report=build/compliance/compliance-evidence-<timestamp>.json`
 - `compliance_evidence_latest=build/compliance/compliance-evidence-latest.json`
 - `compliance_evidence_ok=true|false`
+- report includes `require_full_mapping=true|false`
 - report includes mapping integrity fields: `missing_controls_count`, `unmapped_controls_count`, `unmapped_enforced_controls_count`, `mapping_coverage_ratio`
 - report includes stale-evidence summaries: `failed_enforced_stale_count`, `advisory_stale_count`
 
@@ -756,7 +764,7 @@ Outputs:
 - report includes safety budget context: `safety_budget_ok`, `safety_budget_violations`
 - report includes policy-signature context: `policy_smoke_ok`
 - report includes policy-tamper context: `policy_tamper_ok`, `policy_tamper_detected`
-- report includes compliance mapping context: `compliance_ok`, `compliance_missing_controls_count`, `compliance_unmapped_controls_count`, `compliance_unmapped_enforced_controls_count`, `compliance_mapping_coverage_ratio`
+- report includes compliance mapping context: `compliance_require_full_mapping`, `compliance_ok`, `compliance_missing_controls_count`, `compliance_unmapped_controls_count`, `compliance_unmapped_enforced_controls_count`, `compliance_mapping_coverage_ratio`
 - report includes network-partition context: `network_partition_ok`, `network_partition_during_reachable`, `network_partition_recovered`
 - report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
 - report includes determinism context: `determinism_ok`, `determinism_executed_runs`, `determinism_distinct_hash_count`

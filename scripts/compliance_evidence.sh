@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 MAPPING_FILE="${MAPPING_FILE:-$ROOT_DIR/compliance/mapping.yaml}"
 CONTROLS_REPORT="${CONTROLS_REPORT:-$ROOT_DIR/build/controls/controls-check-latest.json}"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/compliance}"
+REQUIRE_FULL_MAPPING="${COMPLIANCE_REQUIRE_FULL_MAPPING:-true}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -19,6 +20,14 @@ while [[ $# -gt 0 ]]; do
     --out-dir)
       OUT_DIR="$2"
       shift 2
+      ;;
+    --require-full-mapping)
+      REQUIRE_FULL_MAPPING=true
+      shift
+      ;;
+    --allow-partial-mapping)
+      REQUIRE_FULL_MAPPING=false
+      shift
       ;;
     *)
       echo "unknown option: $1"
@@ -41,7 +50,7 @@ TS_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
 REPORT_FILE="$OUT_DIR/compliance-evidence-${TS_ID}.json"
 LATEST_FILE="$OUT_DIR/compliance-evidence-latest.json"
 
-python3 - "$MAPPING_FILE" "$CONTROLS_REPORT" "$REPORT_FILE" <<'PY'
+python3 - "$MAPPING_FILE" "$CONTROLS_REPORT" "$REPORT_FILE" "$REQUIRE_FULL_MAPPING" <<'PY'
 import json
 import pathlib
 import sys
@@ -50,6 +59,7 @@ from datetime import datetime, timezone
 mapping_file = pathlib.Path(sys.argv[1]).resolve()
 controls_file = pathlib.Path(sys.argv[2]).resolve()
 report_file = pathlib.Path(sys.argv[3]).resolve()
+require_full_mapping = sys.argv[4].strip().lower() == "true"
 
 with open(mapping_file, "r", encoding="utf-8") as f:
     mappings = json.load(f).get("mappings", [])
@@ -122,8 +132,13 @@ payload = {
     "ok": (
         len(missing_controls) == 0
         and len(failed_controls) == 0
-        and len(unmapped_enforced_controls) == 0
+        and (
+            len(unmapped_controls) == 0
+            if require_full_mapping
+            else len(unmapped_enforced_controls) == 0
+        )
     ),
+    "require_full_mapping": require_full_mapping,
     "mapping_count": len(rows),
     "total_controls_count": total_controls,
     "mapped_controls_count": mapped_controls,

@@ -31,9 +31,34 @@
       "description": "GSN safety case governance documentation"
     },
     {
+      "controlId": "CTRL-007",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
+      "description": "Exactly-once stress proof artifact demonstrates duplicate suppression remains stable under repeated event ingestion"
+    },
+    {
+      "controlId": "CTRL-008",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Reconciliation safety smoke artifact validates lag detection and automatic safety-mode escalation path"
+    },
+    {
       "controlId": "CTRL-009",
       "frameworks": ["SOC2:CC7.1", "ISO27001:A.17.2.1"],
       "description": "Chaos replay reliability drill"
+    },
+    {
+      "controlId": "CTRL-010",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.16.1.2"],
+      "description": "Prometheus reconciliation alert rules define on-call detection thresholds for lag/mismatch incidents"
+    },
+    {
+      "controlId": "CTRL-011",
+      "frameworks": ["SOC2:CC2.2", "ISO27001:A.5.37"],
+      "description": "Runbook documentation provides operator procedures for incident response and recovery execution"
+    },
+    {
+      "controlId": "CTRL-012",
+      "frameworks": ["SOC2:CC2.3", "ISO27001:A.5.37"],
+      "description": "API surface documentation establishes controlled and reviewable administrative and trading interfaces"
     },
     {
       "controlId": "CTRL-013",
@@ -41,9 +66,34 @@
       "description": "Secret rotation drill evidence"
     },
     {
+      "controlId": "CTRL-014",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Reconciliation safety smoke script is versioned to provide deterministic, repeatable lag-escalation testing"
+    },
+    {
+      "controlId": "CTRL-015",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
+      "description": "Exactly-once stress script is versioned to execute repeatable duplicate-processing integrity drills"
+    },
+    {
+      "controlId": "CTRL-016",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Chaos replay script is versioned for deterministic crash/restart resilience exercises"
+    },
+    {
+      "controlId": "CTRL-017",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.7.5.3"],
+      "description": "Safety-case script is versioned to generate standardized release evidence bundles"
+    },
+    {
       "controlId": "CTRL-018",
       "frameworks": ["SOC2:CC3.2", "ISO27001:A.9.2.5"],
       "description": "Assurance pack generation capability"
+    },
+    {
+      "controlId": "CTRL-019",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.12.1.1"],
+      "description": "Compose stack definition provides deterministic local integration environment for control and recovery drills"
     },
     {
       "controlId": "CTRL-020",

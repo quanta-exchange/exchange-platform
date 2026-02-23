@@ -180,6 +180,7 @@ adversarial_failed_steps = []
 policy_smoke_ok = None
 policy_tamper_ok = None
 policy_tamper_detected = None
+compliance_require_full_mapping = summary.get("compliance_require_full_mapping")
 compliance_ok = None
 compliance_missing_controls_count = None
 compliance_unmapped_controls_count = None
@@ -257,6 +258,9 @@ if compliance_report_path:
         with open(candidate, "r", encoding="utf-8") as f:
             compliance_payload = json.load(f)
         compliance_ok = bool(compliance_payload.get("ok", False))
+        compliance_require_full_mapping = compliance_payload.get(
+            "require_full_mapping", compliance_require_full_mapping
+        )
         compliance_missing_controls_count = compliance_payload.get("missing_controls_count")
         compliance_unmapped_controls_count = compliance_payload.get("unmapped_controls_count")
         compliance_unmapped_enforced_controls_count = compliance_payload.get("unmapped_enforced_controls_count")
@@ -331,6 +335,7 @@ payload = {
     "policy_smoke_ok": policy_smoke_ok,
     "policy_tamper_ok": policy_tamper_ok,
     "policy_tamper_detected": policy_tamper_detected,
+    "compliance_require_full_mapping": compliance_require_full_mapping,
     "compliance_ok": compliance_ok,
     "compliance_missing_controls_count": compliance_missing_controls_count,
     "compliance_unmapped_controls_count": compliance_unmapped_controls_count,
