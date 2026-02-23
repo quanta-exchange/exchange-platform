@@ -1905,7 +1905,10 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 
 	symbol := record.Symbol
 	if strings.TrimSpace(symbol) == "" {
-		symbol = "BTC-KRW"
+		status, body := marshalResponse(http.StatusInternalServerError, map[string]string{"error": "order_symbol_missing"})
+		s.idempotencySet(apiKey, idemKey, r.Method, pathKey, requestHash, status, body)
+		writeRaw(w, status, body)
+		return
 	}
 	commandID := uuid.NewString()
 	correlationID := uuid.NewString()

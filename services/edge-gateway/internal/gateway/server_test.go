@@ -505,6 +505,37 @@ func TestOrderLifecycleCreateGetCancel(t *testing.T) {
 	}
 }
 
+func TestCancelOrderFailsClosedWhenSymbolIsMissing(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	orderID := "ord-missing-symbol"
+	s.state.mu.Lock()
+	s.state.orders[orderID] = OrderRecord{
+		OrderID:     orderID,
+		Status:      "ACCEPTED",
+		OwnerUserID: "test-key",
+		Symbol:      "",
+	}
+	s.state.mu.Unlock()
+
+	path := "/v1/orders/" + orderID
+	req := httptest.NewRequest(http.MethodDelete, path, nil)
+	for k, vals := range signHeaders(t, http.MethodDelete, path, nil, time.Now().UnixMilli()) {
+		req.Header[k] = vals
+	}
+	req.Header.Set("Idempotency-Key", "idem-cancel-missing-symbol")
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "order_symbol_missing") {
+		t.Fatalf("expected order_symbol_missing body, got %s", w.Body.String())
+	}
+}
+
 func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()
