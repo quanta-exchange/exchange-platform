@@ -59,6 +59,16 @@
       "controlId": "CTRL-022",
       "frameworks": ["SOC2:CC1.4", "ISO27001:A.5.18"],
       "description": "Access review and role baseline maintenance"
+    },
+    {
+      "controlId": "CTRL-023",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Deterministic replay proof for crash recovery consistency"
+    },
+    {
+      "controlId": "CTRL-024",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.14.2.8"],
+      "description": "State-machine model checks for lifecycle correctness"
     }
   ]
 }

@@ -131,6 +131,18 @@
       "title": "Access review script and role baseline exist",
       "enforced": false,
       "required_evidence": ["scripts/access_review.sh", "security/rbac_roles.yaml"]
+    },
+    {
+      "id": "CTRL-023",
+      "title": "Deterministic replay proof evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/determinism/prove-determinism-latest.json", "scripts/prove_determinism.sh"]
+    },
+    {
+      "id": "CTRL-024",
+      "title": "State-machine model check evidence exists",
+      "enforced": false,
+      "required_evidence": ["specs/state_machines.json", "build/model-check/model-check-latest.json", "scripts/model_check.sh"]
     }
   ]
 }
