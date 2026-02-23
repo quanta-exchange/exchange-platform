@@ -37,6 +37,7 @@ scripts/
   load_smoke.sh           # I-0105 load smoke harness
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
+  assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -208,6 +209,15 @@ make safety-case-extended
 - `build/exactly-once/exactly-once-stress.json`
 - `build/reconciliation/smoke-reconciliation-safety.json`
 - `build/chaos/chaos-replay.json`
+
+### 12) Assurance pack (claims + evidence index)
+```bash
+make assurance-pack
+```
+Success output includes:
+- `assurance_pack_json=build/assurance/<timestamp>/assurance-pack.json`
+- `assurance_pack_markdown=build/assurance/<timestamp>/assurance-pack.md`
+- `assurance_pack_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -20,6 +20,9 @@ safety-case-extended:
 
 safety-case-upload:
 	./scripts/safety_case.sh --run-checks --upload-minio
+
+assurance-pack:
+	./scripts/assurance_pack.sh
 
 exactly-once-stress:
 	./scripts/exactly_once_stress.sh
