@@ -64,6 +64,7 @@ jobs:
               - 'compliance/**'
               - 'policies/**'
               - 'tools/**'
+              - 'security/**'
               - 'Makefile'
               - 'README.md'
               - 'RUNBOOK.md'
@@ -339,6 +340,8 @@ jobs:
           JSON
       - name: run verification factory
         run: ./scripts/verification_factory.sh
+      - name: run release gate
+        run: ./scripts/release_gate.sh
       - name: upload verification factory artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -353,6 +356,7 @@ jobs:
             build/safety/**
             build/assurance/**
             build/external-replay/**
+            build/release-gate/**
 
   security-baseline:
     runs-on: ubuntu-latest
