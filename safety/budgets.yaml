@@ -42,6 +42,11 @@
       "mustBeOk": true,
       "maxMissingTests": 0
     },
+    "idempotencyLatchRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true
+    },
     "exactlyOnceMillion": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -160,6 +165,7 @@
     "determinism": "build/determinism/prove-determinism-latest.json",
     "idempotencyScope": "build/idempotency/prove-idempotency-latest.json",
     "latchApproval": "build/latch/prove-latch-approval-latest.json",
+    "idempotencyLatchRunbook": "build/runbooks/idempotency-latch-latest.json",
     "exactlyOnceMillion": "build/exactly-once/prove-exactly-once-million-latest.json",
     "invariantsSummary": "build/invariants/invariants-summary.json",
     "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",

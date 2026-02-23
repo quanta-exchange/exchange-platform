@@ -529,6 +529,11 @@
       "controlId": "CTRL-106",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "Idempotency scope and latch approval proof artifacts are budgeted and surfaced in release/status/transparency contexts for operational trust decisions"
+    },
+    {
+      "controlId": "CTRL-107",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for idempotency+latch failure drills and is wired into verification/release/status/transparency/safety-budget contexts for deterministic remediation evidence"
     }
   ]
 }

@@ -271,6 +271,7 @@ redpanda_bounce_latest = read_latest_json("build/chaos/redpanda-broker-bounce-la
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
 exactly_once_runbook_latest = read_latest_json("build/runbooks/exactly-once-million-latest.json")
 mapping_integrity_runbook_latest = read_latest_json("build/runbooks/mapping-integrity-latest.json")
+idempotency_latch_runbook_latest = read_latest_json("build/runbooks/idempotency-latch-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
@@ -477,6 +478,26 @@ report = {
                         mapping_integrity_runbook_latest.get("payload") or {}
                     ).get("recommended_action"),
                     "error": mapping_integrity_runbook_latest.get("error"),
+                },
+                "idempotency_latch": {
+                    "present": idempotency_latch_runbook_latest.get("present", False),
+                    "path": idempotency_latch_runbook_latest.get("path"),
+                    "idempotency_ok": (
+                        idempotency_latch_runbook_latest.get("payload") or {}
+                    ).get("idempotency_ok"),
+                    "latch_ok": (idempotency_latch_runbook_latest.get("payload") or {}).get(
+                        "latch_ok"
+                    ),
+                    "idempotency_passed": (
+                        idempotency_latch_runbook_latest.get("payload") or {}
+                    ).get("idempotency_passed"),
+                    "latch_missing_tests_count": (
+                        idempotency_latch_runbook_latest.get("payload") or {}
+                    ).get("latch_missing_tests_count"),
+                    "recommended_action": (
+                        idempotency_latch_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": idempotency_latch_runbook_latest.get("error"),
                 }
             },
             "proofs": {
