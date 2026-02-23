@@ -83,6 +83,19 @@ HAS_FAILURE=false
 if ! run_step "safety-case" "${SAFETY_CASE_CMD[@]}"; then
   HAS_FAILURE=true
 fi
+ARCHIVE_MANIFEST=""
+if run_step "archive-range" "$ROOT_DIR/scripts/archive_range.sh" --source-file "$ROOT_DIR/build/load/load-smoke.json"; then
+  ARCHIVE_MANIFEST="$(extract_value "archive_manifest" "$LOG_DIR/archive-range.log")"
+else
+  HAS_FAILURE=true
+fi
+if [[ -n "$ARCHIVE_MANIFEST" ]]; then
+  if ! run_step "verify-archive" "$ROOT_DIR/scripts/verify_archive.sh" --manifest "$ARCHIVE_MANIFEST"; then
+    HAS_FAILURE=true
+  fi
+else
+  HAS_FAILURE=true
+fi
 if ! run_step "external-replay-demo" "$ROOT_DIR/tools/external-replay/external_replay_demo.sh"; then
   HAS_FAILURE=true
 fi
@@ -106,6 +119,8 @@ if ! run_step "assurance-pack" "$ROOT_DIR/scripts/assurance_pack.sh"; then
 fi
 
 SAFETY_LOG="$LOG_DIR/safety-case.log"
+ARCHIVE_LOG="$LOG_DIR/archive-range.log"
+VERIFY_ARCHIVE_LOG="$LOG_DIR/verify-archive.log"
 EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
 COMPLIANCE_LOG="$LOG_DIR/compliance-evidence.log"
@@ -116,6 +131,8 @@ ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
 SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
 SAFETY_ARTIFACT="$(extract_value "safety_case_artifact" "$SAFETY_LOG")"
+ARCHIVE_RANGE_MANIFEST="$(extract_value "archive_manifest" "$ARCHIVE_LOG")"
+VERIFY_ARCHIVE_SHA="$(extract_value "verify_archive_sha256" "$VERIFY_ARCHIVE_LOG")"
 EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL_REPLAY_LOG")"
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 COMPLIANCE_REPORT="$(extract_value "compliance_evidence_report" "$COMPLIANCE_LOG")"
@@ -124,7 +141,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -135,13 +152,15 @@ run_extended_checks = sys.argv[4].lower() == "true"
 steps_tsv = sys.argv[5]
 safety_manifest = sys.argv[6]
 safety_artifact = sys.argv[7]
-external_replay_report = sys.argv[8]
-controls_report = sys.argv[9]
-compliance_report = sys.argv[10]
-transparency_report = sys.argv[11]
-access_review_report = sys.argv[12]
-safety_budget_report = sys.argv[13]
-assurance_json = sys.argv[14]
+archive_manifest = sys.argv[8]
+archive_sha = sys.argv[9]
+external_replay_report = sys.argv[10]
+controls_report = sys.argv[11]
+compliance_report = sys.argv[12]
+transparency_report = sys.argv[13]
+access_review_report = sys.argv[14]
+safety_budget_report = sys.argv[15]
+assurance_json = sys.argv[16]
 
 steps = []
 ok = True
@@ -170,6 +189,8 @@ summary = {
     "artifacts": {
         "safety_case_manifest": safety_manifest or None,
         "safety_case_artifact": safety_artifact or None,
+        "archive_manifest": archive_manifest or None,
+        "archive_sha256": archive_sha or None,
         "external_replay_report": external_replay_report or None,
         "controls_check_report": controls_report or None,
         "compliance_evidence_report": compliance_report or None,

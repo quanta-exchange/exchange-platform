@@ -45,6 +45,8 @@ scripts/
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
+  archive_range.sh        # G21 legal archive capture
+  verify_archive.sh       # G21 archive checksum verifier
   change_proposal.sh      # G10 change proposal creation
   change_approve.sh       # G10 approval recording
   apply_change.sh         # G10 apply + verification evidence
@@ -376,6 +378,17 @@ Outputs:
 - `release_gate_report=build/release-gate/release-gate-<timestamp>.json`
 - `release_gate_latest=build/release-gate/release-gate-latest.json`
 - `release_gate_ok=true|false`
+
+### 26) Legal archive capture + verify
+```bash
+./scripts/archive_range.sh --source-file build/load/load-smoke.json
+./scripts/verify_archive.sh --manifest build/archive/<timestamp>/manifest.json
+```
+Outputs:
+- `archive_manifest=build/archive/<timestamp>/manifest.json`
+- `verify_archive_ok=true`
+
+`verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
