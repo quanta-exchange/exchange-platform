@@ -289,6 +289,11 @@
       "controlId": "CTRL-068",
       "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
       "description": "Controls freshness proof validates stale-evidence detection and fresh-evidence acceptance for control checks"
+    },
+    {
+      "controlId": "CTRL-069",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
+      "description": "Operational status and transparency summaries expose freshness-proof posture for on-call and audit visibility"
     }
   ]
 }

@@ -49,12 +49,14 @@ ws_resume = read_json("build/ws/ws-resume-smoke.json")
 safety_budget = read_json("build/safety/safety-budget-latest.json")
 snapshot_verify = read_json("build/snapshot/snapshot-verify-latest.json")
 controls = read_json("build/controls/controls-check-latest.json")
+controls_freshness = read_json("build/controls/prove-controls-freshness-latest.json")
 compliance = read_json("build/compliance/compliance-evidence-latest.json")
 audit_chain = read_json("build/audit/verify-audit-chain-latest.json")
 change_audit_chain = read_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
 rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
 anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
+budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
 
 sources = {
     "load": load,
@@ -67,12 +69,14 @@ sources = {
     "safety_budget": safety_budget,
     "snapshot_verify": snapshot_verify,
     "controls": controls,
+    "controls_freshness": controls_freshness,
     "compliance": compliance,
     "audit_chain": audit_chain,
     "change_audit_chain": change_audit_chain,
     "pii_log_scan": pii_log_scan,
     "rbac_sod": rbac_sod,
     "anomaly": anomaly,
+    "budget_freshness": budget_freshness,
 }
 
 email_pattern = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -137,6 +141,8 @@ report = {
         },
         "governance_proxy": {
             "controls_ok": bool(controls.get("ok")) if controls else None,
+            "controls_failed_enforced_stale_count": int(controls.get("failed_enforced_stale_count")) if controls and controls.get("failed_enforced_stale_count") is not None else None,
+            "controls_advisory_stale_count": int(controls.get("advisory_stale_count")) if controls and controls.get("advisory_stale_count") is not None else None,
             "compliance_ok": bool(compliance.get("ok")) if compliance else None,
             "audit_chain_ok": bool(audit_chain.get("ok")) if audit_chain else None,
             "audit_chain_mode": audit_chain.get("mode") if audit_chain else None,
@@ -147,6 +153,8 @@ report = {
             "rbac_sod_ok": bool(rbac_sod.get("ok")) if rbac_sod else None,
             "anomaly_detector_ok": bool(anomaly.get("ok")) if anomaly else None,
             "anomaly_detected": bool(anomaly.get("anomaly_detected")) if anomaly else None,
+            "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
+            "budget_freshness_proof_ok": bool(budget_freshness.get("ok")) if budget_freshness else None,
         },
     },
     "pii_scan": {
@@ -164,12 +172,14 @@ report = {
         "safety_budget": "build/safety/safety-budget-latest.json",
         "snapshot_verify": "build/snapshot/snapshot-verify-latest.json",
         "controls": "build/controls/controls-check-latest.json",
+        "controls_freshness": "build/controls/prove-controls-freshness-latest.json",
         "compliance": "build/compliance/compliance-evidence-latest.json",
         "audit_chain": "build/audit/verify-audit-chain-latest.json",
         "change_audit_chain": "build/change-audit/verify-change-audit-chain-latest.json",
         "pii_log_scan": "build/security/pii-log-scan-latest.json",
         "rbac_sod": "build/security/rbac-sod-check-latest.json",
         "anomaly": "build/anomaly/anomaly-detector-latest.json",
+        "budget_freshness": "build/safety/prove-budget-freshness-latest.json",
     },
 }
 

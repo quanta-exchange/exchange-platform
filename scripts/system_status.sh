@@ -248,9 +248,12 @@ if not kafka_status.get("up"):
     }
 
 controls_latest = read_latest_json("build/controls/controls-check-latest.json")
+controls_freshness_latest = read_latest_json("build/controls/prove-controls-freshness-latest.json")
 audit_chain_latest = read_latest_json("build/audit/verify-audit-chain-latest.json")
 change_audit_chain_latest = read_latest_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
+safety_budget_latest = read_latest_json("build/safety/safety-budget-latest.json")
+budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
@@ -287,8 +290,14 @@ report = {
                 "failed_enforced_count": (controls_latest.get("payload") or {}).get(
                     "failed_enforced_count"
                 ),
+                "failed_enforced_stale_count": (controls_latest.get("payload") or {}).get(
+                    "failed_enforced_stale_count"
+                ),
                 "advisory_missing_count": (controls_latest.get("payload") or {}).get(
                     "advisory_missing_count"
+                ),
+                "advisory_stale_count": (controls_latest.get("payload") or {}).get(
+                    "advisory_stale_count"
                 ),
                 "error": controls_latest.get("error"),
             },
@@ -317,6 +326,28 @@ report = {
                 "hit_count": (pii_scan_latest.get("payload") or {}).get("hit_count"),
                 "files_scanned": (pii_scan_latest.get("payload") or {}).get("files_scanned"),
                 "error": pii_scan_latest.get("error"),
+            },
+            "safety_budget": {
+                "present": safety_budget_latest.get("present", False),
+                "path": safety_budget_latest.get("path"),
+                "ok": (safety_budget_latest.get("payload") or {}).get("ok"),
+                "violations_count": len((safety_budget_latest.get("payload") or {}).get("violations", []) or []),
+                "freshness_default_max_age_seconds": (safety_budget_latest.get("payload") or {}).get("freshness_default_max_age_seconds"),
+                "error": safety_budget_latest.get("error"),
+            },
+            "proofs": {
+                "controls_freshness": {
+                    "present": controls_freshness_latest.get("present", False),
+                    "path": controls_freshness_latest.get("path"),
+                    "ok": (controls_freshness_latest.get("payload") or {}).get("ok"),
+                    "error": controls_freshness_latest.get("error"),
+                },
+                "budget_freshness": {
+                    "present": budget_freshness_latest.get("present", False),
+                    "path": budget_freshness_latest.get("path"),
+                    "ok": (budget_freshness_latest.get("payload") or {}).get("ok"),
+                    "error": budget_freshness_latest.get("error"),
+                },
             },
         },
     },

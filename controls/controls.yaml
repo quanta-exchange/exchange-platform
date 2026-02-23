@@ -415,6 +415,12 @@
       "enforced": false,
       "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/prove_controls_freshness.sh", "scripts/controls_check.sh", "build/controls/prove-controls-freshness-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-069",
+      "title": "Operational summaries expose freshness proof posture",
+      "enforced": false,
+      "required_evidence": ["scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
     }
   ]
 }

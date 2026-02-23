@@ -460,7 +460,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan` snapshots when latest artifacts exist
+- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist
 
 ### 17.1) Anomaly detector
 ```bash
@@ -511,7 +511,7 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `rbac_sod`, `anomaly_detector` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `rbac_sod`, `anomaly_detector`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20) External replay demo
 ```bash
