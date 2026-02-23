@@ -204,9 +204,10 @@ type WSCommand struct {
 }
 
 type idempotencyRecord struct {
-	status int
-	body   []byte
-	tsMs   int64
+	status      int
+	body        []byte
+	requestHash string
+	tsMs        int64
 }
 
 type userRecord struct {
@@ -1502,14 +1503,22 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Idempotency-Key required"})
 		return
 	}
-
-	if status, body, ok := s.idempotencyGet(apiKey, idemKey, r.Method, r.URL.Path); ok {
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+		return
+	}
+	requestHash := idempotencyRequestHash(r.Method, r.URL.Path, rawBody)
+	if status, body, ok, conflict := s.idempotencyGet(apiKey, idemKey, r.Method, r.URL.Path, requestHash); conflict {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "IDEMPOTENCY_CONFLICT"})
+		return
+	} else if ok {
 		writeRaw(w, status, body)
 		return
 	}
 
 	var req OrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.Unmarshal(rawBody, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
 		return
 	}
@@ -1626,7 +1635,7 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		Correlation: coreResp.CorrelationId,
 	}
 	status, body := marshalResponse(http.StatusOK, resp)
-	s.idempotencySet(apiKey, idemKey, r.Method, r.URL.Path, status, body)
+	s.idempotencySet(apiKey, idemKey, r.Method, r.URL.Path, requestHash, status, body)
 	writeRaw(w, status, body)
 }
 
@@ -1643,8 +1652,11 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	orderID := chi.URLParam(r, "orderId")
 	pathKey := "/v1/orders/" + orderID
-
-	if status, body, ok := s.idempotencyGet(apiKey, idemKey, r.Method, pathKey); ok {
+	requestHash := idempotencyRequestHash(r.Method, pathKey, nil)
+	if status, body, ok, conflict := s.idempotencyGet(apiKey, idemKey, r.Method, pathKey, requestHash); conflict {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "IDEMPOTENCY_CONFLICT"})
+		return
+	} else if ok {
 		writeRaw(w, status, body)
 		return
 	}
@@ -1658,7 +1670,7 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		s.state.mu.Unlock()
 		status, body := marshalResponse(http.StatusNotFound, map[string]string{"error": "UNKNOWN_ORDER"})
-		s.idempotencySet(apiKey, idemKey, r.Method, pathKey, status, body)
+		s.idempotencySet(apiKey, idemKey, r.Method, pathKey, requestHash, status, body)
 		writeRaw(w, status, body)
 		return
 	}
@@ -1742,7 +1754,7 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		Correlation: coreResp.CorrelationId,
 	}
 	status, body := marshalResponse(http.StatusOK, resp)
-	s.idempotencySet(apiKey, idemKey, r.Method, pathKey, status, body)
+	s.idempotencySet(apiKey, idemKey, r.Method, pathKey, requestHash, status, body)
 	writeRaw(w, status, body)
 }
 
@@ -2901,7 +2913,13 @@ func conflatable(channel string) bool {
 	return channel == "book" || channel == "candles" || channel == "ticker"
 }
 
-func (s *Server) idempotencyGet(apiKey, idemKey, method, path string) (int, []byte, bool) {
+func (s *Server) idempotencyGet(
+	apiKey,
+	idemKey,
+	method,
+	path,
+	requestHash string,
+) (int, []byte, bool, bool) {
 	k := apiKey + "|" + method + "|" + path + "|" + idemKey
 	now := time.Now().UnixMilli()
 	s.state.mu.Lock()
@@ -2913,18 +2931,44 @@ func (s *Server) idempotencyGet(apiKey, idemKey, method, path string) (int, []by
 	}
 	rec, ok := s.state.idempotencyResults[k]
 	if !ok {
-		return 0, nil, false
+		return 0, nil, false, false
+	}
+	if rec.requestHash != "" && requestHash != "" && rec.requestHash != requestHash {
+		return 0, nil, false, true
 	}
 	cp := make([]byte, len(rec.body))
 	copy(cp, rec.body)
-	return rec.status, cp, true
+	return rec.status, cp, true, false
 }
 
-func (s *Server) idempotencySet(apiKey, idemKey, method, path string, status int, body []byte) {
+func (s *Server) idempotencySet(
+	apiKey,
+	idemKey,
+	method,
+	path,
+	requestHash string,
+	status int,
+	body []byte,
+) {
 	k := apiKey + "|" + method + "|" + path + "|" + idemKey
 	s.state.mu.Lock()
-	s.state.idempotencyResults[k] = idempotencyRecord{status: status, body: body, tsMs: time.Now().UnixMilli()}
+	s.state.idempotencyResults[k] = idempotencyRecord{
+		status:      status,
+		body:        body,
+		requestHash: requestHash,
+		tsMs:        time.Now().UnixMilli(),
+	}
 	s.state.mu.Unlock()
+}
+
+func idempotencyRequestHash(method, path string, body []byte) string {
+	hash := sha256.New()
+	_, _ = hash.Write([]byte(method))
+	_, _ = hash.Write([]byte{'\n'})
+	_, _ = hash.Write([]byte(path))
+	_, _ = hash.Write([]byte{'\n'})
+	_, _ = hash.Write(body)
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func (s *Server) allowRate(apiKey string, nowMs int64) bool {

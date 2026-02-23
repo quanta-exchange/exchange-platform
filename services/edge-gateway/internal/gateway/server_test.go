@@ -178,6 +178,41 @@ func TestCreateOrderIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestCreateOrderIdempotencyConflictOnPayloadMismatch(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	firstPayload := OrderRequest{Symbol: "BTC-KRW", Side: "BUY", Type: "LIMIT", Price: "100", Qty: "1", TimeInForce: "GTC"}
+	firstRaw, _ := json.Marshal(firstPayload)
+	first := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(firstRaw))
+	for k, vals := range signHeaders(t, http.MethodPost, "/v1/orders", firstRaw, time.Now().UnixMilli()) {
+		first.Header[k] = vals
+	}
+	first.Header.Set("Idempotency-Key", "idem-conflict")
+	w1 := httptest.NewRecorder()
+	s.Router().ServeHTTP(w1, first)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("first request failed: %d body=%s", w1.Code, w1.Body.String())
+	}
+
+	secondPayload := OrderRequest{Symbol: "BTC-KRW", Side: "BUY", Type: "LIMIT", Price: "100", Qty: "2", TimeInForce: "GTC"}
+	secondRaw, _ := json.Marshal(secondPayload)
+	second := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(secondRaw))
+	for k, vals := range signHeaders(t, http.MethodPost, "/v1/orders", secondRaw, time.Now().UnixMilli()+1) {
+		second.Header[k] = vals
+	}
+	second.Header.Set("Idempotency-Key", "idem-conflict")
+	w2 := httptest.NewRecorder()
+	s.Router().ServeHTTP(w2, second)
+
+	if w2.Code != http.StatusConflict {
+		t.Fatalf("expected 409 conflict, got %d body=%s", w2.Code, w2.Body.String())
+	}
+	if !strings.Contains(w2.Body.String(), "IDEMPOTENCY_CONFLICT") {
+		t.Fatalf("expected IDEMPOTENCY_CONFLICT body, got %s", w2.Body.String())
+	}
+}
+
 func TestRejectsInvalidSignature(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()

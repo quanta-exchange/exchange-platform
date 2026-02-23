@@ -27,6 +27,8 @@ Base: `/v1`
   - `METHOD + "\\n" + PATH + "\\n" + X-TS + "\\n" + RAW_BODY`
 - Replay defense:
   - duplicate `(api_key, signature, ts)` within replay window must be rejected
+- Idempotency conflict:
+  - reusing same `Idempotency-Key` with different request payload returns `409 IDEMPOTENCY_CONFLICT`
 - Tracing:
   - request accepts `traceparent` (W3C)
   - response includes `X-Trace-Id`
@@ -63,6 +65,7 @@ Errors (examples)
 - `INSUFFICIENT_FUNDS`
 - `MARKET_HALTED`
 - `TOO_MANY_REQUESTS`
+- `IDEMPOTENCY_CONFLICT` (`409`)
 
 #### DELETE `/v1/orders/{orderId}`
 Cancel order
