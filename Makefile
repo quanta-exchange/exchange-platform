@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory safety-budget compliance-evidence policy-sign policy-verify policy-smoke runbook-lag-spike runbook-ws-drop exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
+.PHONY: doctor load-smoke dr-rehearsal invariants safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory safety-budget compliance-evidence transparency-report policy-sign policy-verify policy-smoke runbook-lag-spike runbook-ws-drop exactly-once-stress chaos-full chaos-core chaos-ledger chaos-redpanda
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -35,6 +35,9 @@ safety-budget:
 
 compliance-evidence:
 	./scripts/compliance_evidence.sh
+
+transparency-report:
+	./scripts/transparency_report.sh
 
 policy-sign:
 	./scripts/policy_sign.sh

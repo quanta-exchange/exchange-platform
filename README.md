@@ -39,9 +39,10 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->compliance->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->compliance->transparency->budget->assurance)
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
+  transparency_report.sh  # G34 public transparency report generator
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
@@ -296,6 +297,15 @@ Success output includes:
 - `compliance_evidence_report=build/compliance/compliance-evidence-<timestamp>.json`
 - `compliance_evidence_latest=build/compliance/compliance-evidence-latest.json`
 - `compliance_evidence_ok=true|false`
+
+### 19) Transparency report
+```bash
+make transparency-report
+```
+Success output includes:
+- `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
+- `transparency_report_latest=build/transparency/transparency-report-latest.json`
+- `transparency_report_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

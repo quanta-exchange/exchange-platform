@@ -89,6 +89,9 @@ fi
 if ! run_step "compliance-evidence" "$ROOT_DIR/scripts/compliance_evidence.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "transparency-report" "$ROOT_DIR/scripts/transparency_report.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "safety-budget" "$ROOT_DIR/scripts/safety_budget_check.sh"; then
   HAS_FAILURE=true
 fi
@@ -99,6 +102,7 @@ fi
 SAFETY_LOG="$LOG_DIR/safety-case.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
 COMPLIANCE_LOG="$LOG_DIR/compliance-evidence.log"
+TRANSPARENCY_LOG="$LOG_DIR/transparency-report.log"
 SAFETY_BUDGET_LOG="$LOG_DIR/safety-budget.log"
 ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
@@ -106,10 +110,11 @@ SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
 SAFETY_ARTIFACT="$(extract_value "safety_case_artifact" "$SAFETY_LOG")"
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 COMPLIANCE_REPORT="$(extract_value "compliance_evidence_report" "$COMPLIANCE_LOG")"
+TRANSPARENCY_REPORT="$(extract_value "transparency_report_file" "$TRANSPARENCY_LOG")"
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$CONTROLS_REPORT" "$COMPLIANCE_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$CONTROLS_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -122,8 +127,9 @@ safety_manifest = sys.argv[6]
 safety_artifact = sys.argv[7]
 controls_report = sys.argv[8]
 compliance_report = sys.argv[9]
-safety_budget_report = sys.argv[10]
-assurance_json = sys.argv[11]
+transparency_report = sys.argv[10]
+safety_budget_report = sys.argv[11]
+assurance_json = sys.argv[12]
 
 steps = []
 ok = True
@@ -154,6 +160,7 @@ summary = {
         "safety_case_artifact": safety_artifact or None,
         "controls_check_report": controls_report or None,
         "compliance_evidence_report": compliance_report or None,
+        "transparency_report": transparency_report or None,
         "safety_budget_report": safety_budget_report or None,
         "assurance_pack_json": assurance_json or None,
     },
