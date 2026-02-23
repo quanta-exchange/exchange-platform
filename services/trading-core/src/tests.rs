@@ -5,6 +5,8 @@ use crate::leader::FencingCoordinator;
 use crate::model::{RejectCode, SymbolMode};
 use crate::outbox::EventSink;
 use crate::risk::RiskConfig;
+use prost_types::Timestamp;
+use std::{thread, time::Duration};
 use tempfile::TempDir;
 
 fn meta(
@@ -323,6 +325,54 @@ fn idempotency_scope_isolated_per_command_type() {
         .unwrap();
     assert_eq!(replayed.order_id, first.order_id);
     assert_eq!(replayed.seq, first.seq);
+}
+
+#[test]
+fn idempotency_ttl_uses_server_clock_not_request_timestamp() {
+    let tmp = TempDir::new().unwrap();
+    let mut cfg = core_config(&tmp);
+    cfg.idempotency_ttl_ms = 1;
+    let mut core = TradingCore::new(cfg, FencingCoordinator::new()).unwrap();
+    core.set_balance("u1", "BTC", 1_000_000, 0);
+    core.set_balance("u1", "KRW", 1_000_000_000_000, 0);
+
+    let mut first_req = place_req(
+        "scope-ttl-1",
+        "idem-ttl",
+        "u1",
+        "o-ttl-1",
+        proto::Side::Buy,
+        proto::OrderType::Limit,
+        "100",
+        "1",
+    );
+    if let Some(meta) = first_req.meta.as_mut() {
+        meta.ts_server = Some(Timestamp {
+            seconds: 4_102_444_800,
+            nanos: 0,
+        });
+    }
+
+    let first = core.place_order(first_req).unwrap();
+    assert!(first.accepted);
+
+    thread::sleep(Duration::from_millis(20));
+
+    let second = core
+        .place_order(place_req(
+            "scope-ttl-2",
+            "idem-ttl",
+            "u1",
+            "o-ttl-2",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(second.accepted);
+    assert_eq!(second.order_id, "o-ttl-2");
+    assert_ne!(second.seq, first.seq);
 }
 
 #[test]

@@ -161,6 +161,12 @@
       "title": "Service-mode matrix verification evidence exists",
       "enforced": false,
       "required_evidence": ["safety/service_modes.yaml", "build/service-modes/verify-service-modes-latest.json", "scripts/verify_service_modes.sh"]
+    },
+    {
+      "id": "CTRL-028",
+      "title": "Idempotency scope proof evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/idempotency/prove-idempotency-latest.json", "scripts/prove_idempotency_scope.sh", "services/trading-core/src/tests.rs"]
     }
   ]
 }

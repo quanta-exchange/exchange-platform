@@ -91,6 +91,7 @@ fi
 
 if [[ "$RUN_EXTENDED_CHECKS" == "true" ]]; then
   run_cmd "exactly-once-stress" ./scripts/exactly_once_stress.sh
+  run_cmd "prove-idempotency" ./scripts/prove_idempotency_scope.sh
   run_cmd "reconciliation-smoke" ./scripts/smoke_reconciliation_safety.sh
   run_cmd "chaos-replay" ./scripts/chaos_replay.sh
   run_cmd "prove-determinism" env RUNS="${PROVE_DETERMINISM_RUNS}" ./scripts/prove_determinism.sh
@@ -126,6 +127,7 @@ declare -a REQUIRED_EVIDENCE=(
 
 declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/exactly-once/exactly-once-stress.json"
+  "build/idempotency/prove-idempotency-latest.json"
   "build/reconciliation/smoke-reconciliation-safety.json"
   "build/chaos/chaos-replay.json"
   "build/ws/ws-smoke.json"

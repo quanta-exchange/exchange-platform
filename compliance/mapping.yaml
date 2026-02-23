@@ -84,6 +84,11 @@
       "controlId": "CTRL-027",
       "frameworks": ["SOC2:CC6.6", "ISO27001:A.5.30"],
       "description": "Service mode matrix and automated enforcement verification"
+    },
+    {
+      "controlId": "CTRL-028",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
+      "description": "Idempotency scope and TTL verification for duplicate isolation correctness"
     }
   ]
 }

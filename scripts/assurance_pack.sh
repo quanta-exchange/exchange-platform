@@ -75,6 +75,7 @@ evidence = [
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},
     {"id": "determinism", "path": pathlib.Path("build/determinism/prove-determinism-latest.json"), "required": False},
+    {"id": "idempotency_scope", "path": pathlib.Path("build/idempotency/prove-idempotency-latest.json"), "required": False},
     {"id": "circuit_breakers", "path": pathlib.Path("build/breakers/prove-breakers-latest.json"), "required": False},
     {"id": "model_check", "path": pathlib.Path("build/model-check/model-check-latest.json"), "required": False},
     {"id": "service_modes", "path": pathlib.Path("build/service-modes/verify-service-modes-latest.json"), "required": False},
@@ -116,6 +117,7 @@ pack = {
         {"id": "G5", "text": "Order notional/quantity circuit breakers reject oversized risk-taking orders."},
         {"id": "G6", "text": "Service mode matrix is verified against executable tests for mode enforcement."},
         {"id": "G7", "text": "Shadow verification recomputes candles and balance hashes without divergence."},
+        {"id": "G8", "text": "Idempotency scope is isolated by user and command type with server-clock TTL expiry."},
     ],
 }
 

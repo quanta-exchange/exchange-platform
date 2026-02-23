@@ -39,13 +39,14 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->model-check->breakers->service-modes->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->model-check->breakers->service-modes->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
+  prove_idempotency_scope.sh # G4.1 idempotency scope/TTL proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
   verify_service_modes.sh # G26 service mode matrix verification
   model_check.sh          # G28 state-machine model checker
@@ -151,7 +152,7 @@ Rust protobuf build note (Trading Core):
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
 make safety-case
-# optional full safety-case proof set (exactly-once + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
+# optional full safety-case proof set (exactly-once + idempotency-scope + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
 make safety-case-extended
 ```
 
@@ -254,6 +255,7 @@ make safety-case-extended
 - `build/dr/dr-report.json`
 - `build/invariants/ledger-invariants.json`
 - `build/exactly-once/exactly-once-stress.json`
+- `build/idempotency/prove-idempotency-latest.json`
 - `build/reconciliation/smoke-reconciliation-safety.json`
 - `build/chaos/chaos-replay.json`
 - `build/ws/ws-smoke.json`
@@ -417,7 +419,16 @@ Outputs:
 - `prove_determinism_report=build/determinism/<timestamp>/prove-determinism.json`
 - `prove_determinism_ok=true|false`
 
-### 27.1) Circuit-breaker proof
+### 27.1) Idempotency scope proof
+```bash
+make prove-idempotency
+```
+Outputs:
+- `prove_idempotency_report=build/idempotency/prove-idempotency-<timestamp>.json`
+- `prove_idempotency_latest=build/idempotency/prove-idempotency-latest.json`
+- `prove_idempotency_ok=true|false`
+
+### 27.2) Circuit-breaker proof
 ```bash
 make prove-breakers
 ```
@@ -426,7 +437,7 @@ Outputs:
 - `prove_breakers_latest=build/breakers/prove-breakers-latest.json`
 - `prove_breakers_ok=true|false`
 
-### 27.2) Service-mode matrix verification
+### 27.3) Service-mode matrix verification
 ```bash
 make verify-service-modes
 ```
@@ -516,7 +527,7 @@ Market order liquidity policy (v1):
   - load smoke report
   - DR rehearsal report
   - `make safety-case` artifact bundle + integrity hash
-  - `make safety-case-extended` for exactly-once/reconciliation/chaos/determinism evidence 포함 번들
+  - `make safety-case-extended` for exactly-once/idempotency-scope/reconciliation/chaos/determinism evidence 포함 번들
 
 ## Service endpoints (local)
 - Edge Gateway: `http://localhost:8081`

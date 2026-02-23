@@ -945,7 +945,7 @@ impl TradingCore {
         self.idempotency.insert(
             Self::idempotency_scope(meta, "place"),
             IdempotencyEntry {
-                created_at_ms: meta.ts_server_ms,
+                created_at_ms: crate::model::now_millis(),
                 response: IdempotentResponse::Place(response.clone()),
             },
         );
@@ -959,7 +959,7 @@ impl TradingCore {
         self.idempotency.insert(
             Self::idempotency_scope(meta, "cancel"),
             IdempotencyEntry {
-                created_at_ms: meta.ts_server_ms,
+                created_at_ms: crate::model::now_millis(),
                 response: IdempotentResponse::Cancel(response.clone()),
             },
         );
