@@ -161,12 +161,17 @@ make safety-case-extended
 ```
 `./scripts/invariants.sh` behavior:
 - always checks ledger invariants (`/v1/admin/invariants/check`)
+- Core WAL seq checks default to `INVARIANTS_CORE_MODE=auto`
+  - `auto`: run only when WAL directory (`CORE_WAL_DIR`) exists
+  - `require`: fail if WAL is unavailable or non-monotonic seq is detected
+  - `off`: skip Core checks
 - ClickHouse checks default to `INVARIANTS_CLICKHOUSE_MODE=auto`
   - `auto`: run only when ClickHouse is reachable
   - `require`: fail if ClickHouse is unreachable or invalid rows are found
   - `off`: skip ClickHouse checks
 - outputs:
   - `build/invariants/ledger-invariants.json`
+  - `build/invariants/core-invariants.json`
   - `build/invariants/clickhouse-invariants.json`
   - `build/invariants/invariants-summary.json`
 
@@ -290,6 +295,7 @@ make safety-case-extended
 - `build/load/load-smoke.json`
 - `build/dr/dr-report.json`
 - `build/invariants/ledger-invariants.json`
+- `build/invariants/core-invariants.json`
 - `build/invariants/invariants-summary.json`
 - `build/exactly-once/exactly-once-stress.json`
 - `build/idempotency/prove-idempotency-latest.json`

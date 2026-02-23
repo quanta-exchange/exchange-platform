@@ -197,6 +197,12 @@
       "title": "Candle correctness proof evidence exists",
       "enforced": false,
       "required_evidence": ["build/candles/prove-candles-latest.json", "scripts/prove_candles.sh"]
+    },
+    {
+      "id": "CTRL-034",
+      "title": "Core WAL seq monotonic invariant evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/invariants/core-invariants.json", "scripts/invariants.sh"]
     }
   ]
 }

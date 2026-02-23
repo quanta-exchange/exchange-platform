@@ -109,16 +109,23 @@ for key, budget in budgets.items():
             entry["details"].append("invariants_not_ok")
     elif key == "invariantsSummary":
         must_clickhouse_ok = bool(budget.get("mustClickhouseBeOkWhenChecked", True))
+        must_core_ok = bool(budget.get("mustCoreBeOkWhenChecked", True))
         summary_ok = bool(payload.get("ok", False))
         clickhouse = payload.get("clickhouse", {}) if isinstance(payload, dict) else {}
         clickhouse_status = str(clickhouse.get("status", ""))
         clickhouse_ok = bool(clickhouse.get("ok", False))
+        core = payload.get("core", {}) if isinstance(payload, dict) else {}
+        core_status = str(core.get("status", ""))
+        core_ok = bool(core.get("ok", False))
         if not summary_ok:
             entry["ok"] = False
             entry["details"].append("invariants_summary_not_ok")
         if must_clickhouse_ok and clickhouse_status == "checked" and not clickhouse_ok:
             entry["ok"] = False
             entry["details"].append("clickhouse_invariants_not_ok")
+        if must_core_ok and core_status == "checked" and not core_ok:
+            entry["ok"] = False
+            entry["details"].append("core_seq_invariants_not_ok")
     elif key == "ws":
         slow = float(payload.get("metrics", {}).get("ws_slow_closes", 0.0))
         dropped = float(payload.get("metrics", {}).get("ws_dropped_msgs", 0.0))

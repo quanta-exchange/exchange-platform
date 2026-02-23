@@ -16,7 +16,8 @@
     },
     "invariantsSummary": {
       "required": false,
-      "mustClickhouseBeOkWhenChecked": true
+      "mustClickhouseBeOkWhenChecked": true,
+      "mustCoreBeOkWhenChecked": true
     },
     "ws": {
       "required": false,

@@ -72,6 +72,7 @@ evidence = [
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
     {"id": "invariants", "path": pathlib.Path("build/invariants/ledger-invariants.json"), "required": True},
     {"id": "invariants_summary", "path": pathlib.Path("build/invariants/invariants-summary.json"), "required": False},
+    {"id": "core_invariants", "path": pathlib.Path("build/invariants/core-invariants.json"), "required": False},
     {"id": "exactly_once", "path": pathlib.Path("build/exactly-once/exactly-once-stress.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},

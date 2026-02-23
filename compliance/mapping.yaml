@@ -114,6 +114,11 @@
       "controlId": "CTRL-033",
       "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
       "description": "Candle correctness proof for deterministic market-data aggregation under out-of-order and duplicate trades"
+    },
+    {
+      "controlId": "CTRL-034",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
+      "description": "Core WAL sequence monotonic verification evidence in invariant summary"
     }
   ]
 }
