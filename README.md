@@ -281,7 +281,7 @@ make ws-resume-smoke
 ```
 Success output includes:
 - `ws_resume_smoke_success=true`
-- `ws_resume_gap_first_type=Snapshot`
+- `ws_resume_gap_first_type=Snapshot|Missed`
 - `ws_resume_smoke_report=build/ws/ws-resume-smoke.json`
 
 WS alert rule examples:

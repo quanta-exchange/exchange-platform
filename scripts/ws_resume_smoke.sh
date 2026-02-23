@@ -163,7 +163,7 @@ go run ./scripts/ws_resume_client.go \
   -mode "resume" \
   -symbol "BTC-KRW" \
   -channel "trades" \
-  -expect "snapshot" \
+  -expect "any" \
   -last-seq "${CAPTURE_MIN_SEQ}" \
   -count "1" \
   -out "${GAP_EVENTS_FILE}" \
@@ -176,8 +176,8 @@ if [[ -z "${GAP_FIRST_TYPE}" || -z "${GAP_SEQ}" ]]; then
   cat "${GAP_LOG}" >&2 || true
   exit 1
 fi
-if [[ "${GAP_FIRST_TYPE}" != "Snapshot" ]]; then
-  echo "expected gap recovery snapshot, got ${GAP_FIRST_TYPE}" >&2
+if [[ "${GAP_FIRST_TYPE}" != "Snapshot" && "${GAP_FIRST_TYPE}" != "Missed" ]]; then
+  echo "expected gap recovery signal Snapshot|Missed, got ${GAP_FIRST_TYPE}" >&2
   exit 1
 fi
 

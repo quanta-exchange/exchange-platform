@@ -1878,6 +1878,53 @@ func TestHandleResumeReplaysTradesOnlyForTradeSubscription(t *testing.T) {
 	}
 }
 
+func TestHandleResumeTradesGapSendsMissedThenSnapshot(t *testing.T) {
+	s := &Server{
+		state: &state{
+			historyBySymbol: map[string][]WSMessage{
+				"BTC-KRW": {
+					{Type: "TradeExecuted", Channel: "trades", Symbol: "BTC-KRW", Seq: 50, Ts: 1, Data: map[string]string{"tradeId": "t-50"}},
+				},
+			},
+			cacheMemory: map[string][]byte{},
+		},
+	}
+	c := &client{
+		send:        make(chan []byte, 8),
+		conflated:   map[string][]byte{},
+		subscribers: map[string]wsSubscription{},
+	}
+
+	s.handleResume(c, wsSubscription{channel: "trades", symbol: "BTC-KRW"}, 10)
+
+	if got := len(c.send); got != 2 {
+		t.Fatalf("expected missed+snapshot on trade gap, got %d", got)
+	}
+
+	var missed WSMessage
+	if err := json.Unmarshal(<-c.send, &missed); err != nil {
+		t.Fatalf("decode missed message: %v", err)
+	}
+	if missed.Type != "Missed" || missed.Channel != "trades" {
+		t.Fatalf("unexpected missed payload: %+v", missed)
+	}
+	data, ok := missed.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected missed data map, got=%T", missed.Data)
+	}
+	if reason, _ := data["reason"].(string); reason != "HISTORY_GAP" {
+		t.Fatalf("unexpected missed reason: %v", data["reason"])
+	}
+
+	var snap WSMessage
+	if err := json.Unmarshal(<-c.send, &snap); err != nil {
+		t.Fatalf("decode snapshot message: %v", err)
+	}
+	if snap.Type != "Snapshot" || snap.Channel != "trades" {
+		t.Fatalf("unexpected snapshot payload: %+v", snap)
+	}
+}
+
 func TestHandleResumeUsesSnapshotForConflatedChannels(t *testing.T) {
 	s := &Server{
 		state: &state{

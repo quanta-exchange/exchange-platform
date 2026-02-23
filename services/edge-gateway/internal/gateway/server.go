@@ -3157,6 +3157,21 @@ func (s *Server) handleResume(c *client, sub wsSubscription, lastSeq uint64) {
 		break
 	}
 	if !found || lastSeq+1 < oldest {
+		if sub.channel == "trades" {
+			s.sendToClient(c, WSMessage{
+				Type:    "Missed",
+				Channel: sub.channel,
+				Symbol:  sub.symbol,
+				Seq:     oldest,
+				Ts:      time.Now().UnixMilli(),
+				Data: map[string]interface{}{
+					"reason":             "HISTORY_GAP",
+					"lastSeq":            lastSeq,
+					"oldestAvailableSeq": oldest,
+					"recovery":           "fetch_recent_trades_or_resubscribe",
+				},
+			}, false, "")
+		}
 		s.sendSnapshot(c, sub)
 		return
 	}

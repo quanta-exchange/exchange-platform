@@ -156,7 +156,7 @@ Latest rolling 24h ticker snapshot
 { "op": "RESUME", "channel": "trades", "symbol": "BTC-KRW", "lastSeq": 1234500 }
 ```
 - Server responses:
-  - `trades`: if replay range available, stream missed events; if not, send `Snapshot`
+  - `trades`: if replay range available, stream missed events; if history gap exists, send `Missed` (with `reason=HISTORY_GAP`) then `Snapshot`
   - `book/candles/ticker`: send latest `Snapshot` (conflation channel)
 
 ### Backpressure policy (must implement)
