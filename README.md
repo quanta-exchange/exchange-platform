@@ -364,6 +364,7 @@ Ledger env:
 - `LEDGER_RECONCILIATION_INTERVAL_MS=5000`
 - `LEDGER_RECONCILIATION_LAG_THRESHOLD=10`
 - `LEDGER_RECONCILIATION_STATE_STALE_MS=30000` (latest seq update freshness budget)
+- `LEDGER_READY_REQUIRE_SETTLEMENT_CONSUMER=true` (`true`면 Kafka settlement consumer 미가동/일시정지 시 `/readyz`가 `503`)
 - `LEDGER_ADMIN_TOKEN=` (optional; when set, `/v1/admin/**` and `/v1/balances` require `X-Admin-Token`)
 - `LEDGER_RECONCILIATION_SAFETY_MODE=CANCEL_ONLY` (`SOFT_HALT`/`HARD_HALT` supported)
 - `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
@@ -395,3 +396,9 @@ Reconciliation metrics (ledger `/metrics`):
 Edge readiness/consumer metrics (`/metrics`):
 - `edge_trade_consumer_running`
 - `edge_trade_consumer_read_error_total`
+
+Ledger `/readyz` failure statuses:
+- `db_unready`
+- `settlement_consumer_unavailable`
+- `settlement_consumer_not_running`
+- `settlement_consumer_paused`

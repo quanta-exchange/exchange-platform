@@ -223,6 +223,15 @@ Topic naming (suggested)
 
 Base: `/v1`
 
+System probes:
+- `GET /healthz`
+- `GET /readyz`
+  - returns `503` on:
+    - `db_unready`
+    - `settlement_consumer_unavailable`
+    - `settlement_consumer_not_running`
+    - `settlement_consumer_paused`
+
 ### Internal settlement/reserve
 - `POST /internal/trades/executed`
   - consumes `TradeExecuted` payload with envelope

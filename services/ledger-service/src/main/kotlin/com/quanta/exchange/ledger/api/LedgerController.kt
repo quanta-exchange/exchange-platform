@@ -24,6 +24,13 @@ import java.time.Instant
 class SystemController(
     private val jdbc: JdbcTemplate,
     private val metrics: LedgerMetrics,
+    private val consumerControl: KafkaConsumerControl,
+    @Value("\${ledger.kafka.enabled:false}")
+    private val kafkaEnabled: Boolean,
+    @Value("\${ledger.kafka.settlement-enabled:true}")
+    private val settlementConsumerEnabled: Boolean,
+    @Value("\${ledger.readiness.require-settlement-consumer:true}")
+    private val requireSettlementConsumer: Boolean,
 ) {
     @GetMapping("/healthz")
     fun health(): Map<String, String> {
@@ -34,7 +41,20 @@ class SystemController(
     fun ready(): ResponseEntity<Map<String, String>> {
         return try {
             jdbc.queryForObject("SELECT 1", Int::class.java)
-            ResponseEntity.ok(mapOf("status" to "ready"))
+            if (requireSettlementConsumer && kafkaEnabled && settlementConsumerEnabled) {
+                val status = consumerControl.settlementStatus()
+                when {
+                    !status.available -> ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(mapOf("status" to "settlement_consumer_unavailable"))
+                    !status.running -> ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(mapOf("status" to "settlement_consumer_not_running"))
+                    status.gatePaused || status.containerPaused || status.pauseRequested -> ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(mapOf("status" to "settlement_consumer_paused"))
+                    else -> ResponseEntity.ok(mapOf("status" to "ready"))
+                }
+            } else {
+                ResponseEntity.ok(mapOf("status" to "ready"))
+            }
         } catch (_: Exception) {
             ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mapOf("status" to "db_unready"))
         }

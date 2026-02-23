@@ -34,6 +34,8 @@ management:
 ledger:
   admin:
     token: ${LEDGER_ADMIN_TOKEN:}
+  readiness:
+    require-settlement-consumer: ${LEDGER_READY_REQUIRE_SETTLEMENT_CONSUMER:true}
   kafka:
     enabled: ${LEDGER_KAFKA_ENABLED:false}
     trade-topic: ${LEDGER_KAFKA_TRADE_TOPIC:core.trade-events.v1}
