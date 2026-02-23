@@ -481,6 +481,8 @@ Outputs:
 ### 25) Release gate
 ```bash
 make release-gate
+# include staged load profiles in gate:
+./scripts/release_gate.sh --run-load-profiles
 ```
 Outputs:
 - `release_gate_report=build/release-gate/release-gate-<timestamp>.json`

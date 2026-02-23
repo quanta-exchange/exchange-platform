@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/release-gate}"
 RUN_CHECKS=false
 RUN_EXTENDED_CHECKS=false
+RUN_LOAD_PROFILES=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-extended-checks)
       RUN_EXTENDED_CHECKS=true
+      shift
+      ;;
+    --run-load-profiles)
+      RUN_LOAD_PROFILES=true
       shift
       ;;
     *)
@@ -39,6 +44,9 @@ fi
 if [[ "$RUN_EXTENDED_CHECKS" == "true" ]]; then
   VERIFY_CMD+=("--run-extended-checks")
 fi
+if [[ "$RUN_LOAD_PROFILES" == "true" ]]; then
+  VERIFY_CMD+=("--run-load-profiles")
+fi
 
 VERIFY_OUTPUT="$("${VERIFY_CMD[@]}")"
 echo "$VERIFY_OUTPUT"
@@ -53,7 +61,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" <<'PY'
 import json
 import pathlib
 import sys
@@ -66,6 +74,7 @@ git_commit = sys.argv[4]
 git_branch = sys.argv[5]
 run_checks = sys.argv[6].lower() == "true"
 run_extended_checks = sys.argv[7].lower() == "true"
+run_load_profiles = sys.argv[8].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -77,6 +86,8 @@ payload = {
     "git_branch": git_branch,
     "run_checks": run_checks,
     "run_extended_checks": run_extended_checks,
+    "run_load_profiles": run_load_profiles,
+    "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_summary": str(verification_summary),
     "verification_step_count": len(summary.get("steps", [])),
     "failed_steps": [s.get("name") for s in summary.get("steps", []) if s.get("status") != "pass"],
