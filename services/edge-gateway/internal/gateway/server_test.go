@@ -139,6 +139,73 @@ func TestNewRejectsWeakAPISecret(t *testing.T) {
 	}
 }
 
+func TestReadyzFailsWhenCoreConnectionClosed(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	if s.coreConn == nil {
+		t.Fatalf("expected core connection")
+	}
+	_ = s.coreConn.Close()
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "core_unready") {
+		t.Fatalf("expected core_unready body, got %s", w.Body.String())
+	}
+}
+
+func TestReadyzFailsWhenTradeConsumerIsNotRunning(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	s.cfg.KafkaBrokers = "localhost:29092"
+	s.state.mu.Lock()
+	s.state.tradeConsumerExpected = true
+	s.state.tradeConsumerRunning = false
+	s.state.tradeConsumerErrorMs = 0
+	s.state.mu.Unlock()
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "trade_consumer_unready") {
+		t.Fatalf("expected trade_consumer_unready body, got %s", w.Body.String())
+	}
+}
+
+func TestReadyzFailsOnRecentTradeConsumerReadError(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	s.cfg.KafkaBrokers = "localhost:29092"
+	s.state.mu.Lock()
+	s.state.tradeConsumerExpected = true
+	s.state.tradeConsumerRunning = true
+	s.state.tradeConsumerErrorMs = time.Now().UnixMilli()
+	s.state.mu.Unlock()
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "trade_consumer_unready") {
+		t.Fatalf("expected trade_consumer_unready body, got %s", w.Body.String())
+	}
+}
+
 func TestCreateOrderRequiresIdempotencyKey(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()

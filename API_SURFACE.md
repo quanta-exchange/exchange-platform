@@ -89,6 +89,17 @@ Candles history (ClickHouse)
 #### GET `/v1/markets/{symbol}/ticker`
 Latest rolling 24h ticker snapshot
 
+### System probes
+- `GET /healthz`
+  - always returns liveness (`200`) when process loop is up
+- `GET /readyz`
+  - returns `200 {"status":"ready"}` only when dependency checks pass
+  - failure statuses include:
+    - `db_unready`
+    - `redis_unready`
+    - `core_unready` (when core is enabled)
+    - `trade_consumer_unready` (when Kafka consumer is configured)
+
 ---
 
 ## 2) External WebSocket API (Edge Gateway)

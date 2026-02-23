@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -44,6 +45,7 @@ const (
 	slowConsumerCloseCode = 4001
 	defaultBookDepth      = 20
 	defaultCandleInterval = "1m"
+	consumerErrorGraceMs  = int64(10_000)
 )
 
 type contextKey string
@@ -266,19 +268,23 @@ type state struct {
 	wallets         map[string]map[string]walletBalance
 	appliedTrades   map[string]int64
 
-	ordersTotal         uint64
-	tradesTotal         uint64
-	slowConsumerCloses  uint64
-	wsDroppedMsgs       uint64
-	replayDetected      uint64
-	publicRateLimited   uint64
-	wsPolicyCloses      uint64
-	wsRateLimitCloses   uint64
-	nextOrderGcAtMs     int64
-	wsConnRejects       uint64
-	wsConnsByIP         map[string]int
-	settlementAnomalies uint64
-	sessionEvictions    uint64
+	ordersTotal             uint64
+	tradesTotal             uint64
+	slowConsumerCloses      uint64
+	wsDroppedMsgs           uint64
+	replayDetected          uint64
+	publicRateLimited       uint64
+	wsPolicyCloses          uint64
+	wsRateLimitCloses       uint64
+	nextOrderGcAtMs         int64
+	wsConnRejects           uint64
+	wsConnsByIP             map[string]int
+	settlementAnomalies     uint64
+	sessionEvictions        uint64
+	tradeConsumerExpected   bool
+	tradeConsumerRunning    bool
+	tradeConsumerErrorMs    int64
+	tradeConsumerReadErrors uint64
 }
 
 type wsSubscription struct {
@@ -767,7 +773,61 @@ func (s *Server) handleReady(w http.ResponseWriter, _ *http.Request) {
 			return
 		}
 	}
+	if !s.coreReady() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "core_unready"})
+		return
+	}
+	if !s.tradeConsumerReady() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "trade_consumer_unready"})
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+}
+
+func (s *Server) coreReady() bool {
+	if s.cfg.DisableCore {
+		return true
+	}
+	if s.coreConn == nil {
+		return false
+	}
+	s.coreConn.Connect()
+	state := s.coreConn.GetState()
+	if state == connectivity.Ready {
+		return true
+	}
+	if state == connectivity.Shutdown || state == connectivity.TransientFailure {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
+	defer cancel()
+	if !s.coreConn.WaitForStateChange(ctx, state) {
+		return s.coreConn.GetState() == connectivity.Ready
+	}
+	state = s.coreConn.GetState()
+	return state == connectivity.Ready || state == connectivity.Idle
+}
+
+func (s *Server) tradeConsumerReady() bool {
+	if strings.TrimSpace(s.cfg.KafkaBrokers) == "" {
+		return true
+	}
+	now := time.Now().UnixMilli()
+	s.state.mu.Lock()
+	expected := s.state.tradeConsumerExpected
+	running := s.state.tradeConsumerRunning
+	lastErrorMs := s.state.tradeConsumerErrorMs
+	s.state.mu.Unlock()
+	if !expected {
+		return false
+	}
+	if !running {
+		return false
+	}
+	if lastErrorMs > 0 && now-lastErrorMs <= consumerErrorGraceMs {
+		return false
+	}
+	return true
 }
 
 func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
@@ -784,6 +844,8 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	publicRateLimited := s.state.publicRateLimited
 	settlementAnomalies := s.state.settlementAnomalies
 	sessionEvictions := s.state.sessionEvictions
+	tradeConsumerRunning := s.state.tradeConsumerRunning
+	tradeConsumerErrors := s.state.tradeConsumerReadErrors
 	queueLens := make([]int, 0, len(s.state.clients))
 	for c := range s.state.clients {
 		queueLens = append(queueLens, c.queueLen())
@@ -815,6 +877,12 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_public_rate_limited_total " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_settlement_anomaly_total " + strconv.FormatUint(settlementAnomalies, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_session_eviction_total " + strconv.FormatUint(sessionEvictions, 10) + "\n"))
+	if tradeConsumerRunning {
+		_, _ = w.Write([]byte("edge_trade_consumer_running 1\n"))
+	} else {
+		_, _ = w.Write([]byte("edge_trade_consumer_running 0\n"))
+	}
+	_, _ = w.Write([]byte("edge_trade_consumer_read_error_total " + strconv.FormatUint(tradeConsumerErrors, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
 	for _, reason := range reasons {
 		line := fmt.Sprintf(
@@ -2148,6 +2216,11 @@ func (s *Server) seedSampleMarketData(ctx context.Context) error {
 
 func (s *Server) startTradeConsumer() {
 	if strings.TrimSpace(s.cfg.KafkaBrokers) == "" {
+		s.state.mu.Lock()
+		s.state.tradeConsumerExpected = false
+		s.state.tradeConsumerRunning = false
+		s.state.tradeConsumerErrorMs = 0
+		s.state.mu.Unlock()
 		return
 	}
 	brokers := make([]string, 0, 3)
@@ -2158,6 +2231,11 @@ func (s *Server) startTradeConsumer() {
 		}
 	}
 	if len(brokers) == 0 {
+		s.state.mu.Lock()
+		s.state.tradeConsumerExpected = false
+		s.state.tradeConsumerRunning = false
+		s.state.tradeConsumerErrorMs = 0
+		s.state.mu.Unlock()
 		return
 	}
 
@@ -2174,15 +2252,29 @@ func (s *Server) startTradeConsumer() {
 
 	s.tradeConsumer = reader
 	s.tradeCancel = cancel
+	s.state.mu.Lock()
+	s.state.tradeConsumerExpected = true
+	s.state.tradeConsumerRunning = true
+	s.state.tradeConsumerErrorMs = 0
+	s.state.mu.Unlock()
 	s.tradeWG.Add(1)
 	go func() {
 		defer s.tradeWG.Done()
+		defer func() {
+			s.state.mu.Lock()
+			s.state.tradeConsumerRunning = false
+			s.state.mu.Unlock()
+		}()
 		for {
 			msg, err := reader.ReadMessage(ctx)
 			if err != nil {
 				if errors.Is(err, context.Canceled) || errors.Is(err, kafka.ErrGroupClosed) {
 					return
 				}
+				s.state.mu.Lock()
+				s.state.tradeConsumerReadErrors++
+				s.state.tradeConsumerErrorMs = time.Now().UnixMilli()
+				s.state.mu.Unlock()
 				log.Printf("service=edge-gateway msg=trade_consume_failed topic=%s reason=%v", s.cfg.KafkaTradeTopic, err)
 				select {
 				case <-ctx.Done():
@@ -2191,6 +2283,9 @@ func (s *Server) startTradeConsumer() {
 				}
 				continue
 			}
+			s.state.mu.Lock()
+			s.state.tradeConsumerErrorMs = 0
+			s.state.mu.Unlock()
 			if err := s.consumeTradeMessage(ctx, msg.Value); err != nil {
 				log.Printf("service=edge-gateway msg=trade_apply_failed reason=%v payload=%s", err, string(msg.Value))
 			}

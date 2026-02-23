@@ -339,6 +339,9 @@ Configure auth in env:
 
 `EDGE_DISABLE_CORE=true`에서는 주문 API가 `core_unavailable`로 거절됩니다.
 주문/체결 플로우 테스트는 Trading Core 실행이 필요합니다.
+`/readyz`는 DB/Redis 외에 다음 상태를 함께 검사합니다:
+- `EDGE_DISABLE_CORE=false`일 때 core gRPC 연결 상태
+- `EDGE_KAFKA_BROKERS` 설정 시 trade consumer 실행/최근 읽기 오류 상태
 
 Request headers for trading endpoints:
 - `X-API-KEY`
@@ -388,3 +391,7 @@ Reconciliation metrics (ledger `/metrics`):
 - `reconciliation_safety_failure_total`
 - `invariant_safety_trigger_total`
 - `invariant_safety_failure_total`
+
+Edge readiness/consumer metrics (`/metrics`):
+- `edge_trade_consumer_running`
+- `edge_trade_consumer_read_error_total`
