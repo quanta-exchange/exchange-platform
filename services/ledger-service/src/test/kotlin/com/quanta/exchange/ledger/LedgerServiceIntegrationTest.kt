@@ -2,11 +2,14 @@ package com.quanta.exchange.ledger
 
 import com.quanta.exchange.ledger.core.BalanceAdjustmentCommand
 import com.quanta.exchange.ledger.core.EventEnvelope
+import com.quanta.exchange.ledger.core.LedgerEntryCommand
 import com.quanta.exchange.ledger.core.LedgerMetrics
+import com.quanta.exchange.ledger.core.LedgerPostingCommand
 import com.quanta.exchange.ledger.core.LedgerService
 import com.quanta.exchange.ledger.core.ReserveCommand
 import com.quanta.exchange.ledger.core.SafetyMode
 import com.quanta.exchange.ledger.core.TradeExecuted
+import com.quanta.exchange.ledger.repo.LedgerRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -34,6 +37,9 @@ class LedgerServiceIntegrationTest {
 
     @Autowired
     lateinit var ledgerMetrics: LedgerMetrics
+
+    @Autowired
+    lateinit var ledgerRepository: LedgerRepository
 
     @BeforeEach
     fun cleanDb() {
@@ -78,6 +84,47 @@ class LedgerServiceIntegrationTest {
         assertEquals("dlq", failed.reason)
         val dlqCount = jdbc.queryForObject("SELECT COUNT(*) FROM settlement_dlq", Long::class.java)!!
         assertEquals(1L, dlqCount)
+    }
+
+    @Test
+    fun appendEntryRejectsAccountCurrencyMismatchEvenWhenAccountExists() {
+        jdbc.update(
+            "INSERT INTO accounts(account_id, user_id, currency, account_kind) VALUES (?, ?, ?, ?)",
+            "user:mismatch:KRW:AVAILABLE",
+            "mismatch",
+            "KRW",
+            "AVAILABLE",
+        )
+
+        val command = LedgerEntryCommand(
+            entryId = "entry-mismatch-1",
+            referenceType = "TEST",
+            referenceId = "ref-mismatch-1",
+            entryKind = "MANUAL",
+            symbol = "BTC-KRW",
+            engineSeq = 1,
+            occurredAt = Instant.now(),
+            correlationId = "corr-mismatch-1",
+            causationId = "cause-mismatch-1",
+            postings = listOf(
+                LedgerPostingCommand(
+                    accountId = "user:mismatch:KRW:AVAILABLE",
+                    currency = "BTC",
+                    amount = 10,
+                    isDebit = true,
+                ),
+                LedgerPostingCommand(
+                    accountId = "system:clearing:BTC:AVAILABLE",
+                    currency = "BTC",
+                    amount = 10,
+                    isDebit = false,
+                ),
+            ),
+        )
+
+        assertThrows(IllegalStateException::class.java) {
+            ledgerRepository.appendEntry(command)
+        }
     }
 
     @Test

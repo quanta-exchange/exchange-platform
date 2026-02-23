@@ -752,24 +752,41 @@ class LedgerRepository(
         } else {
             "system"
         }
-        val exists = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM accounts WHERE account_id = ?",
-            Long::class.java,
-            accountId,
-        ) ?: 0L
-        if (exists > 0) {
-            return
+        try {
+            jdbc.update(
+                """
+                INSERT INTO accounts(account_id, user_id, currency, account_kind)
+                VALUES (?, ?, ?, ?)
+                """.trimIndent(),
+                accountId,
+                userId,
+                currency,
+                kind,
+            )
+        } catch (ex: DataIntegrityViolationException) {
+            if (!isUniqueViolation(ex)) {
+                throw ex
+            }
         }
-        jdbc.update(
+        val account = jdbc.query(
             """
-            INSERT INTO accounts(account_id, user_id, currency, account_kind)
-            VALUES (?, ?, ?, ?)
+            SELECT currency, account_kind
+            FROM accounts
+            WHERE account_id = ?
             """.trimIndent(),
+            { rs, _ -> rs.getString("currency") to rs.getString("account_kind") },
             accountId,
-            userId,
-            currency,
-            kind,
-        )
+        ).firstOrNull() ?: throw IllegalStateException("account creation failed for $accountId")
+        if (!account.first.equals(currency, ignoreCase = true)) {
+            throw IllegalStateException(
+                "account currency mismatch for $accountId: expected ${account.first}, got $currency",
+            )
+        }
+        if (!account.second.equals(kind, ignoreCase = true)) {
+            throw IllegalStateException(
+                "account kind mismatch for $accountId: expected ${account.second}, got $kind",
+            )
+        }
     }
 
     private fun isUniqueViolation(ex: DataIntegrityViolationException): Boolean {
