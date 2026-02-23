@@ -539,6 +539,11 @@
       "controlId": "CTRL-108",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "Proof and runbook health artifacts are exported as metrics and backed by alert-rule examples so operational failures are observable through Prometheus"
+    },
+    {
+      "controlId": "CTRL-109",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for proof-health failures and is wired into verification/release/status/transparency/safety-budget contexts for deterministic remediation evidence"
     }
   ]
 }

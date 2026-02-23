@@ -273,6 +273,7 @@ adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-lates
 exactly_once_runbook_latest = read_latest_json("build/runbooks/exactly-once-million-latest.json")
 mapping_integrity_runbook_latest = read_latest_json("build/runbooks/mapping-integrity-latest.json")
 idempotency_latch_runbook_latest = read_latest_json("build/runbooks/idempotency-latch-latest.json")
+proof_health_runbook_latest = read_latest_json("build/runbooks/proof-health-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
@@ -499,6 +500,29 @@ report = {
                         idempotency_latch_runbook_latest.get("payload") or {}
                     ).get("recommended_action"),
                     "error": idempotency_latch_runbook_latest.get("error"),
+                },
+                "proof_health": {
+                    "present": proof_health_runbook_latest.get("present", False),
+                    "path": proof_health_runbook_latest.get("path"),
+                    "proof_health_ok": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("proof_health_ok"),
+                    "tracked_count": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("tracked_count"),
+                    "present_count": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("present_count"),
+                    "missing_count": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("missing_count"),
+                    "failing_count": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("failing_count"),
+                    "recommended_action": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": proof_health_runbook_latest.get("error"),
                 }
             },
             "proofs": {

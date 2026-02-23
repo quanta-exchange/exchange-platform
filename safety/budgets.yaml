@@ -47,6 +47,11 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "proofHealthRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true
+    },
     "exactlyOnceMillion": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -166,6 +171,7 @@
     "idempotencyScope": "build/idempotency/prove-idempotency-latest.json",
     "latchApproval": "build/latch/prove-latch-approval-latest.json",
     "idempotencyLatchRunbook": "build/runbooks/idempotency-latch-latest.json",
+    "proofHealthRunbook": "build/runbooks/proof-health-latest.json",
     "exactlyOnceMillion": "build/exactly-once/prove-exactly-once-million-latest.json",
     "invariantsSummary": "build/invariants/invariants-summary.json",
     "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",

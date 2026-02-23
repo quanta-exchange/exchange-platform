@@ -661,6 +661,12 @@
       "title": "Proof and runbook health are exported as Prometheus metrics with alert examples",
       "enforced": false,
       "required_evidence": ["scripts/proof_health_metrics.sh", "infra/observability/proof-alert-rules.example.yml", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-109",
+      "title": "Runbook-as-code exists for proof-health failures and is integrated into verification/release/status/transparency/safety-budget flows",
+      "enforced": false,
+      "required_evidence": ["runbooks/proof_health_failure.sh", "runbooks/proof_health_failure.md", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/proof_health_metrics.sh", "README.md", "RUNBOOK.md", "Makefile"]
     }
   ]
 }

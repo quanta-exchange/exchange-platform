@@ -31,6 +31,7 @@ sources = {
     "runbook_exactly_once_million": "build/runbooks/exactly-once-million-latest.json",
     "runbook_mapping_integrity": "build/runbooks/mapping-integrity-latest.json",
     "runbook_idempotency_latch": "build/runbooks/idempotency-latch-latest.json",
+    "runbook_proof_health": "build/runbooks/proof-health-latest.json",
 }
 
 def parse_utc(raw):
@@ -92,6 +93,8 @@ for name, rel in sources.items():
                 # runbook summary payloads keep proof semantics.
                 if name == "runbook_idempotency_latch":
                     ok = bool(payload.get("idempotency_ok", False) and payload.get("latch_ok", False))
+                elif name == "runbook_proof_health":
+                    ok = bool(payload.get("proof_health_ok", False))
                 else:
                     ok = bool(payload.get("proof_ok", False))
             else:

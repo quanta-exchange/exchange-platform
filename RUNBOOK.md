@@ -164,6 +164,7 @@ Gate G1 operational check:
 - Exactly-once million failure drill: `./runbooks/exactly_once_million_failure.sh`
 - Mapping integrity failure drill: `./runbooks/mapping_integrity_failure.sh`
 - Idempotency+latch failure drill: `./runbooks/idempotency_latch_failure.sh`
+- Proof health failure drill: `./runbooks/proof_health_failure.sh`
 - Policy signature drill: `./runbooks/policy_signature.sh`
 - Policy tamper drill: `./runbooks/policy_tamper.sh`
 - Kafka network partition drill: `./runbooks/network_partition.sh`
@@ -179,6 +180,7 @@ Gate G1 operational check:
   - with exactly-once million runbook: `./scripts/verification_factory.sh --run-exactly-once-runbook`
   - with mapping integrity runbook: `./scripts/verification_factory.sh --run-mapping-integrity-runbook`
   - with idempotency+latch runbook: `./scripts/verification_factory.sh --run-idempotency-latch-runbook`
+  - with proof-health runbook: `./scripts/verification_factory.sh --run-proof-health-runbook`
   - with determinism proof: `./scripts/verification_factory.sh --run-determinism`
   - with exactly-once million proof: `./scripts/verification_factory.sh --run-exactly-once-million`
   - with adversarial drill: `./scripts/verification_factory.sh --run-adversarial`

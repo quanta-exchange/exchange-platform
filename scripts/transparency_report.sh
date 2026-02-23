@@ -71,6 +71,7 @@ adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 exactly_once_runbook = read_json("build/runbooks/exactly-once-million-latest.json")
 mapping_integrity_runbook = read_json("build/runbooks/mapping-integrity-latest.json")
 idempotency_latch_runbook = read_json("build/runbooks/idempotency-latch-latest.json")
+proof_health_runbook = read_json("build/runbooks/proof-health-latest.json")
 
 sources = {
     "load": load,
@@ -105,6 +106,7 @@ sources = {
     "exactly_once_runbook": exactly_once_runbook,
     "mapping_integrity_runbook": mapping_integrity_runbook,
     "idempotency_latch_runbook": idempotency_latch_runbook,
+    "proof_health_runbook": proof_health_runbook,
 }
 
 email_pattern = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -258,6 +260,10 @@ report = {
             "idempotency_latch_runbook_idempotency_ok": bool(idempotency_latch_runbook.get("idempotency_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_latch_ok": bool(idempotency_latch_runbook.get("latch_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook.get("recommended_action") if idempotency_latch_runbook else None,
+            "proof_health_runbook_proof_ok": bool(proof_health_runbook.get("proof_health_ok")) if proof_health_runbook else None,
+            "proof_health_runbook_missing_count": int(proof_health_runbook.get("missing_count")) if proof_health_runbook and proof_health_runbook.get("missing_count") is not None else None,
+            "proof_health_runbook_failing_count": int(proof_health_runbook.get("failing_count")) if proof_health_runbook and proof_health_runbook.get("failing_count") is not None else None,
+            "proof_health_runbook_recommended_action": proof_health_runbook.get("recommended_action") if proof_health_runbook else None,
             "proof_health_ok": bool(proof_health.get("ok")) if proof_health else None,
             "proof_health_failing_count": int(proof_health.get("failing_count")) if proof_health and proof_health.get("failing_count") is not None else None,
             "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
@@ -301,6 +307,7 @@ report = {
         "exactly_once_runbook": "build/runbooks/exactly-once-million-latest.json",
         "mapping_integrity_runbook": "build/runbooks/mapping-integrity-latest.json",
         "idempotency_latch_runbook": "build/runbooks/idempotency-latch-latest.json",
+        "proof_health_runbook": "build/runbooks/proof-health-latest.json",
     },
 }
 

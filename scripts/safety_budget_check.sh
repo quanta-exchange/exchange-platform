@@ -238,6 +238,20 @@ for key, budget in budgets.items():
                 entry["details"].append("idempotency_latch_runbook_idempotency_not_ok")
             if not runbook_latch_ok:
                 entry["details"].append("idempotency_latch_runbook_latch_not_ok")
+    elif key == "proofHealthRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        proof_health_ok = bool(payload.get("proof_health_ok", False))
+        missing_count = int(payload.get("missing_count", 0))
+        failing_count = int(payload.get("failing_count", 0))
+        if must_ok and not proof_health_ok:
+            entry["ok"] = False
+            entry["details"].append("proof_health_runbook_not_ok")
+        if missing_count > 0:
+            entry["ok"] = False
+            entry["details"].append(f"proof_health_runbook_missing_count={missing_count}")
+        if failing_count > 0:
+            entry["ok"] = False
+            entry["details"].append(f"proof_health_runbook_failing_count={failing_count}")
     elif key == "exactlyOnceMillion":
         must_ok = bool(budget.get("mustBeOk", True))
         exactly_once_ok = bool(payload.get("ok", False))
