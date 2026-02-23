@@ -314,6 +314,16 @@
       "controlId": "CTRL-073",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.12.4.1"],
       "description": "Release gate report embeds safety budget violation context so blocked promotions include concrete budget failure evidence"
+    },
+    {
+      "controlId": "CTRL-074",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for safety budget failures and emits deterministic diagnostic artifacts with recommended next action"
+    },
+    {
+      "controlId": "CTRL-075",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification summary records budget-failure runbook artifact path so release evidence includes failure diagnostics"
     }
   ]
 }

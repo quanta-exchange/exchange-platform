@@ -445,6 +445,18 @@
       "title": "Release gate report includes safety budget violation context",
       "enforced": false,
       "required_evidence": ["scripts/release_gate.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-074",
+      "title": "Safety budget failure runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/budget_failure.sh", "runbooks/budget_failure.md", "README.md", "RUNBOOK.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-075",
+      "title": "Verification summary includes budget failure runbook artifact path",
+      "enforced": false,
+      "required_evidence": ["scripts/verification_factory.sh", "README.md"]
     }
   ]
 }

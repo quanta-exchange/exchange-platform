@@ -196,6 +196,9 @@ fi
 if ! run_step "safety-budget" "$ROOT_DIR/scripts/safety_budget_check.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "runbook-budget-failure" "$ROOT_DIR/runbooks/budget_failure.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "assurance-pack" "$ROOT_DIR/scripts/assurance_pack.sh"; then
   HAS_FAILURE=true
 fi
@@ -229,6 +232,7 @@ COMPLIANCE_LOG="$LOG_DIR/compliance-evidence.log"
 TRANSPARENCY_LOG="$LOG_DIR/transparency-report.log"
 ACCESS_REVIEW_LOG="$LOG_DIR/access-review.log"
 SAFETY_BUDGET_LOG="$LOG_DIR/safety-budget.log"
+BUDGET_FAILURE_RUNBOOK_LOG="$LOG_DIR/runbook-budget-failure.log"
 ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
 SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
@@ -261,9 +265,10 @@ COMPLIANCE_REPORT="$(extract_value "compliance_evidence_report" "$COMPLIANCE_LOG
 TRANSPARENCY_REPORT="$(extract_value "transparency_report_file" "$TRANSPARENCY_LOG")"
 ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG")"
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
+BUDGET_FAILURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$BUDGET_FAILURE_RUNBOOK_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -300,12 +305,13 @@ run_startup_guardrails = sys.argv[30].lower() == "true"
 startup_guardrails_runbook_dir = sys.argv[31]
 run_change_workflow = sys.argv[32].lower() == "true"
 change_workflow_runbook_dir = sys.argv[33]
-verify_audit_chain_report = sys.argv[34]
-verify_change_audit_chain_report = sys.argv[35]
-pii_log_scan_report = sys.argv[36]
-anomaly_detector_report = sys.argv[37]
-anomaly_smoke_report = sys.argv[38]
-rbac_sod_report = sys.argv[39]
+budget_failure_runbook_dir = sys.argv[34]
+verify_audit_chain_report = sys.argv[35]
+verify_change_audit_chain_report = sys.argv[36]
+pii_log_scan_report = sys.argv[37]
+anomaly_detector_report = sys.argv[38]
+anomaly_smoke_report = sys.argv[39]
+rbac_sod_report = sys.argv[40]
 
 steps = []
 ok = True
@@ -340,6 +346,7 @@ summary = {
         "load_all_report": load_all_report or None,
         "startup_guardrails_runbook_dir": startup_guardrails_runbook_dir or None,
         "change_workflow_runbook_dir": change_workflow_runbook_dir or None,
+        "budget_failure_runbook_dir": budget_failure_runbook_dir or None,
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,
         "external_replay_report": external_replay_report or None,

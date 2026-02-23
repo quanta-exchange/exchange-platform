@@ -160,6 +160,7 @@ Gate G1 operational check:
 - Game-day anomaly drill: `./runbooks/game_day_anomaly.sh`
 - Audit-chain tamper drill: `./runbooks/audit_chain_tamper.sh`
 - Change workflow drill: `./runbooks/change_workflow.sh`
+- Budget failure drill: `./runbooks/budget_failure.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
   - with change workflow drill: `./scripts/verification_factory.sh --run-change-workflow`
@@ -312,6 +313,20 @@ Success criteria:
 - runbook output contains:
   - `change-workflow-summary.json`
   - `verify-change-audit-chain-*.json`
+  - `status-before.json` / `status-after.json`
+
+### 4.8 Safety budget failure drill
+Purpose:
+- safety budget 위반 원인을 빠르게 진단하고 권고 액션을 자동 생성
+- 온콜이 `release_gate` 실패 원인을 즉시 분류하도록 지원
+
+Command:
+- `./runbooks/budget_failure.sh`
+
+Success criteria:
+- output includes `runbook_budget_failure_ok=true`
+- runbook output contains:
+  - `budget-failure-summary.json` (`budget_ok`, `violation_count`, `recommended_action`)
   - `status-before.json` / `status-after.json`
 
 ---

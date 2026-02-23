@@ -90,6 +90,8 @@ runbooks/
   game_day_anomaly.md     # anomaly game-day drill notes
   change_workflow.sh      # change workflow (proposal/approval/apply/audit-chain) automated drill
   change_workflow.md      # change workflow drill notes
+  budget_failure.sh       # safety budget failure diagnosis automated drill
+  budget_failure.md       # safety budget failure drill notes
   startup_guardrails.sh   # startup guardrails verification drill
   startup_guardrails.md   # startup guardrails drill notes
   ws_drop_spike.sh        # ws drop spike automated drill
@@ -428,7 +430,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -455,6 +457,17 @@ Success output includes:
   - `mustThresholdsChecked`
   - `mustThresholdsPass`
   - `minOrdersSucceeded`
+
+### 16.1) Safety budget failure runbook
+```bash
+make runbook-budget-failure
+```
+Outputs:
+- `runbook_budget_failure_ok=true|false`
+- `budget_ok=true|false`
+- `budget_violation_count=<n>`
+- `budget_recommended_action=...`
+- `runbook_output_dir=build/runbooks/budget-failure-<timestamp>`
 
 ### 17) System status snapshot
 ```bash
@@ -492,9 +505,10 @@ make runbook-startup-guardrails
 make runbook-game-day-anomaly
 make runbook-audit-tamper
 make runbook-change-workflow
+make runbook-budget-failure
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 

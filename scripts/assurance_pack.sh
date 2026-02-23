@@ -70,6 +70,7 @@ startup_guardrails_runbook = newest(root.glob("build/runbooks/startup-guardrails
 game_day_anomaly_runbook = newest(root.glob("build/runbooks/game-day-anomaly-*/game-day-anomaly.log"))
 audit_chain_tamper_runbook = newest(root.glob("build/runbooks/audit-chain-tamper-*/audit-chain-tamper.log"))
 change_workflow_runbook = newest(root.glob("build/runbooks/change-workflow-*/change-workflow.log"))
+budget_failure_runbook = newest(root.glob("build/runbooks/budget-failure-*/budget-failure.log"))
 
 evidence = [
     {"id": "load_smoke", "path": pathlib.Path("build/load/load-smoke.json"), "required": True},
@@ -78,6 +79,7 @@ evidence = [
     {"id": "game_day_anomaly_runbook", "path": pathlib.Path(rel(game_day_anomaly_runbook)) if game_day_anomaly_runbook else None, "required": False},
     {"id": "audit_chain_tamper_runbook", "path": pathlib.Path(rel(audit_chain_tamper_runbook)) if audit_chain_tamper_runbook else None, "required": False},
     {"id": "change_workflow_runbook", "path": pathlib.Path(rel(change_workflow_runbook)) if change_workflow_runbook else None, "required": False},
+    {"id": "budget_failure_runbook", "path": pathlib.Path(rel(budget_failure_runbook)) if budget_failure_runbook else None, "required": False},
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "verify_change_audit_chain", "path": pathlib.Path("build/change-audit/verify-change-audit-chain-latest.json"), "required": False},
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
@@ -160,6 +162,7 @@ pack = {
         {"id": "G24", "text": "Runbook-as-code drill validates the full change workflow and emits reproducible operational evidence with before/after posture snapshots."},
         {"id": "G25", "text": "Safety budget freshness proof confirms stale evidence is rejected while fresh evidence passes, reducing false trust in outdated reports."},
         {"id": "G26", "text": "Controls freshness proof verifies stale control evidence is detected and excluded from trust decisions in control catalog checks."},
+        {"id": "G27", "text": "Budget failure runbook automatically summarizes violations and recommends next action, improving deterministic incident response."},
     ],
 }
 
