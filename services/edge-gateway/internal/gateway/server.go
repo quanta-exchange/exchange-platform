@@ -82,6 +82,7 @@ type Config struct {
 	RedisDB                  int
 	OTelEndpoint             string
 	OTelServiceName          string
+	OTelEnvironment          string
 	OTelSampleRatio          float64
 	OTelInsecure             bool
 	CoreAddr                 string
@@ -3568,7 +3569,7 @@ func initTracer(cfg Config) (trace.Tracer, func(context.Context) error, error) {
 		ctx,
 		resource.WithAttributes(
 			semconv.ServiceName(cfg.OTelServiceName),
-			semconv.DeploymentEnvironment("local"),
+			semconv.DeploymentEnvironment(otelEnvironment(cfg)),
 		),
 	)
 	if err != nil {
@@ -3584,6 +3585,14 @@ func initTracer(cfg Config) (trace.Tracer, func(context.Context) error, error) {
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return provider.Tracer("exchange/edge-gateway"), provider.Shutdown, nil
+}
+
+func otelEnvironment(cfg Config) string {
+	env := strings.TrimSpace(cfg.OTelEnvironment)
+	if env == "" {
+		return "local"
+	}
+	return env
 }
 
 func marshalResponse(status int, v interface{}) (int, []byte) {

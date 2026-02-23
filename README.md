@@ -351,6 +351,7 @@ Edge env:
 - `EDGE_OTEL_ENDPOINT=localhost:24317`
 - `EDGE_OTEL_INSECURE=true`
 - `EDGE_OTEL_SERVICE_NAME=edge-gateway`
+- `EDGE_OTEL_ENV=local`
 - `EDGE_OTEL_SAMPLE_RATIO=1.0`
 
 Ledger env:

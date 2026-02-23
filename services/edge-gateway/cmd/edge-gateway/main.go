@@ -44,6 +44,7 @@ func main() {
 		RedisDB:                  getenvInt("EDGE_REDIS_DB", 0),
 		OTelEndpoint:             getenv("EDGE_OTEL_ENDPOINT", ""),
 		OTelServiceName:          getenv("EDGE_OTEL_SERVICE_NAME", "edge-gateway"),
+		OTelEnvironment:          getenv("EDGE_OTEL_ENV", "local"),
 		OTelSampleRatio:          getenvFloat("EDGE_OTEL_SAMPLE_RATIO", 1.0),
 		OTelInsecure:             getenv("EDGE_OTEL_INSECURE", "true") == "true",
 		CoreAddr:                 getenv("EDGE_CORE_ADDR", "localhost:50051"),

@@ -963,6 +963,15 @@ func TestKafkaStartOffsetParser(t *testing.T) {
 	}
 }
 
+func TestOTelEnvironmentDefaultAndOverride(t *testing.T) {
+	if got := otelEnvironment(Config{}); got != "local" {
+		t.Fatalf("expected default otel env to be local, got %s", got)
+	}
+	if got := otelEnvironment(Config{OTelEnvironment: "prod"}); got != "prod" {
+		t.Fatalf("expected otel env override, got %s", got)
+	}
+}
+
 func TestWSClientIPParsing(t *testing.T) {
 	if got := wsClientIP("127.0.0.1:8080"); got != "127.0.0.1" {
 		t.Fatalf("unexpected parsed client ip: %s", got)
