@@ -12,6 +12,10 @@ WS_EVENTS_LOG="/tmp/ws-slow-events-smoke-${RUN_ID}.jsonl"
 WS_QUEUE_SIZE="${WS_QUEUE_SIZE:-2}"
 TRADE_BURST="${TRADE_BURST:-1200}"
 PARALLEL_POSTS="${PARALLEL_POSTS:-40}"
+OUT_DIR="${OUT_DIR:-build/ws}"
+REPORT_FILE="${REPORT_FILE:-${OUT_DIR}/ws-smoke.json}"
+
+mkdir -p "${OUT_DIR}"
 
 require_cmd() {
   local cmd="$1"
@@ -131,13 +135,63 @@ if (( ${WS_DROPPED_MSGS%.*} < 1 )); then
   echo "expected ws_dropped_msgs >= 1, got ${WS_DROPPED_MSGS}" >&2
   exit 1
 fi
-if ! grep -q '^ws_close_code=4001$' "${WS_CLIENT_LOG}"; then
+CLOSE_CODE="$(grep -E '^ws_close_code=' "${WS_CLIENT_LOG}" | tail -n 1 | cut -d= -f2 || true)"
+if [[ "${CLOSE_CODE}" != "4001" ]]; then
   echo "slow client close code mismatch; expected 4001" >&2
   cat "${WS_CLIENT_LOG}" >&2 || true
   exit 1
 fi
 
+REPORT_FILE="${REPORT_FILE}" \
+RUN_ID="${RUN_ID}" \
+EDGE_URL="${EDGE_URL}" \
+WS_URL="${WS_URL}" \
+WS_QUEUE_SIZE="${WS_QUEUE_SIZE}" \
+TRADE_BURST="${TRADE_BURST}" \
+PARALLEL_POSTS="${PARALLEL_POSTS}" \
+WS_SLOW_CLOSES="${WS_SLOW_CLOSES}" \
+WS_DROPPED_MSGS="${WS_DROPPED_MSGS}" \
+WS_QUEUE_P99="${WS_QUEUE_P99}" \
+CLOSE_CODE="${CLOSE_CODE}" \
+EDGE_LOG="${EDGE_LOG}" \
+WS_CLIENT_LOG="${WS_CLIENT_LOG}" \
+WS_EVENTS_LOG="${WS_EVENTS_LOG}" \
+python3 - <<'PY'
+import json
+import os
+from datetime import datetime, timezone
+
+report = {
+    "timestamp_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "run_id": os.environ["RUN_ID"],
+    "ok": True,
+    "edge_url": os.environ["EDGE_URL"],
+    "ws_url": os.environ["WS_URL"],
+    "settings": {
+        "ws_queue_size": int(os.environ["WS_QUEUE_SIZE"]),
+        "trade_burst": int(os.environ["TRADE_BURST"]),
+        "parallel_posts": int(os.environ["PARALLEL_POSTS"]),
+    },
+    "metrics": {
+        "ws_slow_closes": float(os.environ["WS_SLOW_CLOSES"]),
+        "ws_dropped_msgs": float(os.environ["WS_DROPPED_MSGS"]),
+        "ws_send_queue_p99": float(os.environ["WS_QUEUE_P99"]),
+        "ws_close_code": int(os.environ["CLOSE_CODE"]),
+    },
+    "logs": {
+        "edge": os.environ["EDGE_LOG"],
+        "ws_client": os.environ["WS_CLIENT_LOG"],
+        "ws_events": os.environ["WS_EVENTS_LOG"],
+    },
+}
+
+with open(os.environ["REPORT_FILE"], "w", encoding="utf-8") as f:
+    json.dump(report, f, indent=2, sort_keys=True)
+    f.write("\n")
+PY
+
 echo "ws_smoke_success=true"
 echo "ws_slow_closes=${WS_SLOW_CLOSES}"
 echo "ws_dropped_msgs=${WS_DROPPED_MSGS}"
 echo "ws_send_queue_p99=${WS_QUEUE_P99}"
+echo "ws_smoke_report=${REPORT_FILE}"

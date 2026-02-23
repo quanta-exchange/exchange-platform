@@ -43,6 +43,7 @@ scripts/
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
+  ws_smoke.sh             # WS slow-consumer backpressure smoke
 policies/
   trading-policy.v1.json  # baseline policy-as-code document
 web-user/
@@ -205,6 +206,14 @@ make chaos-redpanda  # broker bounce drill
 - `chaos_replay_report=build/chaos/chaos-replay.json`
   - in stub-trade mode, `invariants_warning=negative_balances_present_under_stub_mode` can appear
 
+### 10.1) WS slow-consumer smoke
+```bash
+./scripts/ws_smoke.sh
+```
+Success output includes:
+- `ws_smoke_success=true`
+- `ws_smoke_report=build/ws/ws-smoke.json`
+
 ### 11) Safety case bundle (extended)
 ```bash
 make safety-case-extended
@@ -216,6 +225,7 @@ make safety-case-extended
 - `build/exactly-once/exactly-once-stress.json`
 - `build/reconciliation/smoke-reconciliation-safety.json`
 - `build/chaos/chaos-replay.json`
+- `build/ws/ws-smoke.json`
 
 ### 12) Assurance pack (claims + evidence index)
 ```bash

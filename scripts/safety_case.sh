@@ -124,6 +124,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/exactly-once/exactly-once-stress.json"
   "build/reconciliation/smoke-reconciliation-safety.json"
   "build/chaos/chaos-replay.json"
+  "build/ws/ws-smoke.json"
 )
 
 declare -a EVIDENCE_FILES=()
