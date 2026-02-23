@@ -61,6 +61,7 @@ ledger:
     auto-switch-enabled: ${LEDGER_RECONCILIATION_AUTO_SWITCH:true}
     safety-latch-enabled: ${LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED:true}
     latch-allow-negative-balances: ${LEDGER_RECONCILIATION_LATCH_ALLOW_NEGATIVE:false}
+    latch-release-require-dual-approval: ${LEDGER_RECONCILIATION_LATCH_RELEASE_REQUIRE_DUAL_APPROVAL:false}
     core-grpc-address: ${LEDGER_RECONCILIATION_CORE_GRPC_ADDR:localhost:50051}
     core-grpc-timeout-ms: ${LEDGER_RECONCILIATION_CORE_GRPC_TIMEOUT_MS:1500}
 server:

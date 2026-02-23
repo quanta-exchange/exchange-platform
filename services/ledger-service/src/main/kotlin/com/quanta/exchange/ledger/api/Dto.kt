@@ -128,6 +128,7 @@ data class ApplyCorrectionDto(
 
 data class ReconciliationLatchReleaseDto(
     val approvedBy: String,
+    val approvedBy2: String? = null,
     val reason: String,
     val restoreSymbolMode: Boolean = true,
 )

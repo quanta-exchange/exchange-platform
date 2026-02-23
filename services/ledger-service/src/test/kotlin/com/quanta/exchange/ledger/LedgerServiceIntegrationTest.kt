@@ -436,6 +436,69 @@ class LedgerServiceIntegrationTest {
     }
 
     @Test
+    fun latchReleaseRequiresDualApprovalWhenEnabled() {
+        ledgerService.updateEngineSeq("BTC-KRW", 50)
+        seedBalancesAndReserves()
+        assertTrue(ledgerService.consumeTrade(trade("trade-latch-dual-1", 40)).applied)
+
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+
+        assertTrue(ledgerService.reserve(reserve("ord-buy-latch-dual-2", "buyer", "BUY", 100_000, 45)))
+        assertTrue(ledgerService.reserve(reserve("ord-sell-latch-dual-2", "seller", "SELL", 1, 46)))
+        assertTrue(ledgerService.consumeTrade(trade("trade-latch-dual-2", 50)).applied)
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 5,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+
+        val missingSecond = ledgerService.releaseReconciliationLatch(
+            symbol = "BTC-KRW",
+            lagThreshold = 5,
+            approvedBy = "ops-a",
+            secondApprover = null,
+            reason = "dual_required",
+            restoreSymbolMode = false,
+            allowNegativeBalanceViolations = false,
+            requireDualApproval = true,
+        )
+        assertFalse(missingSecond.released)
+        assertEquals("dual_approval_required", missingSecond.reason)
+
+        val sameApprover = ledgerService.releaseReconciliationLatch(
+            symbol = "BTC-KRW",
+            lagThreshold = 5,
+            approvedBy = "ops-a",
+            secondApprover = "ops-a",
+            reason = "dual_required",
+            restoreSymbolMode = false,
+            allowNegativeBalanceViolations = false,
+            requireDualApproval = true,
+        )
+        assertFalse(sameApprover.released)
+        assertEquals("dual_approval_distinct_required", sameApprover.reason)
+
+        val release = ledgerService.releaseReconciliationLatch(
+            symbol = "BTC-KRW",
+            lagThreshold = 5,
+            approvedBy = "ops-a",
+            secondApprover = "ops-b",
+            reason = "dual_approved",
+            restoreSymbolMode = false,
+            allowNegativeBalanceViolations = false,
+            requireDualApproval = true,
+        )
+        assertTrue(release.released) { "release=$release" }
+        assertEquals("ops-a,ops-b", release.releasedBy)
+    }
+
+    @Test
     fun latchReleaseIsRejectedWhileStillBreached() {
         ledgerService.updateEngineSeq("BTC-KRW", 50)
         seedBalancesAndReserves()

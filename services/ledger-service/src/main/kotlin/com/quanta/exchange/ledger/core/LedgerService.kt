@@ -369,11 +369,83 @@ class LedgerService(
         lagThreshold: Long,
         staleStateThresholdMs: Long = Long.MAX_VALUE,
         approvedBy: String,
+        secondApprover: String? = null,
         reason: String,
         restoreSymbolMode: Boolean,
         allowNegativeBalanceViolations: Boolean,
+        requireDualApproval: Boolean = false,
     ): ReconciliationLatchReleaseResult {
         val safeSymbol = symbol.trim().uppercase()
+        val primaryApprover = approvedBy.trim()
+        val secondaryApprover = secondApprover?.trim().orEmpty()
+        val safeReason = reason.trim()
+        if (primaryApprover.isBlank()) {
+            return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = false,
+                reason = "approved_by_required",
+                lag = 0,
+                mismatch = false,
+                thresholdBreached = false,
+                invariantsOk = false,
+                invariantViolations = emptyList(),
+                releasedAt = null,
+                releasedBy = null,
+            )
+        }
+        if (safeReason.isBlank()) {
+            return ReconciliationLatchReleaseResult(
+                symbol = safeSymbol,
+                released = false,
+                modeRestored = false,
+                reason = "reason_required",
+                lag = 0,
+                mismatch = false,
+                thresholdBreached = false,
+                invariantsOk = false,
+                invariantViolations = emptyList(),
+                releasedAt = null,
+                releasedBy = null,
+            )
+        }
+        if (requireDualApproval) {
+            if (secondaryApprover.isBlank()) {
+                return ReconciliationLatchReleaseResult(
+                    symbol = safeSymbol,
+                    released = false,
+                    modeRestored = false,
+                    reason = "dual_approval_required",
+                    lag = 0,
+                    mismatch = false,
+                    thresholdBreached = false,
+                    invariantsOk = false,
+                    invariantViolations = emptyList(),
+                    releasedAt = null,
+                    releasedBy = null,
+                )
+            }
+            if (secondaryApprover == primaryApprover) {
+                return ReconciliationLatchReleaseResult(
+                    symbol = safeSymbol,
+                    released = false,
+                    modeRestored = false,
+                    reason = "dual_approval_distinct_required",
+                    lag = 0,
+                    mismatch = false,
+                    thresholdBreached = false,
+                    invariantsOk = false,
+                    invariantViolations = emptyList(),
+                    releasedAt = null,
+                    releasedBy = null,
+                )
+            }
+        }
+        val releasedByValue = if (secondaryApprover.isNotBlank()) {
+            "$primaryApprover,$secondaryApprover"
+        } else {
+            primaryApprover
+        }
         val status = repo.reconciliation(safeSymbol)
         val now = Instant.now()
         val lag = status.lastEngineSeq - status.lastSettledSeq
@@ -449,7 +521,7 @@ class LedgerService(
 
         val releasedAt = now
         val modeRestored = if (restoreSymbolMode) {
-            symbolModeSwitcher.restoreSymbolMode(safeSymbol, "reconciliation_latch_release:$reason")
+            symbolModeSwitcher.restoreSymbolMode(safeSymbol, "reconciliation_latch_release:$safeReason")
         } else {
             false
         }
@@ -470,14 +542,14 @@ class LedgerService(
         }
 
         val nextMode = if (restoreSymbolMode) "NORMAL" else safety.safetyMode
-        val releaseReason = "manual_latch_release:$reason"
+        val releaseReason = "manual_latch_release:$safeReason"
         val released = repo.releaseReconciliationLatch(
             symbol = safeSymbol,
             lag = lag,
             mismatch = mismatch,
             safetyMode = nextMode,
             releaseReason = releaseReason,
-            releasedBy = approvedBy,
+            releasedBy = releasedByValue,
             releasedAt = releasedAt,
         )
         if (!released) {
@@ -528,7 +600,7 @@ class LedgerService(
             invariantsOk = invariantResult.ok,
             invariantViolations = invariantResult.violations,
             releasedAt = releasedAt,
-            releasedBy = approvedBy,
+            releasedBy = releasedByValue,
         )
     }
 

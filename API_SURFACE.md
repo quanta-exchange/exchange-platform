@@ -270,7 +270,9 @@ System probes:
   - response includes `nextHistoryBeforeId` cursor for the next page
 - `POST /admin/reconciliation/latch/{symbol}/release`
   - manually release reconciliation safety latch after recovery (`lag==0` + invariant check pass)
-  - response includes `invariantsOk` and `invariantViolations`
+  - request body fields: `approvedBy`, `reason`, `restoreSymbolMode`, optional `approvedBy2`
+  - when `LEDGER_RECONCILIATION_LATCH_RELEASE_REQUIRE_DUAL_APPROVAL=true`, `approvedBy2` must be present and distinct
+  - response includes `invariantsOk`, `invariantViolations`, and `dualApprovalRequired`
 - `POST /admin/consumers/settlement/pause`
   - pause settlement Kafka listener without stopping reconciliation observer
 - `POST /admin/consumers/settlement/resume`

@@ -82,6 +82,8 @@ class LedgerController(
     private val staleStateThresholdMs: Long,
     @Value("\${ledger.reconciliation.latch-allow-negative-balances:false}")
     private val latchAllowNegativeBalances: Boolean,
+    @Value("\${ledger.reconciliation.latch-release-require-dual-approval:false}")
+    private val latchReleaseRequireDualApproval: Boolean,
     @Value("\${ledger.admin.token:}")
     private val adminToken: String,
 ) {
@@ -236,9 +238,11 @@ class LedgerController(
             lagThreshold = lagThreshold,
             staleStateThresholdMs = staleStateThresholdMs,
             approvedBy = req.approvedBy,
+            secondApprover = req.approvedBy2,
             reason = req.reason,
             restoreSymbolMode = req.restoreSymbolMode,
             allowNegativeBalanceViolations = latchAllowNegativeBalances,
+            requireDualApproval = latchReleaseRequireDualApproval,
         )
         return mapOf(
             "symbol" to result.symbol,
@@ -252,6 +256,7 @@ class LedgerController(
             "invariantViolations" to result.invariantViolations,
             "releasedAt" to result.releasedAt,
             "releasedBy" to result.releasedBy,
+            "dualApprovalRequired" to latchReleaseRequireDualApproval,
         )
     }
 

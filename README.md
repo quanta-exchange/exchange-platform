@@ -657,11 +657,14 @@ Ledger env:
 - `LEDGER_RECONCILIATION_AUTO_SWITCH=true`
 - `LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED=true` (breach latched until manual release)
 - `LEDGER_RECONCILIATION_LATCH_ALLOW_NEGATIVE=false` (stub smoke only: `true` 허용 가능)
+- `LEDGER_RECONCILIATION_LATCH_RELEASE_REQUIRE_DUAL_APPROVAL=false` (`true`면 latch release 시 `approvedBy2` 추가 승인자 필수)
 - `LEDGER_GUARD_AUTO_SWITCH=true` (`false` to keep invariant scheduler as monitor-only)
 - `LEDGER_GUARD_SAFETY_MODE=CANCEL_ONLY`
 
 Safety latch release contract:
 - `POST /v1/admin/reconciliation/latch/{symbol}/release`
+- request body: `approvedBy`, `reason`, `restoreSymbolMode`, and optional `approvedBy2`
+- when `LEDGER_RECONCILIATION_LATCH_RELEASE_REQUIRE_DUAL_APPROVAL=true`, `approvedBy2` must be present and different from `approvedBy`
 - release is allowed only when:
   - reconciliation is recovered (`lag==0`, no mismatch/threshold breach)
   - invariant check passes at release time
