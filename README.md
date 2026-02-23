@@ -156,6 +156,16 @@ make safety-case
 # optional full safety-case proof set (exactly-once + idempotency-scope + latch-approval + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
 make safety-case-extended
 ```
+`./scripts/invariants.sh` behavior:
+- always checks ledger invariants (`/v1/admin/invariants/check`)
+- ClickHouse checks default to `INVARIANTS_CLICKHOUSE_MODE=auto`
+  - `auto`: run only when ClickHouse is reachable
+  - `require`: fail if ClickHouse is unreachable or invalid rows are found
+  - `off`: skip ClickHouse checks
+- outputs:
+  - `build/invariants/ledger-invariants.json`
+  - `build/invariants/clickhouse-invariants.json`
+  - `build/invariants/invariants-summary.json`
 
 ### 3) Infra up
 ```bash
@@ -255,6 +265,7 @@ make safety-case-extended
 - `build/load/load-smoke.json`
 - `build/dr/dr-report.json`
 - `build/invariants/ledger-invariants.json`
+- `build/invariants/invariants-summary.json`
 - `build/exactly-once/exactly-once-stress.json`
 - `build/idempotency/prove-idempotency-latest.json`
 - `build/latch/prove-latch-approval-latest.json`

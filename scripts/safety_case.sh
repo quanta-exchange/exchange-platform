@@ -138,6 +138,10 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/service-modes/verify-service-modes-latest.json"
 )
 
+declare -a OPTIONAL_BASE_EVIDENCE=(
+  "build/invariants/invariants-summary.json"
+)
+
 declare -a EVIDENCE_FILES=()
 for file in "${REQUIRED_EVIDENCE[@]}"; do
   if [[ ! -f "$ROOT_DIR/$file" ]]; then
@@ -145,6 +149,12 @@ for file in "${REQUIRED_EVIDENCE[@]}"; do
     exit 1
   fi
   EVIDENCE_FILES+=("$file")
+done
+
+for file in "${OPTIONAL_BASE_EVIDENCE[@]}"; do
+  if [[ -f "$ROOT_DIR/$file" ]]; then
+    EVIDENCE_FILES+=("$file")
+  fi
 done
 
 for file in "${OPTIONAL_EXTENDED_EVIDENCE[@]}"; do

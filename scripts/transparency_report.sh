@@ -42,6 +42,7 @@ def read_json(rel_path):
 load = read_json("build/load/load-smoke.json")
 dr = read_json("build/dr/dr-report.json")
 invariants = read_json("build/invariants/ledger-invariants.json")
+invariants_summary = read_json("build/invariants/invariants-summary.json")
 ws = read_json("build/ws/ws-smoke.json")
 safety_budget = read_json("build/safety/safety-budget-latest.json")
 controls = read_json("build/controls/controls-check-latest.json")
@@ -51,6 +52,7 @@ sources = {
     "load": load,
     "dr": dr,
     "invariants": invariants,
+    "invariants_summary": invariants_summary,
     "ws": ws,
     "safety_budget": safety_budget,
     "controls": controls,
@@ -104,6 +106,7 @@ report = {
         },
         "integrity_proxy": {
             "invariants_ok": bool(invariants.get("ok")) if invariants else None,
+            "clickhouse_invariants_ok": bool(invariants_summary.get("clickhouse", {}).get("ok")) if invariants_summary else None,
             "dr_invariant_violations": int(dr.get("invariant_violations")) if dr and dr.get("invariant_violations") is not None else None,
             "safety_budget_ok": bool(safety_budget.get("ok")) if safety_budget else None,
         },
@@ -124,6 +127,7 @@ report = {
         "load": "build/load/load-smoke.json",
         "dr": "build/dr/dr-report.json",
         "invariants": "build/invariants/ledger-invariants.json",
+        "invariants_summary": "build/invariants/invariants-summary.json",
         "ws": "build/ws/ws-smoke.json",
         "safety_budget": "build/safety/safety-budget-latest.json",
         "controls": "build/controls/controls-check-latest.json",
