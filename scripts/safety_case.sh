@@ -11,6 +11,7 @@ MINIO_URL="http://localhost:29002"
 MINIO_ACCESS_KEY="minio"
 MINIO_SECRET_KEY="minio123"
 MINIO_BUCKET="exchange-archive"
+PROVE_DETERMINISM_RUNS="${PROVE_DETERMINISM_RUNS:-5}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -92,6 +93,7 @@ if [[ "$RUN_EXTENDED_CHECKS" == "true" ]]; then
   run_cmd "exactly-once-stress" ./scripts/exactly_once_stress.sh
   run_cmd "reconciliation-smoke" ./scripts/smoke_reconciliation_safety.sh
   run_cmd "chaos-replay" ./scripts/chaos_replay.sh
+  run_cmd "prove-determinism" env RUNS="${PROVE_DETERMINISM_RUNS}" ./scripts/prove_determinism.sh
 fi
 
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
@@ -125,6 +127,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/reconciliation/smoke-reconciliation-safety.json"
   "build/chaos/chaos-replay.json"
   "build/ws/ws-smoke.json"
+  "build/determinism/prove-determinism-latest.json"
 )
 
 declare -a EVIDENCE_FILES=()

@@ -13,6 +13,7 @@ N_AFTER_LEDGER_RESTART="${N_AFTER_LEDGER_RESTART:-3}"
 TOTAL_ORDERS="$((N_INITIAL_ORDERS + N_AFTER_CORE_RESTART + N_WHILE_LEDGER_DOWN + N_AFTER_LEDGER_RESTART))"
 CHAOS_KILL_CORE="${CHAOS_KILL_CORE:-true}"
 CHAOS_KILL_LEDGER="${CHAOS_KILL_LEDGER:-true}"
+CHAOS_SKIP_LEDGER_ASSERTS="${CHAOS_SKIP_LEDGER_ASSERTS:-false}"
 ALLOW_NEGATIVE_BALANCE_INVARIANT="${ALLOW_NEGATIVE_BALANCE_INVARIANT:-true}"
 
 BASE_PORT="$((24000 + RANDOM % 8000))"
@@ -311,10 +312,14 @@ sleep 1
 
 echo "[chaos] phase-1 place ${N_INITIAL_ORDERS} orders"
 place_orders "${N_INITIAL_ORDERS}" 0
-if ! wait_ledger_trade_count "${N_INITIAL_ORDERS}" 120; then
-  echo "ledger did not settle initial trades" >&2
-  tail -n 120 "${LEDGER_LOG}" >&2 || true
-  exit 1
+if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+  if ! wait_ledger_trade_count "${N_INITIAL_ORDERS}" 120; then
+    echo "ledger did not settle initial trades" >&2
+    tail -n 120 "${LEDGER_LOG}" >&2 || true
+    exit 1
+  fi
+else
+  echo "[chaos] skip ledger phase-1 settle assertion"
 fi
 
 read -r PRE_KILL_SEQ PRE_KILL_HASH <<<"$(wal_last_meta)"
@@ -356,9 +361,13 @@ fi
 echo "[chaos] phase-2 place ${N_AFTER_CORE_RESTART} orders (core post-restart)"
 place_orders "${N_AFTER_CORE_RESTART}" "${N_INITIAL_ORDERS}"
 EXPECTED_AFTER_CORE="$((N_INITIAL_ORDERS + N_AFTER_CORE_RESTART))"
-if ! wait_ledger_trade_count "${EXPECTED_AFTER_CORE}" 120; then
-  echo "ledger did not settle post-core-restart trades" >&2
-  exit 1
+if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+  if ! wait_ledger_trade_count "${EXPECTED_AFTER_CORE}" 120; then
+    echo "ledger did not settle post-core-restart trades" >&2
+    exit 1
+  fi
+else
+  echo "[chaos] skip ledger phase-2 settle assertion"
 fi
 read -r POST_CORE_SEQ _ <<<"$(wal_last_meta)"
 if [[ "${POST_CORE_SEQ}" -le "${PRE_KILL_SEQ}" ]]; then
@@ -375,10 +384,14 @@ if [[ "${CHAOS_KILL_LEDGER}" == "true" ]]; then
   echo "[chaos] phase-3 place ${N_WHILE_LEDGER_DOWN} orders while ledger is down"
   place_orders "${N_WHILE_LEDGER_DOWN}" "${EXPECTED_AFTER_CORE}"
 
-  CURRENT_COUNT="$(ledger_trade_count)"
-  if [[ "${CURRENT_COUNT}" != "${EXPECTED_AFTER_CORE}" ]]; then
-    echo "ledger changed while down: expected=${EXPECTED_AFTER_CORE} got=${CURRENT_COUNT}" >&2
-    exit 1
+  if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+    CURRENT_COUNT="$(ledger_trade_count)"
+    if [[ "${CURRENT_COUNT}" != "${EXPECTED_AFTER_CORE}" ]]; then
+      echo "ledger changed while down: expected=${EXPECTED_AFTER_CORE} got=${CURRENT_COUNT}" >&2
+      exit 1
+    fi
+  else
+    echo "[chaos] skip ledger down-phase row-count assertion"
   fi
 
   echo "[chaos] restart ledger with same consumer group"
@@ -390,10 +403,14 @@ if [[ "${CHAOS_KILL_LEDGER}" == "true" ]]; then
   fi
 
   EXPECTED_AFTER_LEDGER_CATCHUP="$((EXPECTED_AFTER_CORE + N_WHILE_LEDGER_DOWN))"
-  if ! wait_ledger_trade_count "${EXPECTED_AFTER_LEDGER_CATCHUP}" 180; then
-    echo "ledger did not catch up after restart" >&2
-    tail -n 200 "${LEDGER_LOG}" >&2 || true
-    exit 1
+  if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+    if ! wait_ledger_trade_count "${EXPECTED_AFTER_LEDGER_CATCHUP}" 180; then
+      echo "ledger did not catch up after restart" >&2
+      tail -n 200 "${LEDGER_LOG}" >&2 || true
+      exit 1
+    fi
+  else
+    echo "[chaos] skip ledger catch-up assertion"
   fi
 else
   echo "[chaos] skip ledger kill/restart scenario (CHAOS_KILL_LEDGER=false)"
@@ -401,18 +418,26 @@ else
     echo "[chaos] phase-3 place ${N_WHILE_LEDGER_DOWN} orders (ledger kept online)"
     place_orders "${N_WHILE_LEDGER_DOWN}" "${EXPECTED_AFTER_CORE}"
     EXPECTED_AFTER_LEDGER_CATCHUP="$((EXPECTED_AFTER_CORE + N_WHILE_LEDGER_DOWN))"
-    if ! wait_ledger_trade_count "${EXPECTED_AFTER_LEDGER_CATCHUP}" 180; then
-      echo "ledger did not settle online phase-3 trades" >&2
-      exit 1
+    if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+      if ! wait_ledger_trade_count "${EXPECTED_AFTER_LEDGER_CATCHUP}" 180; then
+        echo "ledger did not settle online phase-3 trades" >&2
+        exit 1
+      fi
+    else
+      echo "[chaos] skip online phase-3 ledger assertion"
     fi
   fi
 fi
 
 echo "[chaos] phase-4 place ${N_AFTER_LEDGER_RESTART} orders after ledger phase"
 place_orders "${N_AFTER_LEDGER_RESTART}" "${EXPECTED_AFTER_LEDGER_CATCHUP}"
-if ! wait_ledger_trade_count "${TOTAL_ORDERS}" 180; then
-  echo "ledger did not settle final trades" >&2
-  exit 1
+if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+  if ! wait_ledger_trade_count "${TOTAL_ORDERS}" 180; then
+    echo "ledger did not settle final trades" >&2
+    exit 1
+  fi
+else
+  echo "[chaos] skip final ledger settle assertion"
 fi
 
 echo "[chaos] wait for kafka capture completion"
@@ -452,9 +477,14 @@ print(len(trade_ids), len(set(trade_ids)))
 PY
 )"
 
-DUP_ROWS="$(docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-  psql -U exchange -d "${LEDGER_DB_NAME}" -tAc "SELECT COUNT(*) FROM (SELECT reference_id, COUNT(*) c FROM ledger_entries WHERE reference_type = 'TRADE' GROUP BY reference_id HAVING COUNT(*) > 1) t;" | tr -d '[:space:]')"
-FINAL_LEDGER_COUNT="$(ledger_trade_count)"
+if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+  DUP_ROWS="$(docker compose -f "${COMPOSE_FILE}" exec -T postgres \
+    psql -U exchange -d "${LEDGER_DB_NAME}" -tAc "SELECT COUNT(*) FROM (SELECT reference_id, COUNT(*) c FROM ledger_entries WHERE reference_type = 'TRADE' GROUP BY reference_id HAVING COUNT(*) > 1) t;" | tr -d '[:space:]')"
+  FINAL_LEDGER_COUNT="$(ledger_trade_count)"
+else
+  DUP_ROWS="-1"
+  FINAL_LEDGER_COUNT="-1"
+fi
 
 if [[ "${CAPTURED_COUNT}" != "${TOTAL_ORDERS}" ]]; then
   echo "captured trade count mismatch: expected=${TOTAL_ORDERS} got=${CAPTURED_COUNT}" >&2
@@ -464,18 +494,19 @@ if [[ "${UNIQUE_TRADE_IDS}" != "${TOTAL_ORDERS}" ]]; then
   echo "captured unique trade ids mismatch: expected=${TOTAL_ORDERS} got=${UNIQUE_TRADE_IDS}" >&2
   exit 1
 fi
-if [[ "${FINAL_LEDGER_COUNT}" != "${TOTAL_ORDERS}" ]]; then
-  echo "ledger trade count mismatch: expected=${TOTAL_ORDERS} got=${FINAL_LEDGER_COUNT}" >&2
-  exit 1
-fi
-if [[ "${DUP_ROWS}" != "0" ]]; then
-  echo "duplicate ledger application detected: duplicate_rows=${DUP_ROWS}" >&2
-  exit 1
-fi
+if [[ "${CHAOS_SKIP_LEDGER_ASSERTS}" != "true" ]]; then
+  if [[ "${FINAL_LEDGER_COUNT}" != "${TOTAL_ORDERS}" ]]; then
+    echo "ledger trade count mismatch: expected=${TOTAL_ORDERS} got=${FINAL_LEDGER_COUNT}" >&2
+    exit 1
+  fi
+  if [[ "${DUP_ROWS}" != "0" ]]; then
+    echo "duplicate ledger application detected: duplicate_rows=${DUP_ROWS}" >&2
+    exit 1
+  fi
 
-INVARIANTS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/invariants/check")"
-INVARIANT_CHECK_RESULT="$(
-INVARIANT_PAYLOAD="${INVARIANTS_JSON}" ALLOW_NEGATIVE="${ALLOW_NEGATIVE_BALANCE_INVARIANT}" "${PYTHON_BIN}" - <<'PY'
+  INVARIANTS_JSON="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "http://localhost:${LEDGER_PORT}/v1/admin/invariants/check")"
+  INVARIANT_CHECK_RESULT="$(
+  INVARIANT_PAYLOAD="${INVARIANTS_JSON}" ALLOW_NEGATIVE="${ALLOW_NEGATIVE_BALANCE_INVARIANT}" "${PYTHON_BIN}" - <<'PY'
 import json
 import os
 import sys
@@ -495,9 +526,13 @@ sys.exit(1)
 PY
 )" || true
 
-if [[ "${INVARIANT_CHECK_RESULT}" == "fail" || -z "${INVARIANT_CHECK_RESULT}" ]]; then
-  echo "invariants check failed after chaos recovery: ${INVARIANTS_JSON}" >&2
-  exit 1
+  if [[ "${INVARIANT_CHECK_RESULT}" == "fail" || -z "${INVARIANT_CHECK_RESULT}" ]]; then
+    echo "invariants check failed after chaos recovery: ${INVARIANTS_JSON}" >&2
+    exit 1
+  fi
+else
+  INVARIANT_CHECK_RESULT="skipped"
+  INVARIANTS_JSON='{"skipped":true}'
 fi
 
 REPORT_FILE="${REPORT_FILE}" \
@@ -509,6 +544,7 @@ N_WHILE_LEDGER_DOWN="${N_WHILE_LEDGER_DOWN}" \
 N_AFTER_LEDGER_RESTART="${N_AFTER_LEDGER_RESTART}" \
 CHAOS_KILL_CORE="${CHAOS_KILL_CORE}" \
 CHAOS_KILL_LEDGER="${CHAOS_KILL_LEDGER}" \
+CHAOS_SKIP_LEDGER_ASSERTS="${CHAOS_SKIP_LEDGER_ASSERTS}" \
 RECOVERED_HASH="${RECOVERED_HASH}" \
 RECOVERED_SEQ="${RECOVERED_SEQ}" \
 POST_CORE_SEQ="${POST_CORE_SEQ}" \
@@ -543,6 +579,7 @@ report = {
     "scenario": {
         "kill_core": as_bool(os.environ.get("CHAOS_KILL_CORE", "true")),
         "kill_ledger": as_bool(os.environ.get("CHAOS_KILL_LEDGER", "true")),
+        "skip_ledger_asserts": as_bool(os.environ.get("CHAOS_SKIP_LEDGER_ASSERTS", "false")),
         "orders": {
             "initial": int(os.environ.get("N_INITIAL_ORDERS", "0")),
             "after_core_restart": int(os.environ.get("N_AFTER_CORE_RESTART", "0")),
@@ -586,7 +623,11 @@ echo "core_recovery_hash=${RECOVERED_HASH}"
 echo "core_recovery_seq=${RECOVERED_SEQ}"
 echo "ledger_trade_rows=${FINAL_LEDGER_COUNT}"
 echo "ledger_duplicate_rows=${DUP_ROWS}"
-echo "invariants_ok=true"
+if [[ "${INVARIANT_CHECK_RESULT}" == "skipped" ]]; then
+  echo "invariants_ok=skipped"
+else
+  echo "invariants_ok=true"
+fi
 echo "chaos_replay_report=${REPORT_FILE}"
 if [[ "${INVARIANT_CHECK_RESULT}" == "negative_only_allowed" ]]; then
   echo "invariants_warning=negative_balances_present_under_stub_mode"

@@ -45,6 +45,7 @@ scripts/
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
+  prove_determinism.sh    # G4.6 deterministic replay proof runner
   archive_range.sh        # G21 legal archive capture
   verify_archive.sh       # G21 archive checksum verifier
   change_proposal.sh      # G10 change proposal creation
@@ -145,7 +146,7 @@ Rust protobuf build note (Trading Core):
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
 make safety-case
-# optional full safety-case proof set (exactly-once + reconciliation + chaos 포함)
+# optional full safety-case proof set (exactly-once + reconciliation + chaos + determinism 포함)
 make safety-case-extended
 ```
 
@@ -251,6 +252,7 @@ make safety-case-extended
 - `build/reconciliation/smoke-reconciliation-safety.json`
 - `build/chaos/chaos-replay.json`
 - `build/ws/ws-smoke.json`
+- `build/determinism/prove-determinism-latest.json`
 
 ### 12) Assurance pack (claims + evidence index)
 ```bash
@@ -390,6 +392,14 @@ Outputs:
 
 `verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.
 
+### 27) Determinism proof
+```bash
+RUNS=5 make prove-determinism
+```
+Outputs:
+- `prove_determinism_report=build/determinism/<timestamp>/prove-determinism.json`
+- `prove_determinism_ok=true|false`
+
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
 - (b) Edge `POST /v1/orders` reaches Core `PlaceOrder`
@@ -452,7 +462,7 @@ Market order liquidity policy (v1):
   - load smoke report
   - DR rehearsal report
   - `make safety-case` artifact bundle + integrity hash
-  - `make safety-case-extended` for exactly-once/reconciliation/chaos evidence 포함 번들
+  - `make safety-case-extended` for exactly-once/reconciliation/chaos/determinism evidence 포함 번들
 
 ## Service endpoints (local)
 - Edge Gateway: `http://localhost:8081`
