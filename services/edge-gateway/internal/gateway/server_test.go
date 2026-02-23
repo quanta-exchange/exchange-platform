@@ -590,6 +590,62 @@ func TestTradeApplyDedupTransitions(t *testing.T) {
 	}
 }
 
+func TestConsumeTradeMessageRejectsMissingSeq(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	raw := []byte(`{
+		"envelope":{
+			"eventId":"evt-missing-seq",
+			"eventVersion":1,
+			"symbol":"BTC-KRW",
+			"seq":0,
+			"occurredAt":"2026-02-23T12:00:00Z",
+			"correlationId":"corr-1",
+			"causationId":"cause-1"
+		},
+		"tradeId":"trade-missing-seq",
+		"buyerUserId":"buyer",
+		"sellerUserId":"seller",
+		"price":100,
+		"quantity":1,
+		"quoteAmount":100
+	}`)
+
+	err := s.consumeTradeMessage(context.Background(), raw)
+	if err == nil || !strings.Contains(err.Error(), "missing seq") {
+		t.Fatalf("expected missing seq error, got %v", err)
+	}
+}
+
+func TestConsumeTradeMessageRejectsUnsupportedEventVersion(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	raw := []byte(`{
+		"envelope":{
+			"eventId":"evt-bad-version",
+			"eventVersion":2,
+			"symbol":"BTC-KRW",
+			"seq":10,
+			"occurredAt":"2026-02-23T12:00:00Z",
+			"correlationId":"corr-2",
+			"causationId":"cause-2"
+		},
+		"tradeId":"trade-bad-version",
+		"buyerUserId":"buyer",
+		"sellerUserId":"seller",
+		"price":100,
+		"quantity":1,
+		"quoteAmount":100
+	}`)
+
+	err := s.consumeTradeMessage(context.Background(), raw)
+	if err == nil || !strings.Contains(err.Error(), "unsupported eventVersion") {
+		t.Fatalf("expected unsupported eventVersion error, got %v", err)
+	}
+}
+
 func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()

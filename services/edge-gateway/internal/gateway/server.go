@@ -2310,6 +2310,9 @@ func (s *Server) consumeTradeMessage(ctx context.Context, raw []byte) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return fmt.Errorf("decode trade payload: %w", err)
 	}
+	if payload.Envelope.EventVersion != 1 {
+		return fmt.Errorf("unsupported eventVersion: %d", payload.Envelope.EventVersion)
+	}
 	if strings.TrimSpace(payload.TradeID) == "" {
 		return fmt.Errorf("missing tradeId")
 	}
@@ -2340,7 +2343,7 @@ func (s *Server) consumeTradeMessage(ctx context.Context, raw []byte) error {
 		seq = payload.Seq
 	}
 	if seq == 0 {
-		seq = uint64(time.Now().UnixMilli())
+		return fmt.Errorf("missing seq")
 	}
 
 	tsMs := payload.TsMs
