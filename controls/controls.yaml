@@ -323,6 +323,12 @@
       "title": "Game-day anomaly runbook-as-code exists",
       "enforced": false,
       "required_evidence": ["runbooks/game_day_anomaly.sh", "runbooks/game_day_anomaly.md", "RUNBOOK.md", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-055",
+      "title": "Anomaly detector webhook smoke proves alert delivery path",
+      "enforced": false,
+      "required_evidence": ["scripts/anomaly_detector_smoke.sh", "build/anomaly/anomaly-smoke-latest.json", "README.md", "Makefile"]
     }
   ]
 }

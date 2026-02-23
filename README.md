@@ -46,6 +46,7 @@ scripts/
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
+  anomaly_detector_smoke.sh # G13 anomaly detector webhook smoke
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
@@ -445,12 +446,15 @@ Success output includes:
 make anomaly-detector
 # deterministic drill mode:
 ./scripts/anomaly_detector.sh --force-anomaly --allow-anomaly
+# webhook E2E smoke:
+make anomaly-smoke
 ```
 Success output includes:
 - `anomaly_report=build/anomaly/anomaly-detector-<timestamp>.json`
 - `anomaly_latest=build/anomaly/anomaly-detector-latest.json`
 - `anomaly_detected=true|false`
 - `anomaly_recommended_action=NONE|INVESTIGATE|CANCEL_ONLY|WITHDRAW_HALT`
+- smoke output: `anomaly_smoke_report=build/anomaly/smoke-<timestamp>/anomaly-smoke.json`, `anomaly_smoke_ok=true|false`
 
 ### 18) Runbook-as-code drills
 ```bash

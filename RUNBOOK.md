@@ -163,6 +163,7 @@ Gate G1 operational check:
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - PII log scan gate: `./scripts/pii_log_scan.sh`
 - Anomaly detector probe: `./scripts/anomaly_detector.sh`
+- Anomaly webhook smoke: `./scripts/anomaly_detector_smoke.sh`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`

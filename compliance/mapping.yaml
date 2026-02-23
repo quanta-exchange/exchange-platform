@@ -219,6 +219,11 @@
       "controlId": "CTRL-054",
       "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
       "description": "Game-day anomaly runbook forces incident signal generation and captures before/after operational evidence"
+    },
+    {
+      "controlId": "CTRL-055",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.16.1.4"],
+      "description": "Anomaly webhook smoke test validates end-to-end alert payload delivery against a local receiver"
     }
   ]
 }

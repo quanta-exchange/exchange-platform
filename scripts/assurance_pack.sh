@@ -77,6 +77,7 @@ evidence = [
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
     {"id": "anomaly_detector", "path": pathlib.Path("build/anomaly/anomaly-detector-latest.json"), "required": False},
+    {"id": "anomaly_smoke", "path": pathlib.Path("build/anomaly/anomaly-smoke-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
     {"id": "invariants", "path": pathlib.Path("build/invariants/ledger-invariants.json"), "required": True},
     {"id": "invariants_summary", "path": pathlib.Path("build/invariants/invariants-summary.json"), "required": False},
@@ -144,6 +145,7 @@ pack = {
         {"id": "G17", "text": "Audit-chain verification produces a deterministic head hash for tamper-evidence checks on admin emergency action logs."},
         {"id": "G18", "text": "PII log scan gate detects email/phone/SSN patterns in generated operational artifacts and fails verification when hits exist."},
         {"id": "G19", "text": "Anomaly detector and game-day drill provide reproducible incident signal evidence with recommended safety-action classification."},
+        {"id": "G20", "text": "Anomaly webhook smoke proves detector alerts can be delivered end-to-end to an HTTP receiver."},
     ],
 }
 

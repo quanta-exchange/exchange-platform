@@ -6,6 +6,8 @@ OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/anomaly}"
 EDGE_URL="${EDGE_URL:-http://localhost:8080}"
 LEDGER_URL="${LEDGER_URL:-http://localhost:8082}"
 WEBHOOK_URL="${WEBHOOK_URL:-}"
+WEBHOOK_RETRIES="${WEBHOOK_RETRIES:-10}"
+WEBHOOK_RETRY_DELAY_MS="${WEBHOOK_RETRY_DELAY_MS:-200}"
 
 LAG_THRESHOLD="${LAG_THRESHOLD:-10}"
 BREACH_ACTIVE_THRESHOLD="${BREACH_ACTIVE_THRESHOLD:-1}"
@@ -34,6 +36,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --webhook-url)
       WEBHOOK_URL="$2"
+      shift 2
+      ;;
+    --webhook-retries)
+      WEBHOOK_RETRIES="$2"
+      shift 2
+      ;;
+    --webhook-retry-delay-ms)
+      WEBHOOK_RETRY_DELAY_MS="$2"
       shift 2
       ;;
     --lag-threshold)
@@ -271,11 +281,21 @@ PY
 WEBHOOK_SENT=false
 WEBHOOK_ERROR=""
 if [[ -n "$WEBHOOK_URL" ]]; then
-  if curl -fsS -X POST "$WEBHOOK_URL" \
-    -H 'Content-Type: application/json' \
-    --data-binary "@$REPORT_FILE" >/dev/null; then
-    WEBHOOK_SENT=true
-  else
+  for _ in $(seq 1 "$WEBHOOK_RETRIES"); do
+    if curl -fsS -X POST "$WEBHOOK_URL" \
+      -H 'Content-Type: application/json' \
+      --data-binary "@$REPORT_FILE" >/dev/null 2>/dev/null; then
+      WEBHOOK_SENT=true
+      break
+    fi
+    python3 - "$WEBHOOK_RETRY_DELAY_MS" <<'PY'
+import sys
+import time
+delay_ms = float(sys.argv[1])
+time.sleep(max(0.0, delay_ms) / 1000.0)
+PY
+  done
+  if [[ "$WEBHOOK_SENT" != "true" ]]; then
     WEBHOOK_ERROR="webhook_delivery_failed"
   fi
 fi

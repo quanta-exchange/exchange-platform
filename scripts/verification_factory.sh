@@ -132,6 +132,9 @@ fi
 if ! run_step "anomaly-detector" "$ROOT_DIR/scripts/anomaly_detector.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "anomaly-smoke" "$ROOT_DIR/scripts/anomaly_detector_smoke.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "prove-idempotency" "$ROOT_DIR/scripts/prove_idempotency_scope.sh"; then
   HAS_FAILURE=true
 fi
@@ -185,6 +188,7 @@ CONTROLS_LOG="$LOG_DIR/controls-check.log"
 VERIFY_AUDIT_CHAIN_LOG="$LOG_DIR/verify-audit-chain.log"
 PII_LOG_SCAN_LOG="$LOG_DIR/pii-log-scan.log"
 ANOMALY_DETECTOR_LOG="$LOG_DIR/anomaly-detector.log"
+ANOMALY_SMOKE_LOG="$LOG_DIR/anomaly-smoke.log"
 PROVE_IDEMPOTENCY_LOG="$LOG_DIR/prove-idempotency.log"
 PROVE_LATCH_APPROVAL_LOG="$LOG_DIR/prove-latch-approval.log"
 MODEL_CHECK_LOG="$LOG_DIR/model-check.log"
@@ -211,6 +215,7 @@ CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 VERIFY_AUDIT_CHAIN_REPORT="$(extract_value "verify_audit_chain_report" "$VERIFY_AUDIT_CHAIN_LOG")"
 PII_LOG_SCAN_REPORT="$(extract_value "pii_log_scan_report" "$PII_LOG_SCAN_LOG")"
 ANOMALY_DETECTOR_REPORT="$(extract_value "anomaly_report" "$ANOMALY_DETECTOR_LOG")"
+ANOMALY_SMOKE_REPORT="$(extract_value "anomaly_smoke_report" "$ANOMALY_SMOKE_LOG")"
 PROVE_IDEMPOTENCY_REPORT="$(extract_value "prove_idempotency_report" "$PROVE_IDEMPOTENCY_LOG")"
 PROVE_LATCH_APPROVAL_REPORT="$(extract_value "prove_latch_approval_report" "$PROVE_LATCH_APPROVAL_LOG")"
 MODEL_CHECK_REPORT="$(extract_value "model_check_report" "$MODEL_CHECK_LOG")"
@@ -226,7 +231,7 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" <<'PY'
 import json
 import sys
 
@@ -262,6 +267,7 @@ startup_guardrails_runbook_dir = sys.argv[29]
 verify_audit_chain_report = sys.argv[30]
 pii_log_scan_report = sys.argv[31]
 anomaly_detector_report = sys.argv[32]
+anomaly_smoke_report = sys.argv[33]
 
 steps = []
 ok = True
@@ -301,6 +307,7 @@ summary = {
         "verify_audit_chain_report": verify_audit_chain_report or None,
         "pii_log_scan_report": pii_log_scan_report or None,
         "anomaly_detector_report": anomaly_detector_report or None,
+        "anomaly_smoke_report": anomaly_smoke_report or None,
         "prove_idempotency_report": prove_idempotency_report or None,
         "prove_latch_approval_report": prove_latch_approval_report or None,
         "model_check_report": model_check_report or None,
