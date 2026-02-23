@@ -49,6 +49,16 @@
       "controlId": "CTRL-020",
       "frameworks": ["SOC2:CC2.3", "ISO27001:A.5.37"],
       "description": "Architecture documentation baseline"
+    },
+    {
+      "controlId": "CTRL-021",
+      "frameworks": ["SOC2:CC6.2", "ISO27001:A.5.30"],
+      "description": "Break-glass emergency access control workflow"
+    },
+    {
+      "controlId": "CTRL-022",
+      "frameworks": ["SOC2:CC1.4", "ISO27001:A.5.18"],
+      "description": "Access review and role baseline maintenance"
     }
   ]
 }

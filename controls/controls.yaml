@@ -119,6 +119,18 @@
       "title": "Monorepo architecture doc exists",
       "enforced": false,
       "required_evidence": ["ARCHITECTURE.md"]
+    },
+    {
+      "id": "CTRL-021",
+      "title": "Break-glass control script exists",
+      "enforced": false,
+      "required_evidence": ["scripts/break_glass.sh"]
+    },
+    {
+      "id": "CTRL-022",
+      "title": "Access review script and role baseline exist",
+      "enforced": false,
+      "required_evidence": ["scripts/access_review.sh", "security/rbac_roles.yaml"]
     }
   ]
 }
