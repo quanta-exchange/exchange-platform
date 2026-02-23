@@ -3,9 +3,9 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{transport::Server, Code, Request, Response, Status};
 
-use trading_core::engine::{CoreConfig, TradingCore};
+use trading_core::engine::{CoreConfig, EngineError, TradingCore};
 use trading_core::kafka::KafkaTradePublisher;
 use trading_core::leader::FencingCoordinator;
 use trading_core::outbox::EventSink;
@@ -35,8 +35,22 @@ impl CoreGrpcService {
             .lock()
             .map_err(|_| Status::internal("publisher lock poisoned"))?;
         core.publish_pending(&mut **publisher, self.publish_retries)
-            .map_err(|e| Status::internal(format!("publish pending: {e}")))?;
+            .map_err(map_engine_error)?;
         Ok(())
+    }
+}
+
+fn map_engine_error(error: EngineError) -> Status {
+    match error {
+        EngineError::Wal(inner) => {
+            Status::new(Code::Unavailable, format!("wal_unavailable: {inner}"))
+        }
+        EngineError::Outbox(inner) => {
+            Status::new(Code::Unavailable, format!("outbox_unavailable: {inner}"))
+        }
+        EngineError::Snapshot(inner) => {
+            Status::new(Code::Internal, format!("snapshot_error: {inner}"))
+        }
     }
 }
 
@@ -58,8 +72,7 @@ impl TradingCoreService for CoreGrpcService {
                 .core
                 .lock()
                 .map_err(|_| Status::internal("core lock poisoned"))?;
-            core.place_order(req)
-                .map_err(|e| Status::internal(format!("place order: {e}")))?
+            core.place_order(req).map_err(map_engine_error)?
         };
         self.flush_pending()?;
 
@@ -76,7 +89,7 @@ impl TradingCoreService for CoreGrpcService {
                 .lock()
                 .map_err(|_| Status::internal("core lock poisoned"))?;
             core.cancel_order(request.into_inner())
-                .map_err(|e| Status::internal(format!("cancel order: {e}")))?
+                .map_err(map_engine_error)?
         };
         self.flush_pending()?;
         Ok(Response::new(response))
@@ -92,7 +105,7 @@ impl TradingCoreService for CoreGrpcService {
                 .lock()
                 .map_err(|_| Status::internal("core lock poisoned"))?;
             core.set_symbol_mode(request.into_inner())
-                .map_err(|e| Status::internal(format!("set symbol mode: {e}")))?
+                .map_err(map_engine_error)?
         };
         self.flush_pending()?;
         Ok(Response::new(response))
@@ -108,7 +121,7 @@ impl TradingCoreService for CoreGrpcService {
                 .lock()
                 .map_err(|_| Status::internal("core lock poisoned"))?;
             core.cancel_all(request.into_inner())
-                .map_err(|e| Status::internal(format!("cancel all: {e}")))?
+                .map_err(map_engine_error)?
         };
         self.flush_pending()?;
         Ok(Response::new(response))
@@ -241,6 +254,9 @@ mod tests {
         CancelAllRequest, CancelOrderRequest, CommandMetadata, OrderType, PlaceOrderRequest,
         SetSymbolModeRequest, Side, SymbolMode, TimeInForce,
     };
+    use trading_core::outbox::OutboxError;
+    use trading_core::snapshot::SnapshotError;
+    use trading_core::wal::WalError;
 
     struct CountingSink {
         published: Arc<AtomicUsize>,
@@ -420,5 +436,29 @@ mod tests {
             res.is_ok(),
             "valid production settings should pass guardrails"
         );
+    }
+
+    #[test]
+    fn map_engine_error_maps_wal_to_unavailable() {
+        let status = map_engine_error(EngineError::Wal(WalError::CrcMismatch));
+        assert_eq!(status.code(), Code::Unavailable);
+        assert!(status.message().contains("wal_unavailable"));
+    }
+
+    #[test]
+    fn map_engine_error_maps_outbox_to_unavailable() {
+        let status = map_engine_error(EngineError::Outbox(OutboxError::Io(std::io::Error::new(
+            std::io::ErrorKind::BrokenPipe,
+            "broken pipe",
+        ))));
+        assert_eq!(status.code(), Code::Unavailable);
+        assert!(status.message().contains("outbox_unavailable"));
+    }
+
+    #[test]
+    fn map_engine_error_maps_snapshot_to_internal() {
+        let status = map_engine_error(EngineError::Snapshot(SnapshotError::HashMismatch));
+        assert_eq!(status.code(), Code::Internal);
+        assert!(status.message().contains("snapshot_error"));
     }
 }
