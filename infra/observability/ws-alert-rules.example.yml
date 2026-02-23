@@ -1,0 +1,42 @@
+groups:
+  - name: edge-ws-fanout
+    rules:
+      - alert: WSSlowConsumerClosesHigh
+        expr: increase(ws_slow_closes[5m]) >= 5
+        for: 0m
+        labels:
+          severity: warning
+          service: edge-gateway
+        annotations:
+          summary: "WS slow-consumer closes increased"
+          description: "At least 5 slow-consumer websocket closes occurred in the last 5 minutes."
+
+      - alert: WSDroppedMessagesHigh
+        expr: increase(ws_dropped_msgs[5m]) >= 1000
+        for: 0m
+        labels:
+          severity: warning
+          service: edge-gateway
+        annotations:
+          summary: "WS dropped messages spike"
+          description: "ws_dropped_msgs increased by 1000 or more in 5 minutes."
+
+      - alert: WSSendQueueP99High
+        expr: ws_send_queue_p99 > 128
+        for: 5m
+        labels:
+          severity: critical
+          service: edge-gateway
+        annotations:
+          summary: "WS send queue p99 sustained high"
+          description: "ws_send_queue_p99 exceeded 128 for 5 minutes; fan-out congestion likely."
+
+      - alert: WSActiveConnectionsZero
+        expr: ws_active_conns == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: edge-gateway
+        annotations:
+          summary: "No active WS connections"
+          description: "ws_active_conns is zero for 2 minutes; check ingress/routes/client connectivity."

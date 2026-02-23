@@ -203,6 +203,12 @@
       "title": "Core WAL seq monotonic invariant evidence exists",
       "enforced": false,
       "required_evidence": ["build/invariants/core-invariants.json", "scripts/invariants.sh"]
+    },
+    {
+      "id": "CTRL-035",
+      "title": "WS fan-out alert rule examples exist",
+      "enforced": false,
+      "required_evidence": ["infra/observability/ws-alert-rules.example.yml"]
     }
   ]
 }

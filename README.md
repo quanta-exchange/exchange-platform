@@ -279,6 +279,9 @@ Success output includes:
 - `ws_resume_gap_first_type=Snapshot`
 - `ws_resume_smoke_report=build/ws/ws-resume-smoke.json`
 
+WS alert rule examples:
+- `infra/observability/ws-alert-rules.example.yml`
+
 ### 10.3) Candle correctness proof
 ```bash
 make prove-candles
