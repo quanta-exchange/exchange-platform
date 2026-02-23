@@ -158,6 +158,7 @@ Gate G1 operational check:
 - Crash recovery drill: `./runbooks/crash_recovery.sh`
 - Startup guardrails drill: `./runbooks/startup_guardrails.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
+  - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`

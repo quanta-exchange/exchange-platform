@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all + safety->controls->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -398,11 +398,15 @@ Success output includes:
 make verification-factory
 # include staged load profiles in same gate:
 ./scripts/verification_factory.sh --run-load-profiles
+# include startup guardrails runbook in same gate:
+./scripts/verification_factory.sh --run-startup-guardrails
+# local fallback for core cargo environment:
+VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --run-startup-guardrails
 ```
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false` and (when enabled) `artifacts.load_all_report`
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -515,6 +519,8 @@ Outputs:
 make release-gate
 # include staged load profiles in gate:
 ./scripts/release_gate.sh --run-load-profiles
+# include startup guardrails runbook in gate:
+./scripts/release_gate.sh --run-startup-guardrails
 # fail gate on advisory control gaps too:
 ./scripts/release_gate.sh --strict-controls
 ```
@@ -533,7 +539,8 @@ Outputs:
 - `verify_archive_ok=true`
 
 `verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.  
-`--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.
+`--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.  
+`--run-startup-guardrails`를 주면 startup guardrails runbook 단계가 추가 실행됩니다.
 
 ### 27) Determinism proof
 ```bash

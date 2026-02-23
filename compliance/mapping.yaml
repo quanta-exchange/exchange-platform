@@ -189,6 +189,11 @@
       "controlId": "CTRL-048",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.17.1.3"],
       "description": "Runbook-as-code drill validates startup guardrails across edge/core/ledger and captures before/after operational evidence"
+    },
+    {
+      "controlId": "CTRL-049",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
+      "description": "Verification and release gates can execute startup guardrails drill and record the artifact path in generated summaries"
     }
   ]
 }
