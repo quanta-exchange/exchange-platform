@@ -39,7 +39,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->model-check->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->model-check->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -47,6 +47,7 @@ scripts/
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
   model_check.sh          # G28 state-machine model checker
+  shadow_verify.sh        # G33 production shadow verification
   archive_range.sh        # G21 legal archive capture
   verify_archive.sh       # G21 archive checksum verifier
   change_proposal.sh      # G10 change proposal creation
@@ -420,6 +421,15 @@ Outputs:
 - `model_check_report=build/model-check/model-check-<timestamp>.json`
 - `model_check_latest=build/model-check/model-check-latest.json`
 - `model_check_ok=true|false`
+
+### 29) Shadow verification
+```bash
+make shadow-verify
+```
+Outputs:
+- `shadow_verify_report=build/shadow/shadow-verify-<timestamp>.json`
+- `shadow_verify_latest=build/shadow/shadow-verify-latest.json`
+- `shadow_verify_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

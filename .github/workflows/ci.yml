@@ -361,6 +361,7 @@ jobs:
             build/archive/**
             build/access/**
             build/model-check/**
+            build/shadow/**
 
   security-baseline:
     runs-on: ubuntu-latest

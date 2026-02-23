@@ -105,6 +105,9 @@ fi
 if ! run_step "model-check" "$ROOT_DIR/scripts/model_check.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "shadow-verify" "$ROOT_DIR/scripts/shadow_verify.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "compliance-evidence" "$ROOT_DIR/scripts/compliance_evidence.sh"; then
   HAS_FAILURE=true
 fi
@@ -127,6 +130,7 @@ VERIFY_ARCHIVE_LOG="$LOG_DIR/verify-archive.log"
 EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
 MODEL_CHECK_LOG="$LOG_DIR/model-check.log"
+SHADOW_VERIFY_LOG="$LOG_DIR/shadow-verify.log"
 COMPLIANCE_LOG="$LOG_DIR/compliance-evidence.log"
 TRANSPARENCY_LOG="$LOG_DIR/transparency-report.log"
 ACCESS_REVIEW_LOG="$LOG_DIR/access-review.log"
@@ -140,13 +144,14 @@ VERIFY_ARCHIVE_SHA="$(extract_value "verify_archive_sha256" "$VERIFY_ARCHIVE_LOG
 EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL_REPLAY_LOG")"
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 MODEL_CHECK_REPORT="$(extract_value "model_check_report" "$MODEL_CHECK_LOG")"
+SHADOW_VERIFY_REPORT="$(extract_value "shadow_verify_report" "$SHADOW_VERIFY_LOG")"
 COMPLIANCE_REPORT="$(extract_value "compliance_evidence_report" "$COMPLIANCE_LOG")"
 TRANSPARENCY_REPORT="$(extract_value "transparency_report_file" "$TRANSPARENCY_LOG")"
 ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG")"
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$MODEL_CHECK_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$MODEL_CHECK_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -162,11 +167,12 @@ archive_sha = sys.argv[9]
 external_replay_report = sys.argv[10]
 controls_report = sys.argv[11]
 model_check_report = sys.argv[12]
-compliance_report = sys.argv[13]
-transparency_report = sys.argv[14]
-access_review_report = sys.argv[15]
-safety_budget_report = sys.argv[16]
-assurance_json = sys.argv[17]
+shadow_verify_report = sys.argv[13]
+compliance_report = sys.argv[14]
+transparency_report = sys.argv[15]
+access_review_report = sys.argv[16]
+safety_budget_report = sys.argv[17]
+assurance_json = sys.argv[18]
 
 steps = []
 ok = True
@@ -200,6 +206,7 @@ summary = {
         "external_replay_report": external_replay_report or None,
         "controls_check_report": controls_report or None,
         "model_check_report": model_check_report or None,
+        "shadow_verify_report": shadow_verify_report or None,
         "compliance_evidence_report": compliance_report or None,
         "transparency_report": transparency_report or None,
         "access_review_report": access_review_report or None,

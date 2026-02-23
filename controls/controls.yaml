@@ -143,6 +143,12 @@
       "title": "State-machine model check evidence exists",
       "enforced": false,
       "required_evidence": ["specs/state_machines.json", "build/model-check/model-check-latest.json", "scripts/model_check.sh"]
+    },
+    {
+      "id": "CTRL-025",
+      "title": "Shadow verification evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/shadow/shadow-verify-latest.json", "scripts/shadow_verify.sh"]
     }
   ]
 }

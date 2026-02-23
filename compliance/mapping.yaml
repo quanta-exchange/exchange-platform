@@ -69,6 +69,11 @@
       "controlId": "CTRL-024",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.14.2.8"],
       "description": "State-machine model checks for lifecycle correctness"
+    },
+    {
+      "controlId": "CTRL-025",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.12.4.1"],
+      "description": "Shadow verification evidence for continuous consistency checks"
     }
   ]
 }
