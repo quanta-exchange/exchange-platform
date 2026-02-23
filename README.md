@@ -43,6 +43,7 @@ scripts/
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
+  adversarial_tests.sh    # G30 adversarial reliability bundle
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
@@ -316,6 +317,14 @@ make external-replay-demo
 Success output includes:
 - `external_replay_demo_report=build/external-replay/<timestamp>/external-replay-demo.json`
 - `external_replay_demo_ok=true|false`
+
+### 21) Adversarial tests bundle
+```bash
+make adversarial-tests
+```
+Success output includes:
+- `adversarial_tests_report=build/adversarial/<timestamp>/adversarial-tests.json`
+- `adversarial_tests_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
