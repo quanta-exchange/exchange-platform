@@ -40,6 +40,11 @@ scripts/
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
   verification_factory.sh # G33 continuous verification wrapper (safety->controls->assurance)
+  policy_sign.sh          # G29 policy signing
+  policy_verify.sh        # G29 policy signature verification
+  policy_smoke.sh         # G29 sign+verify smoke
+policies/
+  trading-policy.v1.json  # baseline policy-as-code document
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -237,6 +242,14 @@ make verification-factory
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
+
+### 15) Signed policy smoke
+```bash
+make policy-smoke
+```
+Success output includes:
+- `policy_smoke_ok=true`
+- `policy_smoke_signature=build/policy-smoke/trading-policy.v1.sig`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

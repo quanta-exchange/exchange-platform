@@ -1,0 +1,30 @@
+{
+  "policyVersion": "trading-policy.v1",
+  "generatedAtUtc": "2026-02-23T00:00:00Z",
+  "risk": {
+    "maxOrderNotional": 1000000000,
+    "maxOrderQty": 1000000,
+    "priceBandBps": 500,
+    "volatilityViolationThreshold": 3
+  },
+  "marketModes": {
+    "default": "NORMAL",
+    "allowedTransitions": [
+      ["NORMAL", "CANCEL_ONLY"],
+      ["CANCEL_ONLY", "NORMAL"],
+      ["NORMAL", "SOFT_HALT"],
+      ["SOFT_HALT", "NORMAL"],
+      ["SOFT_HALT", "HARD_HALT"],
+      ["HARD_HALT", "SOFT_HALT"]
+    ]
+  },
+  "fees": {
+    "makerBps": 5,
+    "takerBps": 10,
+    "roundingMode": "HALF_UP"
+  },
+  "controls": {
+    "requireAdminApprovalForModeChange": true,
+    "requireSafetyLatchReleaseApproval": true
+  }
+}
