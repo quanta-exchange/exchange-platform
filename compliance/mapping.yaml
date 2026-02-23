@@ -169,6 +169,11 @@
       "controlId": "CTRL-044",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Release gate strict mode can block deployment when advisory controls are missing evidence"
+    },
+    {
+      "controlId": "CTRL-045",
+      "frameworks": ["SOC2:CC6.1", "ISO27001:A.8.9"],
+      "description": "Edge startup enforces production fail-closed guardrails for insecure auth/smoke/seed/core/origin/telemetry settings"
     }
   ]
 }

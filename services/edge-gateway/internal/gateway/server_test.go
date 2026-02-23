@@ -59,6 +59,24 @@ func newTestServer(t *testing.T) (*Server, func()) {
 	}
 }
 
+func prodBaselineConfig(coreAddr string) Config {
+	return Config{
+		DisableDB:                true,
+		WSQueueSize:              8,
+		Environment:              "prod",
+		APISecrets:               map[string]string{"prod-key": "prod-secret-1234567890"},
+		AllowInsecureNoAuth:      false,
+		EnableSmokeRoutes:        false,
+		SeedMarketData:           false,
+		OTelInsecure:             false,
+		WSAllowedOrigins:         []string{"https://app.exchange.test"},
+		CoreAddr:                 coreAddr,
+		CoreTimeout:              2 * time.Second,
+		RateLimitPerMinute:       100,
+		PublicRateLimitPerMinute: 100,
+	}
+}
+
 func signHeaders(t *testing.T, method, path string, body []byte, tsMs int64) http.Header {
 	t.Helper()
 	h := http.Header{}
@@ -1512,6 +1530,120 @@ func TestOTelEnvironmentDefaultAndOverride(t *testing.T) {
 	}
 	if got := otelEnvironment(Config{OTelEnvironment: "prod"}); got != "prod" {
 		t.Fatalf("expected otel env override, got %s", got)
+	}
+}
+
+func TestRuntimeEnvironmentPrefersExplicitEnvironment(t *testing.T) {
+	cfg := Config{
+		Environment:     "production",
+		OTelEnvironment: "staging",
+	}
+	if got := runtimeEnvironment(cfg); got != "production" {
+		t.Fatalf("expected runtime environment to prefer explicit environment, got %s", got)
+	}
+}
+
+func TestIsProductionEnvironmentVariants(t *testing.T) {
+	cases := []Config{
+		{Environment: "prod"},
+		{Environment: "production"},
+		{Environment: "live"},
+		{Environment: "", OTelEnvironment: "prod"},
+	}
+	for _, cfg := range cases {
+		if !isProductionEnvironment(cfg) {
+			t.Fatalf("expected production environment for cfg=%+v", cfg)
+		}
+	}
+	if isProductionEnvironment(Config{Environment: "local"}) {
+		t.Fatalf("expected local to be non-production")
+	}
+}
+
+func TestNewAcceptsProductionGuardrailConfig(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(prodBaselineConfig(coreAddr))
+	if err != nil {
+		t.Fatalf("expected prod baseline config to pass, got err=%v", err)
+	}
+	_ = s.Close()
+}
+
+func TestNewRejectsInsecureProductionGuardrails(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	type testCase struct {
+		name     string
+		mutate   func(*Config)
+		wantPart string
+	}
+	cases := []testCase{
+		{
+			name: "missing api secrets",
+			mutate: func(cfg *Config) {
+				cfg.APISecrets = nil
+			},
+			wantPart: "api secrets must be configured",
+		},
+		{
+			name: "insecure no-auth enabled",
+			mutate: func(cfg *Config) {
+				cfg.AllowInsecureNoAuth = true
+			},
+			wantPart: "allow insecure no-auth must be disabled",
+		},
+		{
+			name: "smoke routes enabled",
+			mutate: func(cfg *Config) {
+				cfg.EnableSmokeRoutes = true
+			},
+			wantPart: "smoke routes must be disabled",
+		},
+		{
+			name: "seed market data enabled",
+			mutate: func(cfg *Config) {
+				cfg.SeedMarketData = true
+			},
+			wantPart: "seed market data must be disabled",
+		},
+		{
+			name: "core disabled",
+			mutate: func(cfg *Config) {
+				cfg.DisableCore = true
+			},
+			wantPart: "core connection must be enabled",
+		},
+		{
+			name: "otel insecure enabled",
+			mutate: func(cfg *Config) {
+				cfg.OTelInsecure = true
+			},
+			wantPart: "otel insecure transport must be disabled",
+		},
+		{
+			name: "ws origins missing",
+			mutate: func(cfg *Config) {
+				cfg.WSAllowedOrigins = nil
+			},
+			wantPart: "ws allowed origins must be configured",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := prodBaselineConfig(coreAddr)
+			tc.mutate(&cfg)
+			_, err := New(cfg)
+			if err == nil {
+				t.Fatalf("expected production guardrail error")
+			}
+			if !strings.Contains(err.Error(), tc.wantPart) {
+				t.Fatalf("unexpected guardrail error: %v", err)
+			}
+		})
 	}
 }
 

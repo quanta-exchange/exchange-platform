@@ -13,6 +13,7 @@ import (
 func main() {
 	cfg := gateway.Config{
 		Addr:               getenv("EDGE_ADDR", ":8080"),
+		Environment:        getenv("EDGE_ENV", ""),
 		DBDsn:              getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
 		DBMaxOpenConns:     getenvInt("EDGE_DB_MAX_OPEN_CONNS", 32),
 		DBMaxIdleConns:     getenvInt("EDGE_DB_MAX_IDLE_CONNS", 16),

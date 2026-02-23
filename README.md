@@ -132,6 +132,17 @@ npm run dev
 - default proxy target: `http://localhost:8081` (override: `VITE_PROXY_TARGET`)
 
 ## Gate G0 commands
+### Production startup guardrails (Edge)
+- Enable guardrails with `EDGE_ENV=prod` (or `EDGE_OTEL_ENV=prod` when `EDGE_ENV` is unset).
+- In production mode, edge startup fails if any of these are true:
+  - `EDGE_ALLOW_INSECURE_NO_AUTH=true`
+  - `EDGE_ENABLE_SMOKE_ROUTES=true`
+  - `EDGE_SEED_MARKET_DATA=true`
+  - `EDGE_DISABLE_CORE=true`
+  - `EDGE_OTEL_INSECURE=true`
+  - API secrets are not configured
+  - WS origin allowlist is empty
+
 ### 1) Contracts
 If `buf` is installed locally:
 ```bash

@@ -263,6 +263,12 @@
       "title": "Release gate supports strict advisory-control enforcement mode",
       "enforced": false,
       "required_evidence": ["scripts/release_gate.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-045",
+      "title": "Edge production fail-closed startup guardrails exist",
+      "enforced": false,
+      "required_evidence": ["services/edge-gateway/internal/gateway/server.go", "services/edge-gateway/internal/gateway/server_test.go", "services/edge-gateway/cmd/edge-gateway/main.go", "README.md"]
     }
   ]
 }

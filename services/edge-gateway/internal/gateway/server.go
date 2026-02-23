@@ -64,6 +64,7 @@ const apiKeyContextKey contextKey = "api_key"
 // Config keeps runtime settings loaded from env.
 type Config struct {
 	Addr                     string
+	Environment              string
 	DBDsn                    string
 	DBMaxOpenConns           int
 	DBMaxIdleConns           int
@@ -582,6 +583,9 @@ func New(cfg Config) (*Server, error) {
 		if normalized != "" {
 			wsAllowedOrigins[normalized] = struct{}{}
 		}
+	}
+	if err := validateRuntimeGuardrails(cfg, wsAllowedOrigins); err != nil {
+		return nil, err
 	}
 
 	var db *sql.DB
@@ -4020,6 +4024,55 @@ func otelEnvironment(cfg Config) string {
 		return "local"
 	}
 	return env
+}
+
+func runtimeEnvironment(cfg Config) string {
+	env := strings.ToLower(strings.TrimSpace(cfg.Environment))
+	if env != "" {
+		return env
+	}
+	otelEnv := strings.ToLower(strings.TrimSpace(cfg.OTelEnvironment))
+	if otelEnv != "" {
+		return otelEnv
+	}
+	return "local"
+}
+
+func isProductionEnvironment(cfg Config) bool {
+	switch runtimeEnvironment(cfg) {
+	case "prod", "production", "live":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateRuntimeGuardrails(cfg Config, wsAllowedOrigins map[string]struct{}) error {
+	if !isProductionEnvironment(cfg) {
+		return nil
+	}
+	if cfg.AllowInsecureNoAuth {
+		return errors.New("production guardrail: allow insecure no-auth must be disabled")
+	}
+	if len(cfg.APISecrets) == 0 {
+		return errors.New("production guardrail: api secrets must be configured")
+	}
+	if cfg.EnableSmokeRoutes {
+		return errors.New("production guardrail: smoke routes must be disabled")
+	}
+	if cfg.SeedMarketData {
+		return errors.New("production guardrail: seed market data must be disabled")
+	}
+	if cfg.DisableCore {
+		return errors.New("production guardrail: core connection must be enabled")
+	}
+	if cfg.OTelInsecure {
+		return errors.New("production guardrail: otel insecure transport must be disabled")
+	}
+	if len(wsAllowedOrigins) == 0 {
+		return errors.New("production guardrail: ws allowed origins must be configured")
+	}
+	return nil
 }
 
 func marshalResponse(status int, v interface{}) (int, []byte) {
