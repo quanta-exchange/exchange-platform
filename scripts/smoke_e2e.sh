@@ -59,6 +59,7 @@ echo "Starting edge-gateway..."
 EDGE_ADDR=":8081" \
 EDGE_DISABLE_DB="true" \
 EDGE_CORE_ADDR="localhost:50051" \
+EDGE_ALLOW_INSECURE_NO_AUTH="true" \
 EDGE_API_SECRETS="" \
 go run ./services/edge-gateway/cmd/edge-gateway >"${edge_log}" 2>&1 &
 EDGE_PID=$!

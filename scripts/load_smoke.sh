@@ -13,7 +13,7 @@ trap cleanup EXIT
 
 cd "$ROOT_DIR"
 
-EDGE_ADDR=":18081" EDGE_DISABLE_DB="true" go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
+EDGE_ADDR=":18081" EDGE_DISABLE_DB="true" EDGE_ALLOW_INSECURE_NO_AUTH="true" go run ./services/edge-gateway/cmd/edge-gateway >"$EDGE_LOG" 2>&1 &
 EDGE_PID=$!
 
 for _ in {1..120}; do

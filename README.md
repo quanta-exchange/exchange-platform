@@ -310,6 +310,7 @@ Market order liquidity policy (v1):
 ## Edge auth (G2)
 Configure auth in env:
 - `EDGE_API_SECRETS="key1:secret1,key2:secret2"`
+- `EDGE_ALLOW_INSECURE_NO_AUTH=false` (default; when `EDGE_API_SECRETS` is empty, unsigned trading requests are rejected unless explicitly enabled for local smoke)
 - `EDGE_AUTH_SKEW_SEC=30`
 - `EDGE_REPLAY_TTL_SEC=120`
 - `EDGE_RATE_LIMIT_PER_MINUTE=1000`

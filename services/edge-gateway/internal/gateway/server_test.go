@@ -231,6 +231,36 @@ func TestRejectsInvalidSignature(t *testing.T) {
 	}
 }
 
+func TestRejectsUnsignedTradingWhenAuthNotConfigured(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:   true,
+		WSQueueSize: 8,
+		CoreAddr:    coreAddr,
+		CoreTimeout: 2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer func() { _ = s.Close() }()
+
+	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-auth-config")
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 when auth is not configured, got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "auth_not_configured") {
+		t.Fatalf("unexpected body for auth guard: %s", w.Body.String())
+	}
+}
+
 func TestRejectsTimestampSkew(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()

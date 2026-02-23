@@ -51,38 +51,39 @@ const apiKeyContextKey contextKey = "api_key"
 
 // Config keeps runtime settings loaded from env.
 type Config struct {
-	Addr               string
-	DBDsn              string
-	DisableDB          bool
-	DisableCore        bool
-	SeedMarketData     bool
-	EnableSmokeRoutes  bool
-	SessionTTL         time.Duration
-	WSQueueSize        int
-	WSWriteDelay       time.Duration
-	WSMaxSubscriptions int
-	WSCommandRateLimit int
-	WSCommandWindow    time.Duration
-	WSPingInterval     time.Duration
-	WSPongTimeout      time.Duration
-	WSReadLimitBytes   int64
-	WSAllowedOrigins   []string
-	APISecrets         map[string]string
-	TimestampSkew      time.Duration
-	ReplayTTL          time.Duration
-	RateLimitPerMinute int
-	RedisAddr          string
-	RedisPassword      string
-	RedisDB            int
-	OTelEndpoint       string
-	OTelServiceName    string
-	OTelSampleRatio    float64
-	OTelInsecure       bool
-	CoreAddr           string
-	CoreTimeout        time.Duration
-	KafkaBrokers       string
-	KafkaTradeTopic    string
-	KafkaGroupID       string
+	Addr                string
+	DBDsn               string
+	DisableDB           bool
+	DisableCore         bool
+	SeedMarketData      bool
+	EnableSmokeRoutes   bool
+	AllowInsecureNoAuth bool
+	SessionTTL          time.Duration
+	WSQueueSize         int
+	WSWriteDelay        time.Duration
+	WSMaxSubscriptions  int
+	WSCommandRateLimit  int
+	WSCommandWindow     time.Duration
+	WSPingInterval      time.Duration
+	WSPongTimeout       time.Duration
+	WSReadLimitBytes    int64
+	WSAllowedOrigins    []string
+	APISecrets          map[string]string
+	TimestampSkew       time.Duration
+	ReplayTTL           time.Duration
+	RateLimitPerMinute  int
+	RedisAddr           string
+	RedisPassword       string
+	RedisDB             int
+	OTelEndpoint        string
+	OTelServiceName     string
+	OTelSampleRatio     float64
+	OTelInsecure        bool
+	CoreAddr            string
+	CoreTimeout         time.Duration
+	KafkaBrokers        string
+	KafkaTradeTopic     string
+	KafkaGroupID        string
 }
 
 type OrderRequest struct {
@@ -784,9 +785,14 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Local development: if no secrets configured, allow requests.
+		// Local testing-only mode: explicitly allow unsigned requests when configured.
 		if len(s.cfg.APISecrets) == 0 {
-			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), apiKeyContextKey, "")))
+			if s.cfg.AllowInsecureNoAuth {
+				next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), apiKeyContextKey, "")))
+				return
+			}
+			s.authFail("auth_not_configured")
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "auth_not_configured"})
 			return
 		}
 
