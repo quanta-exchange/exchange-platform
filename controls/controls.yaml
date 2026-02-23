@@ -305,6 +305,12 @@
       "title": "PII log scan gate exists and is wired into verification",
       "enforced": false,
       "required_evidence": ["scripts/pii_log_scan.sh", "scripts/verification_factory.sh", "build/security/pii-log-scan-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-052",
+      "title": "System status snapshot includes compliance posture summary",
+      "enforced": false,
+      "required_evidence": ["scripts/system_status.sh", "README.md"]
     }
   ]
 }

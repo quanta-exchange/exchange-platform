@@ -435,6 +435,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
+- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.pii_log_scan` snapshots when latest artifacts exist
 
 ### 18) Runbook-as-code drills
 ```bash

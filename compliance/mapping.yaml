@@ -204,6 +204,11 @@
       "controlId": "CTRL-051",
       "frameworks": ["SOC2:CC6.7", "ISO27001:A.5.34"],
       "description": "PII log scan gate detects sensitive personal data patterns in generated artifacts and blocks verification on hits"
+    },
+    {
+      "controlId": "CTRL-052",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
+      "description": "System status snapshots include latest controls/audit-chain/PII-scan posture for unified operational visibility"
     }
   ]
 }

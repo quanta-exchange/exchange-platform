@@ -68,8 +68,9 @@ fi
 REPORT_FILE="$OUT_DIR/$REPORT_NAME"
 LATEST_FILE="$OUT_DIR/system-status-latest.json"
 
-"$PYTHON_BIN" - "$REPORT_FILE" "$CORE_HOST" "$CORE_PORT" "$EDGE_URL" "$LEDGER_URL" "$KAFKA_BROKER" "$COMPOSE_FILE" "$LEDGER_ADMIN_TOKEN" <<'PY'
+"$PYTHON_BIN" - "$ROOT_DIR" "$REPORT_FILE" "$CORE_HOST" "$CORE_PORT" "$EDGE_URL" "$LEDGER_URL" "$KAFKA_BROKER" "$COMPOSE_FILE" "$LEDGER_ADMIN_TOKEN" <<'PY'
 import json
+import pathlib
 import socket
 import subprocess
 import sys
@@ -78,14 +79,15 @@ import urllib.request
 from datetime import datetime, timezone
 from urllib.parse import urljoin
 
-report_file = sys.argv[1]
-core_host = sys.argv[2]
-core_port = int(sys.argv[3])
-edge_url = sys.argv[4].rstrip("/")
-ledger_url = sys.argv[5].rstrip("/")
-kafka_broker = sys.argv[6]
-compose_file = sys.argv[7]
-ledger_admin_token = sys.argv[8]
+root_dir = pathlib.Path(sys.argv[1]).resolve()
+report_file = sys.argv[2]
+core_host = sys.argv[3]
+core_port = int(sys.argv[4])
+edge_url = sys.argv[5].rstrip("/")
+ledger_url = sys.argv[6].rstrip("/")
+kafka_broker = sys.argv[7]
+compose_file = sys.argv[8]
+ledger_admin_token = sys.argv[9]
 
 
 def now_utc() -> str:
@@ -131,6 +133,23 @@ def parse_metrics(metrics_text: str, names: list[str]):
         except ValueError:
             parsed[metric] = value
     return parsed
+
+
+def read_latest_json(rel_path: str):
+    full_path = (root_dir / rel_path).resolve()
+    if not full_path.exists():
+        return {"present": False, "path": str(full_path), "payload": None}
+    try:
+        with open(full_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        return {"present": True, "path": str(full_path), "payload": payload}
+    except Exception as exc:
+        return {
+            "present": True,
+            "path": str(full_path),
+            "payload": None,
+            "error": str(exc),
+        }
 
 
 def kafka_status_via_rpk():
@@ -228,6 +247,10 @@ if not kafka_status.get("up"):
         "error": None if kafka_tcp_ok else kafka_tcp_err,
     }
 
+controls_latest = read_latest_json("build/controls/controls-check-latest.json")
+audit_chain_latest = read_latest_json("build/audit/verify-audit-chain-latest.json")
+pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
+
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
 report = {
@@ -255,6 +278,37 @@ report = {
             "reconciliation": reconciliation,
         },
         "kafka": kafka_status,
+        "compliance": {
+            "controls": {
+                "present": controls_latest.get("present", False),
+                "path": controls_latest.get("path"),
+                "ok": (controls_latest.get("payload") or {}).get("ok"),
+                "failed_enforced_count": (controls_latest.get("payload") or {}).get(
+                    "failed_enforced_count"
+                ),
+                "advisory_missing_count": (controls_latest.get("payload") or {}).get(
+                    "advisory_missing_count"
+                ),
+                "error": controls_latest.get("error"),
+            },
+            "audit_chain": {
+                "present": audit_chain_latest.get("present", False),
+                "path": audit_chain_latest.get("path"),
+                "ok": (audit_chain_latest.get("payload") or {}).get("ok"),
+                "mode": (audit_chain_latest.get("payload") or {}).get("mode"),
+                "head_hash": (audit_chain_latest.get("payload") or {}).get("head_hash"),
+                "entry_count": (audit_chain_latest.get("payload") or {}).get("entry_count"),
+                "error": audit_chain_latest.get("error"),
+            },
+            "pii_log_scan": {
+                "present": pii_scan_latest.get("present", False),
+                "path": pii_scan_latest.get("path"),
+                "ok": (pii_scan_latest.get("payload") or {}).get("ok"),
+                "hit_count": (pii_scan_latest.get("payload") or {}).get("hit_count"),
+                "files_scanned": (pii_scan_latest.get("payload") or {}).get("files_scanned"),
+                "error": pii_scan_latest.get("error"),
+            },
+        },
     },
 }
 
