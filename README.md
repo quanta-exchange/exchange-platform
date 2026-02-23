@@ -39,6 +39,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->assurance)
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -228,6 +229,14 @@ Success output includes:
 - `controls_check_report=build/controls/controls-check-<timestamp>.json`
 - `controls_check_latest=build/controls/controls-check-latest.json`
 - `controls_check_ok=true|false`
+
+### 14) Verification factory (single command gate)
+```bash
+make verification-factory
+```
+Success output includes:
+- `verification_summary=build/verification/<timestamp>/verification-summary.json`
+- `verification_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
