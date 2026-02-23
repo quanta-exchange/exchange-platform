@@ -159,6 +159,7 @@ Gate G1 operational check:
 - Startup guardrails drill: `./runbooks/startup_guardrails.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
+- Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`

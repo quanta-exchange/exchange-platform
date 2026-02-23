@@ -293,6 +293,12 @@
       "title": "Verification/release gates can include startup guardrails drill",
       "enforced": false,
       "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-050",
+      "title": "Break-glass audit log has tamper-evident hash-chain verification",
+      "enforced": false,
+      "required_evidence": ["scripts/break_glass.sh", "scripts/verify_audit_chain.sh", "build/audit/verify-audit-chain-latest.json", "README.md"]
     }
   ]
 }

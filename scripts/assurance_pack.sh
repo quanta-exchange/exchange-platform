@@ -72,6 +72,7 @@ evidence = [
     {"id": "load_smoke", "path": pathlib.Path("build/load/load-smoke.json"), "required": True},
     {"id": "load_all", "path": pathlib.Path("build/load/load-all-latest.json"), "required": False},
     {"id": "startup_guardrails_runbook", "path": pathlib.Path(rel(startup_guardrails_runbook)) if startup_guardrails_runbook else None, "required": False},
+    {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
     {"id": "invariants", "path": pathlib.Path("build/invariants/ledger-invariants.json"), "required": True},
     {"id": "invariants_summary", "path": pathlib.Path("build/invariants/invariants-summary.json"), "required": False},
@@ -136,6 +137,7 @@ pack = {
         {"id": "G14", "text": "Core invariants scan enforces sequence monotonicity and rejects illegal order lifecycle transitions in WAL events."},
         {"id": "G15", "text": "Staged load bundle report captures smoke/10k/50k profile outcomes in one artifact for performance regression tracking."},
         {"id": "G16", "text": "Startup guardrails drill continuously verifies fail-closed production bootstrap policy across edge/core/ledger services."},
+        {"id": "G17", "text": "Audit-chain verification produces a deterministic head hash for tamper-evidence checks on admin emergency action logs."},
     ],
 }
 

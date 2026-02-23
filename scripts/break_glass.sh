@@ -47,7 +47,60 @@ now_iso() {
 write_audit() {
   local event="$1"
   local payload="$2"
-  echo "{\"ts\":\"$(now_iso)\",\"event\":\"${event}\",\"actor\":\"${ACTOR}\",\"reason\":\"${REASON}\",\"payload\":${payload}}" >>"$AUDIT_FILE"
+  local ts prev_hash base_json row_hash final_json
+  ts="$(now_iso)"
+  prev_hash="GENESIS"
+  if [[ -f "$AUDIT_FILE" && -s "$AUDIT_FILE" ]]; then
+    local last_line
+    last_line="$(tail -n 1 "$AUDIT_FILE" || true)"
+    prev_hash="$(
+      python3 - "$last_line" <<'PY'
+import json
+import sys
+
+line = sys.argv[1].strip()
+if not line:
+    print("GENESIS")
+    raise SystemExit(0)
+try:
+    row = json.loads(line)
+except Exception:
+    print("LEGACY")
+    raise SystemExit(0)
+print(row.get("hash") or "LEGACY")
+PY
+    )"
+  fi
+  base_json="$(
+    python3 - "$ts" "$event" "$ACTOR" "$REASON" "$payload" "$prev_hash" <<'PY'
+import json
+import sys
+
+ts, event, actor, reason, payload_raw, prev_hash = sys.argv[1:7]
+payload = json.loads(payload_raw)
+row = {
+    "ts": ts,
+    "event": event,
+    "actor": actor,
+    "reason": reason,
+    "payload": payload,
+    "prevHash": prev_hash,
+}
+print(json.dumps(row, separators=(",", ":"), sort_keys=True))
+PY
+  )"
+  row_hash="$(printf '%s' "$base_json" | shasum -a 256 | awk '{print $1}')"
+  final_json="$(
+    python3 - "$base_json" "$row_hash" <<'PY'
+import json
+import sys
+
+row = json.loads(sys.argv[1])
+row["hash"] = sys.argv[2]
+print(json.dumps(row, separators=(",", ":"), sort_keys=True))
+PY
+  )"
+  echo "$final_json" >>"$AUDIT_FILE"
 }
 
 status_json() {

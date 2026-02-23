@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -59,6 +59,7 @@ scripts/
   shadow_verify.sh        # G33 production shadow verification
   archive_range.sh        # G21 legal archive capture
   verify_archive.sh       # G21 archive checksum verifier
+  verify_audit_chain.sh   # G25 tamper-evident audit chain verifier
   change_proposal.sh      # G10 change proposal creation
   change_approve.sh       # G10 approval recording
   apply_change.sh         # G10 apply + verification evidence
@@ -537,6 +538,18 @@ Outputs:
 Outputs:
 - `archive_manifest=build/archive/<timestamp>/manifest.json`
 - `verify_archive_ok=true`
+
+### 26.1) Audit hash-chain verify
+```bash
+make verify-audit-chain
+# require at least one audit event:
+./scripts/verify_audit_chain.sh --require-events
+```
+Outputs:
+- `verify_audit_chain_report=build/audit/verify-audit-chain-<timestamp>.json`
+- `verify_audit_chain_latest=build/audit/verify-audit-chain-latest.json`
+- `verify_audit_chain_head=<sha256>`
+- `verify_audit_chain_ok=true|false`
 
 `verification_factory.sh` 실행 시에도 `archive-range`/`verify-archive` 단계가 자동 포함됩니다.  
 `--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.  
