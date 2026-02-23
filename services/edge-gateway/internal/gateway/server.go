@@ -59,6 +59,13 @@ type Config struct {
 	SessionTTL         time.Duration
 	WSQueueSize        int
 	WSWriteDelay       time.Duration
+	WSMaxSubscriptions int
+	WSCommandRateLimit int
+	WSCommandWindow    time.Duration
+	WSPingInterval     time.Duration
+	WSPongTimeout      time.Duration
+	WSReadLimitBytes   int64
+	WSAllowedOrigins   []string
 	APISecrets         map[string]string
 	TimestampSkew      time.Duration
 	ReplayTTL          time.Duration
@@ -248,6 +255,8 @@ type state struct {
 	slowConsumerCloses uint64
 	wsDroppedMsgs      uint64
 	replayDetected     uint64
+	wsPolicyCloses     uint64
+	wsRateLimitCloses  uint64
 }
 
 type wsSubscription struct {
@@ -276,6 +285,7 @@ type client struct {
 	closeOnce   sync.Once
 	conflated   map[string][]byte
 	subscribers map[string]wsSubscription
+	commandTs   []int64
 }
 
 func (c *client) closeSend() {
@@ -327,10 +337,22 @@ func (c *client) drainConflated() [][]byte {
 	return pending
 }
 
-func (c *client) upsertSubscription(sub wsSubscription) {
+func (c *client) upsertSubscription(sub wsSubscription, maxSubscriptions int) bool {
 	c.mu.Lock()
-	c.subscribers[sub.key()] = sub
-	c.mu.Unlock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return false
+	}
+	key := sub.key()
+	if _, exists := c.subscribers[key]; exists {
+		c.subscribers[key] = sub
+		return true
+	}
+	if maxSubscriptions > 0 && len(c.subscribers) >= maxSubscriptions {
+		return false
+	}
+	c.subscribers[key] = sub
+	return true
 }
 
 func (c *client) removeSubscription(sub wsSubscription) {
@@ -349,6 +371,27 @@ func (c *client) matchingSubscriptions(channel, symbol string) []wsSubscription 
 		}
 	}
 	return out
+}
+
+func (c *client) allowCommand(nowMs int64, maxInWindow int, windowMs int64) bool {
+	if maxInWindow <= 0 || windowMs <= 0 {
+		return true
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	cutoff := nowMs - windowMs
+	filtered := c.commandTs[:0]
+	for _, ts := range c.commandTs {
+		if ts >= cutoff {
+			filtered = append(filtered, ts)
+		}
+	}
+	c.commandTs = filtered
+	if len(c.commandTs) >= maxInWindow {
+		return false
+	}
+	c.commandTs = append(c.commandTs, nowMs)
+	return true
 }
 
 type Server struct {
@@ -380,6 +423,24 @@ func New(cfg Config) (*Server, error) {
 	if cfg.WSWriteDelay < 0 {
 		cfg.WSWriteDelay = 0
 	}
+	if cfg.WSMaxSubscriptions <= 0 {
+		cfg.WSMaxSubscriptions = 64
+	}
+	if cfg.WSCommandRateLimit <= 0 {
+		cfg.WSCommandRateLimit = 240
+	}
+	if cfg.WSCommandWindow <= 0 {
+		cfg.WSCommandWindow = time.Minute
+	}
+	if cfg.WSPingInterval <= 0 {
+		cfg.WSPingInterval = 20 * time.Second
+	}
+	if cfg.WSPongTimeout <= 0 {
+		cfg.WSPongTimeout = 60 * time.Second
+	}
+	if cfg.WSReadLimitBytes <= 0 {
+		cfg.WSReadLimitBytes = 1 << 20
+	}
 	if cfg.TimestampSkew <= 0 {
 		cfg.TimestampSkew = 30 * time.Second
 	}
@@ -409,6 +470,14 @@ func New(cfg Config) (*Server, error) {
 	}
 	if cfg.KafkaGroupID == "" {
 		cfg.KafkaGroupID = "edge-trades-v1"
+	}
+
+	wsAllowedOrigins := map[string]struct{}{}
+	for _, origin := range cfg.WSAllowedOrigins {
+		normalized := strings.ToLower(strings.TrimSpace(origin))
+		if normalized != "" {
+			wsAllowedOrigins[normalized] = struct{}{}
+		}
 	}
 
 	var db *sql.DB
@@ -475,7 +544,11 @@ func New(cfg Config) (*Server, error) {
 			wallets:            map[string]map[string]walletBalance{},
 			appliedTrades:      map[string]int64{},
 		},
-		upgrader:      websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool { return true }},
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return originAllowed(wsAllowedOrigins, r.Header.Get("Origin"))
+			},
+		},
 		tracer:        otelTracer,
 		traceShutdown: otelShutdown,
 	}
@@ -646,6 +719,8 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	trades := s.state.tradesTotal
 	clients := len(s.state.clients)
 	slowClose := s.state.slowConsumerCloses
+	policyClose := s.state.wsPolicyCloses
+	wsRateLimitCloses := s.state.wsRateLimitCloses
 	droppedMsgs := s.state.wsDroppedMsgs
 	replayDetected := s.state.replayDetected
 	queueLens := make([]int, 0, len(s.state.clients))
@@ -673,6 +748,8 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_trades_total " + strconv.FormatUint(trades, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_connections " + strconv.Itoa(clients) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_close_slow_consumer_total " + strconv.FormatUint(slowClose, 10) + "\n"))
+	_, _ = w.Write([]byte("edge_ws_close_policy_total " + strconv.FormatUint(policyClose, 10) + "\n"))
+	_, _ = w.Write([]byte("edge_ws_close_ratelimit_total " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
 	for _, reason := range reasons {
 		line := fmt.Sprintf(
@@ -687,6 +764,8 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ws_send_queue_p99 " + strconv.Itoa(queueP99) + "\n"))
 	_, _ = w.Write([]byte("ws_dropped_msgs " + strconv.FormatUint(droppedMsgs, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_slow_closes " + strconv.FormatUint(slowClose, 10) + "\n"))
+	_, _ = w.Write([]byte("ws_policy_closes " + strconv.FormatUint(policyClose, 10) + "\n"))
+	_, _ = w.Write([]byte("ws_command_rate_limit_closes " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -2185,6 +2264,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	conn.SetReadLimit(s.cfg.WSReadLimitBytes)
+	_ = conn.SetReadDeadline(time.Now().Add(s.cfg.WSPongTimeout))
+	conn.SetPongHandler(func(_ string) error {
+		return conn.SetReadDeadline(time.Now().Add(s.cfg.WSPongTimeout))
+	})
 	client := &client{
 		conn:        conn,
 		send:        make(chan []byte, s.cfg.WSQueueSize),
@@ -2211,6 +2295,8 @@ func (s *Server) wsWriter(c *client) {
 
 	flushTicker := time.NewTicker(100 * time.Millisecond)
 	defer flushTicker.Stop()
+	pingTicker := time.NewTicker(s.cfg.WSPingInterval)
+	defer pingTicker.Stop()
 
 	writeJSON := func(payload []byte) error {
 		_ = c.conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
@@ -2239,6 +2325,11 @@ func (s *Server) wsWriter(c *client) {
 					return
 				}
 			}
+		case <-pingTicker.C:
+			deadline := time.Now().Add(1 * time.Second)
+			if err := c.conn.WriteControl(websocket.PingMessage, nil, deadline); err != nil {
+				return
+			}
 		}
 	}
 }
@@ -2254,9 +2345,28 @@ func (s *Server) wsReader(c *client) {
 		if err != nil {
 			return
 		}
+		if !c.allowCommand(
+			time.Now().UnixMilli(),
+			s.cfg.WSCommandRateLimit,
+			s.cfg.WSCommandWindow.Milliseconds(),
+		) {
+			s.state.mu.Lock()
+			s.state.wsPolicyCloses++
+			s.state.wsRateLimitCloses++
+			s.state.mu.Unlock()
+			if c.conn != nil {
+				_ = c.conn.WriteControl(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "RATE_LIMIT"),
+					time.Now().Add(1*time.Second),
+				)
+			}
+			c.closeSend()
+			return
+		}
 		var cmd WSCommand
 		if err := json.Unmarshal(raw, &cmd); err != nil {
-			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "invalid command"}}, false, "")
+			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "INVALID_COMMAND"}}, false, "")
 			continue
 		}
 
@@ -2265,17 +2375,30 @@ func (s *Server) wsReader(c *client) {
 			sub, err := parseWSSubscription(cmd)
 			if err != nil {
 				s.sendToClient(c, WSMessage{
-					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": err.Error()},
+					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "INVALID_SUBSCRIPTION"},
 				}, false, "")
 				continue
 			}
-			c.upsertSubscription(sub)
+			if !c.upsertSubscription(sub, s.cfg.WSMaxSubscriptions) {
+				s.state.mu.Lock()
+				s.state.wsPolicyCloses++
+				s.state.mu.Unlock()
+				if c.conn != nil {
+					_ = c.conn.WriteControl(
+						websocket.CloseMessage,
+						websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "TOO_MANY_SUBSCRIPTIONS"),
+						time.Now().Add(1*time.Second),
+					)
+				}
+				c.closeSend()
+				return
+			}
 			s.sendSnapshot(c, sub)
 		case "UNSUB":
 			sub, err := parseWSSubscription(cmd)
 			if err != nil {
 				s.sendToClient(c, WSMessage{
-					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": err.Error()},
+					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "INVALID_SUBSCRIPTION"},
 				}, false, "")
 				continue
 			}
@@ -2284,14 +2407,27 @@ func (s *Server) wsReader(c *client) {
 			sub, err := parseWSSubscription(cmd)
 			if err != nil {
 				s.sendToClient(c, WSMessage{
-					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": err.Error()},
+					Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "INVALID_SUBSCRIPTION"},
 				}, false, "")
 				continue
 			}
-			c.upsertSubscription(sub)
+			if !c.upsertSubscription(sub, s.cfg.WSMaxSubscriptions) {
+				s.state.mu.Lock()
+				s.state.wsPolicyCloses++
+				s.state.mu.Unlock()
+				if c.conn != nil {
+					_ = c.conn.WriteControl(
+						websocket.CloseMessage,
+						websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "TOO_MANY_SUBSCRIPTIONS"),
+						time.Now().Add(1*time.Second),
+					)
+				}
+				c.closeSend()
+				return
+			}
 			s.handleResume(c, sub, cmd.LastSeq)
 		default:
-			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "unknown op"}}, false, "")
+			s.sendToClient(c, WSMessage{Type: "Error", Symbol: "", Seq: 0, Ts: time.Now().UnixMilli(), Data: map[string]string{"error": "UNKNOWN_OP"}}, false, "")
 		}
 	}
 }
@@ -2448,6 +2584,18 @@ func parseWSSubscription(cmd WSCommand) (wsSubscription, error) {
 		sub.interval = interval
 	}
 	return sub, nil
+}
+
+func originAllowed(allowed map[string]struct{}, origin string) bool {
+	if len(allowed) == 0 {
+		return true
+	}
+	normalized := strings.ToLower(strings.TrimSpace(origin))
+	if normalized == "" {
+		return false
+	}
+	_, ok := allowed[normalized]
+	return ok
 }
 
 func defaultSubscription(channel, symbol string) wsSubscription {

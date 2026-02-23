@@ -642,6 +642,56 @@ func TestParseWSSubscriptionIncludesChannelDimensions(t *testing.T) {
 	}
 }
 
+func TestClientSubscriptionLimit(t *testing.T) {
+	c := &client{
+		subscribers: map[string]wsSubscription{},
+	}
+	if !c.upsertSubscription(wsSubscription{channel: "trades", symbol: "BTC-KRW"}, 1) {
+		t.Fatalf("expected first subscription to pass")
+	}
+	if c.upsertSubscription(wsSubscription{channel: "book", symbol: "BTC-KRW", depth: 20}, 1) {
+		t.Fatalf("expected second distinct subscription to be rejected by limit")
+	}
+	if !c.upsertSubscription(wsSubscription{channel: "trades", symbol: "BTC-KRW"}, 1) {
+		t.Fatalf("expected update of existing subscription to pass")
+	}
+}
+
+func TestClientCommandRateLimitWindow(t *testing.T) {
+	c := &client{}
+	now := time.Now().UnixMilli()
+	if !c.allowCommand(now, 2, 1_000) {
+		t.Fatalf("expected first command allowed")
+	}
+	if !c.allowCommand(now+10, 2, 1_000) {
+		t.Fatalf("expected second command allowed")
+	}
+	if c.allowCommand(now+20, 2, 1_000) {
+		t.Fatalf("expected third command rejected in same window")
+	}
+	if !c.allowCommand(now+1_100, 2, 1_000) {
+		t.Fatalf("expected window rollover to allow command")
+	}
+}
+
+func TestOriginAllowed(t *testing.T) {
+	if !originAllowed(map[string]struct{}{}, "") {
+		t.Fatalf("expected empty allowlist to allow origin")
+	}
+	allowed := map[string]struct{}{
+		"https://app.exchange.test": {},
+	}
+	if !originAllowed(allowed, "https://app.exchange.test") {
+		t.Fatalf("expected listed origin to pass")
+	}
+	if originAllowed(allowed, "https://evil.test") {
+		t.Fatalf("expected unlisted origin to fail")
+	}
+	if originAllowed(allowed, "") {
+		t.Fatalf("expected empty origin to fail when allowlist is configured")
+	}
+}
+
 func TestHandleResumeReplaysTradesOnlyForTradeSubscription(t *testing.T) {
 	s := &Server{
 		state: &state{
@@ -800,6 +850,8 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 				c3: {},
 			},
 			slowConsumerCloses: 2,
+			wsPolicyCloses:     4,
+			wsRateLimitCloses:  3,
 			wsDroppedMsgs:      7,
 			authFailReason: map[string]uint64{
 				"unknown_key":   3,
@@ -825,7 +877,11 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("ws_send_queue_p99", "4")
 	assertMetric("ws_dropped_msgs", "7")
 	assertMetric("ws_slow_closes", "2")
+	assertMetric("ws_policy_closes", "4")
+	assertMetric("ws_command_rate_limit_closes", "3")
 	assertMetric("edge_auth_fail_total", "5")
+	assertMetric("edge_ws_close_policy_total", "4")
+	assertMetric("edge_ws_close_ratelimit_total", "3")
 	assertMetric("edge_auth_fail_reason_total{reason=\"bad_signature\"}", "2")
 	assertMetric("edge_auth_fail_reason_total{reason=\"unknown_key\"}", "3")
 }

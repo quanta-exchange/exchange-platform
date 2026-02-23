@@ -12,15 +12,23 @@ import (
 
 func main() {
 	cfg := gateway.Config{
-		Addr:           getenv("EDGE_ADDR", ":8080"),
-		DBDsn:          getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
-		WSQueueSize:    getenvInt("EDGE_WS_QUEUE_SIZE", 128),
-		WSWriteDelay:   time.Duration(getenvInt("EDGE_WS_WRITE_DELAY_MS", 0)) * time.Millisecond,
-		DisableDB:      getenv("EDGE_DISABLE_DB", "false") == "true",
-		DisableCore:    getenv("EDGE_DISABLE_CORE", "false") == "true",
-		SeedMarketData: getenv("EDGE_SEED_MARKET_DATA", "true") == "true",
-		SessionTTL:     time.Duration(getenvInt("EDGE_SESSION_TTL_HOURS", 24)) * time.Hour,
-		APISecrets:     parseSecrets(getenv("EDGE_API_SECRETS", "")),
+		Addr:               getenv("EDGE_ADDR", ":8080"),
+		DBDsn:              getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
+		WSQueueSize:        getenvInt("EDGE_WS_QUEUE_SIZE", 128),
+		WSWriteDelay:       time.Duration(getenvInt("EDGE_WS_WRITE_DELAY_MS", 0)) * time.Millisecond,
+		WSMaxSubscriptions: getenvInt("EDGE_WS_MAX_SUBSCRIPTIONS", 64),
+		WSCommandRateLimit: getenvInt("EDGE_WS_COMMAND_RATE_LIMIT", 240),
+		WSCommandWindow: time.Duration(getenvInt("EDGE_WS_COMMAND_WINDOW_SEC", 60)) *
+			time.Second,
+		WSPingInterval:   time.Duration(getenvInt("EDGE_WS_PING_INTERVAL_SEC", 20)) * time.Second,
+		WSPongTimeout:    time.Duration(getenvInt("EDGE_WS_PONG_TIMEOUT_SEC", 60)) * time.Second,
+		WSReadLimitBytes: int64(getenvInt("EDGE_WS_READ_LIMIT_BYTES", 1048576)),
+		WSAllowedOrigins: parseCSV(getenv("EDGE_WS_ALLOWED_ORIGINS", "")),
+		DisableDB:        getenv("EDGE_DISABLE_DB", "false") == "true",
+		DisableCore:      getenv("EDGE_DISABLE_CORE", "false") == "true",
+		SeedMarketData:   getenv("EDGE_SEED_MARKET_DATA", "true") == "true",
+		SessionTTL:       time.Duration(getenvInt("EDGE_SESSION_TTL_HOURS", 24)) * time.Hour,
+		APISecrets:       parseSecrets(getenv("EDGE_API_SECRETS", "")),
 		TimestampSkew: time.Duration(getenvInt("EDGE_AUTH_SKEW_SEC", 30)) *
 			time.Second,
 		ReplayTTL:          time.Duration(getenvInt("EDGE_REPLAY_TTL_SEC", 120)) * time.Second,
@@ -93,6 +101,25 @@ func parseSecrets(raw string) map[string]string {
 			continue
 		}
 		out[key] = secret
+	}
+	return out
+}
+
+func parseCSV(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value == "" {
+			continue
+		}
+		out = append(out, value)
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }

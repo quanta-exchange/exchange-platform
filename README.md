@@ -319,6 +319,13 @@ Configure auth in env:
 - `EDGE_KAFKA_BROKERS=localhost:29092` (core trade event consume)
 - `EDGE_KAFKA_TRADE_TOPIC=core.trade-events.v1`
 - `EDGE_KAFKA_GROUP_ID=edge-trades-v1`
+- `EDGE_WS_MAX_SUBSCRIPTIONS=64` (per connection)
+- `EDGE_WS_COMMAND_RATE_LIMIT=240` (commands per window)
+- `EDGE_WS_COMMAND_WINDOW_SEC=60`
+- `EDGE_WS_PING_INTERVAL_SEC=20`
+- `EDGE_WS_PONG_TIMEOUT_SEC=60`
+- `EDGE_WS_READ_LIMIT_BYTES=1048576`
+- `EDGE_WS_ALLOWED_ORIGINS=https://app.exchange.example,https://admin.exchange.example` (optional allowlist)
 
 `EDGE_DISABLE_CORE=true`에서는 주문 API가 `core_unavailable`로 거절됩니다.
 주문/체결 플로우 테스트는 Trading Core 실행이 필요합니다.
