@@ -42,6 +42,7 @@ import sys
 root = pathlib.Path(sys.argv[1]).resolve()
 controls_file = pathlib.Path(sys.argv[2]).resolve()
 report_file = pathlib.Path(sys.argv[3]).resolve()
+now_utc = datetime.datetime.now(datetime.timezone.utc)
 
 with open(controls_file, "r", encoding="utf-8") as f:
     payload = json.load(f)
@@ -50,30 +51,48 @@ controls = payload.get("controls", [])
 results = []
 failed_enforced = []
 advisory_missing = []
+failed_enforced_stale = []
+advisory_stale = []
 
 for item in controls:
     cid = str(item.get("id", "UNKNOWN"))
     title = str(item.get("title", ""))
     enforced = bool(item.get("enforced", False))
     evidence_patterns = item.get("required_evidence", []) or []
+    max_evidence_age_seconds = item.get("max_evidence_age_seconds")
+    if max_evidence_age_seconds is not None:
+        max_evidence_age_seconds = int(max_evidence_age_seconds)
 
     missing = []
     matched = []
+    stale = []
+    evidence_age_seconds = {}
     for pattern in evidence_patterns:
         pattern = str(pattern)
         matches = sorted(glob.glob(str(root / pattern)))
         if matches:
             matched.append(pattern)
+            if max_evidence_age_seconds is not None:
+                newest_mtime = max(pathlib.Path(m).stat().st_mtime for m in matches)
+                age_seconds = max(0, int(now_utc.timestamp() - newest_mtime))
+                evidence_age_seconds[pattern] = age_seconds
+                if age_seconds > max_evidence_age_seconds:
+                    stale.append(
+                        f"{pattern}:age_seconds={age_seconds}>{max_evidence_age_seconds}"
+                    )
         else:
             missing.append(pattern)
 
-    ok = len(missing) == 0
+    ok = len(missing) == 0 and len(stale) == 0
     result = {
         "id": cid,
         "title": title,
         "enforced": enforced,
+        "max_evidence_age_seconds": max_evidence_age_seconds,
         "ok": ok,
         "missing_evidence": missing,
+        "stale_evidence": stale,
+        "evidence_age_seconds": evidence_age_seconds,
         "required_evidence": evidence_patterns,
         "matched_patterns": matched,
     }
@@ -81,18 +100,26 @@ for item in controls:
 
     if not ok and enforced:
         failed_enforced.append(cid)
+    if stale and enforced:
+        failed_enforced_stale.append(cid)
     if not ok and not enforced:
         advisory_missing.append(cid)
+    if stale and not enforced:
+        advisory_stale.append(cid)
 
 report = {
-    "generated_at_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "generated_at_utc": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
     "ok": len(failed_enforced) == 0,
     "total_controls": len(results),
     "enforced_controls": sum(1 for r in results if r["enforced"]),
     "failed_enforced_count": len(failed_enforced),
     "failed_enforced": failed_enforced,
+    "failed_enforced_stale_count": len(failed_enforced_stale),
+    "failed_enforced_stale": failed_enforced_stale,
     "advisory_missing_count": len(advisory_missing),
     "advisory_missing": advisory_missing,
+    "advisory_stale_count": len(advisory_stale),
+    "advisory_stale": advisory_stale,
     "results": results,
 }
 

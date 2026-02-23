@@ -298,12 +298,14 @@
       "id": "CTRL-050",
       "title": "Break-glass audit log has tamper-evident hash-chain verification",
       "enforced": false,
+      "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/break_glass.sh", "scripts/verify_audit_chain.sh", "build/audit/verify-audit-chain-latest.json", "README.md"]
     },
     {
       "id": "CTRL-051",
       "title": "PII log scan gate exists and is wired into verification",
       "enforced": false,
+      "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/pii_log_scan.sh", "scripts/verification_factory.sh", "build/security/pii-log-scan-latest.json", "README.md", "Makefile"]
     },
     {
@@ -316,6 +318,7 @@
       "id": "CTRL-053",
       "title": "Anomaly detector script emits actionable alert evidence",
       "enforced": false,
+      "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/anomaly_detector.sh", "build/anomaly/anomaly-detector-latest.json", "README.md", "Makefile"]
     },
     {
@@ -328,6 +331,7 @@
       "id": "CTRL-055",
       "title": "Anomaly detector webhook smoke proves alert delivery path",
       "enforced": false,
+      "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/anomaly_detector_smoke.sh", "build/anomaly/anomaly-smoke-latest.json", "README.md", "Makefile"]
     },
     {
@@ -346,6 +350,7 @@
       "id": "CTRL-058",
       "title": "RBAC segregation-of-duties checker evidence exists",
       "enforced": false,
+      "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/rbac_sod_check.sh", "security/rbac_roles.yaml", "build/security/rbac-sod-check-latest.json", "README.md", "Makefile"]
     },
     {
@@ -358,6 +363,7 @@
       "id": "CTRL-060",
       "title": "Change workflow audit chain verification evidence exists",
       "enforced": false,
+      "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/change_proposal.sh", "scripts/change_approve.sh", "scripts/apply_change.sh", "scripts/verify_change_audit_chain.sh", "build/change-audit/verify-change-audit-chain-latest.json", "README.md", "Makefile"]
     },
     {
@@ -388,6 +394,7 @@
       "id": "CTRL-065",
       "title": "Safety budget freshness proof verifies stale-report rejection",
       "enforced": false,
+      "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/prove_budget_freshness.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "build/safety/prove-budget-freshness-latest.json", "README.md", "Makefile"]
     },
     {
@@ -395,6 +402,19 @@
       "title": "Verification factory runs budget freshness proof and records artifact",
       "enforced": false,
       "required_evidence": ["scripts/verification_factory.sh", "scripts/prove_budget_freshness.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-067",
+      "title": "Controls checker supports evidence age policy",
+      "enforced": false,
+      "required_evidence": ["scripts/controls_check.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-068",
+      "title": "Controls freshness proof verifies stale-evidence detection",
+      "enforced": false,
+      "max_evidence_age_seconds": 2592000,
+      "required_evidence": ["scripts/prove_controls_freshness.sh", "scripts/controls_check.sh", "build/controls/prove-controls-freshness-latest.json", "README.md", "Makefile"]
     }
   ]
 }

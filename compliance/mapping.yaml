@@ -279,6 +279,16 @@
       "controlId": "CTRL-066",
       "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
       "description": "Verification factory executes the budget-freshness proof and publishes its artifact in the consolidated verification summary"
+    },
+    {
+      "controlId": "CTRL-067",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Controls catalog checker supports evidence-age policy so stale artifacts can be rejected even when files exist"
+    },
+    {
+      "controlId": "CTRL-068",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.14.2.8"],
+      "description": "Controls freshness proof validates stale-evidence detection and fresh-evidence acceptance for control checks"
     }
   ]
 }

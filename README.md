@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -55,6 +55,7 @@ scripts/
   prove_idempotency_scope.sh # G4.1 idempotency scope/TTL proof runner
   prove_latch_approval.sh # G4.1 reconciliation latch approval proof runner
   prove_budget_freshness.sh # G31 safety budget artifact freshness proof runner
+  prove_controls_freshness.sh # G32 controls evidence freshness proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
   prove_candles.sh        # G17 candle correctness proof runner
   snapshot_verify.sh      # G4.2 snapshot checksum + restore rehearsal verifier
@@ -377,6 +378,7 @@ make safety-case-extended
 - `build/invariants/invariants-summary.json`
 - `build/audit/verify-audit-chain-latest.json` (있을 때 자동 포함)
 - `build/change-audit/verify-change-audit-chain-latest.json` (있을 때 자동 포함)
+- `build/controls/prove-controls-freshness-latest.json` (있을 때 자동 포함)
 - `build/exactly-once/exactly-once-stress.json`
 - `build/idempotency/prove-idempotency-latest.json`
 - `build/latch/prove-latch-approval-latest.json`
@@ -408,6 +410,8 @@ Success output includes:
 - `controls_check_report=build/controls/controls-check-<timestamp>.json`
 - `controls_check_latest=build/controls/controls-check-latest.json`
 - `controls_check_ok=true|false`
+- supports optional control field `max_evidence_age_seconds`
+- report fields include `stale_evidence`, `evidence_age_seconds`, `failed_enforced_stale_count`
 
 ### 14) Verification factory (single command gate)
 ```bash
@@ -424,7 +428,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `verify_change_audit_chain_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -678,7 +682,16 @@ Outputs:
 - `prove_budget_freshness_latest=build/safety/prove-budget-freshness-latest.json`
 - `prove_budget_freshness_ok=true|false`
 
-### 27.4) Circuit-breaker proof
+### 27.4) Controls freshness proof
+```bash
+make prove-controls-freshness
+```
+Outputs:
+- `prove_controls_freshness_report=build/controls/prove-controls-freshness-<timestamp>.json`
+- `prove_controls_freshness_latest=build/controls/prove-controls-freshness-latest.json`
+- `prove_controls_freshness_ok=true|false`
+
+### 27.5) Circuit-breaker proof
 ```bash
 make prove-breakers
 ```
@@ -687,7 +700,7 @@ Outputs:
 - `prove_breakers_latest=build/breakers/prove-breakers-latest.json`
 - `prove_breakers_ok=true|false`
 
-### 27.5) Service-mode matrix verification
+### 27.6) Service-mode matrix verification
 ```bash
 make verify-service-modes
 ```

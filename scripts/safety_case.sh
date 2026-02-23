@@ -152,6 +152,7 @@ declare -a OPTIONAL_BASE_EVIDENCE=(
   "build/invariants/core-invariants.json"
   "build/audit/verify-audit-chain-latest.json"
   "build/change-audit/verify-change-audit-chain-latest.json"
+  "build/controls/prove-controls-freshness-latest.json"
 )
 
 declare -a EVIDENCE_FILES=()

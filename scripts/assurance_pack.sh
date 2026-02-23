@@ -83,6 +83,7 @@ evidence = [
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
     {"id": "anomaly_detector", "path": pathlib.Path("build/anomaly/anomaly-detector-latest.json"), "required": False},
     {"id": "anomaly_smoke", "path": pathlib.Path("build/anomaly/anomaly-smoke-latest.json"), "required": False},
+    {"id": "controls_freshness", "path": pathlib.Path("build/controls/prove-controls-freshness-latest.json"), "required": False},
     {"id": "rbac_sod_check", "path": pathlib.Path("build/security/rbac-sod-check-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
     {"id": "invariants", "path": pathlib.Path("build/invariants/ledger-invariants.json"), "required": True},
@@ -158,6 +159,7 @@ pack = {
         {"id": "G23", "text": "Change workflow proposal/approval/apply history is captured with a hash chain and independently verifiable for tamper evidence."},
         {"id": "G24", "text": "Runbook-as-code drill validates the full change workflow and emits reproducible operational evidence with before/after posture snapshots."},
         {"id": "G25", "text": "Safety budget freshness proof confirms stale evidence is rejected while fresh evidence passes, reducing false trust in outdated reports."},
+        {"id": "G26", "text": "Controls freshness proof verifies stale control evidence is detected and excluded from trust decisions in control catalog checks."},
     ],
 }
 

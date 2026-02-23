@@ -170,6 +170,7 @@ Gate G1 operational check:
 - Anomaly webhook smoke: `./scripts/anomaly_detector_smoke.sh`
 - RBAC SoD check: `./scripts/rbac_sod_check.sh`
 - Safety budget freshness proof: `./scripts/prove_budget_freshness.sh`
+- Controls freshness proof: `./scripts/prove_controls_freshness.sh`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`
