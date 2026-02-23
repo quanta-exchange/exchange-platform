@@ -489,6 +489,31 @@
       "title": "Verification and release gates can include adversarial reliability drill",
       "enforced": false,
       "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-081",
+      "title": "Policy smoke evidence is generated and freshness-tracked",
+      "enforced": false,
+      "max_evidence_age_seconds": 2592000,
+      "required_evidence": ["scripts/policy_smoke.sh", "build/policy-smoke/policy-smoke-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-082",
+      "title": "Safety budget and operational summaries include policy-signature posture",
+      "enforced": false,
+      "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-083",
+      "title": "Policy signature runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/policy_signature.sh", "runbooks/policy_signature.md", "README.md", "RUNBOOK.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-084",
+      "title": "Verification and release gates can include policy signature drill",
+      "enforced": false,
+      "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "README.md"]
     }
   ]
 }

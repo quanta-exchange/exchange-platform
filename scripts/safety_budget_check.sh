@@ -270,6 +270,12 @@ for key, budget in budgets.items():
         if bool(budget.get("mustNotDetectAnomaly", False)) and anomaly_detected:
             entry["ok"] = False
             entry["details"].append("anomaly_detected")
+    elif key == "policySmoke":
+        must_ok = bool(budget.get("mustBeOk", True))
+        policy_ok = bool(payload.get("ok", False))
+        if must_ok and not policy_ok:
+            entry["ok"] = False
+            entry["details"].append("policy_smoke_not_ok")
     elif key == "adversarial":
         must_ok = bool(budget.get("mustBeOk", True))
         adversarial_ok = bool(payload.get("ok", False))

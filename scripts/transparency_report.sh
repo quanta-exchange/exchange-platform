@@ -57,6 +57,7 @@ pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
 rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
 anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
 budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
+policy_smoke = read_json("build/policy-smoke/policy-smoke-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 
 sources = {
@@ -78,6 +79,7 @@ sources = {
     "rbac_sod": rbac_sod,
     "anomaly": anomaly,
     "budget_freshness": budget_freshness,
+    "policy_smoke": policy_smoke,
     "adversarial": adversarial,
 }
 
@@ -155,6 +157,8 @@ report = {
             "rbac_sod_ok": bool(rbac_sod.get("ok")) if rbac_sod else None,
             "anomaly_detector_ok": bool(anomaly.get("ok")) if anomaly else None,
             "anomaly_detected": bool(anomaly.get("anomaly_detected")) if anomaly else None,
+            "policy_smoke_ok": bool(policy_smoke.get("ok")) if policy_smoke else None,
+            "policy_signature_file": policy_smoke.get("signature_file") if policy_smoke else None,
             "adversarial_ok": bool(adversarial.get("ok")) if adversarial else None,
             "adversarial_failed_step_count": (
                 len([s for s in (adversarial.get("steps", []) or []) if isinstance(s, dict) and s.get("status") == "fail"])
@@ -200,6 +204,7 @@ report = {
         "rbac_sod": "build/security/rbac-sod-check-latest.json",
         "anomaly": "build/anomaly/anomaly-detector-latest.json",
         "budget_freshness": "build/safety/prove-budget-freshness-latest.json",
+        "policy_smoke": "build/policy-smoke/policy-smoke-latest.json",
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
     },
 }

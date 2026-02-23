@@ -71,6 +71,7 @@ game_day_anomaly_runbook = newest(root.glob("build/runbooks/game-day-anomaly-*/g
 audit_chain_tamper_runbook = newest(root.glob("build/runbooks/audit-chain-tamper-*/audit-chain-tamper.log"))
 change_workflow_runbook = newest(root.glob("build/runbooks/change-workflow-*/change-workflow.log"))
 budget_failure_runbook = newest(root.glob("build/runbooks/budget-failure-*/budget-failure.log"))
+policy_signature_runbook = newest(root.glob("build/runbooks/policy-signature-*/policy-signature.log"))
 adversarial_reliability_runbook = newest(root.glob("build/runbooks/adversarial-reliability-*/adversarial-reliability.log"))
 
 evidence = [
@@ -81,12 +82,14 @@ evidence = [
     {"id": "audit_chain_tamper_runbook", "path": pathlib.Path(rel(audit_chain_tamper_runbook)) if audit_chain_tamper_runbook else None, "required": False},
     {"id": "change_workflow_runbook", "path": pathlib.Path(rel(change_workflow_runbook)) if change_workflow_runbook else None, "required": False},
     {"id": "budget_failure_runbook", "path": pathlib.Path(rel(budget_failure_runbook)) if budget_failure_runbook else None, "required": False},
+    {"id": "policy_signature_runbook", "path": pathlib.Path(rel(policy_signature_runbook)) if policy_signature_runbook else None, "required": False},
     {"id": "adversarial_reliability_runbook", "path": pathlib.Path(rel(adversarial_reliability_runbook)) if adversarial_reliability_runbook else None, "required": False},
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "verify_change_audit_chain", "path": pathlib.Path("build/change-audit/verify-change-audit-chain-latest.json"), "required": False},
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
     {"id": "anomaly_detector", "path": pathlib.Path("build/anomaly/anomaly-detector-latest.json"), "required": False},
     {"id": "anomaly_smoke", "path": pathlib.Path("build/anomaly/anomaly-smoke-latest.json"), "required": False},
+    {"id": "policy_smoke", "path": pathlib.Path("build/policy-smoke/policy-smoke-latest.json"), "required": False},
     {"id": "controls_freshness", "path": pathlib.Path("build/controls/prove-controls-freshness-latest.json"), "required": False},
     {"id": "rbac_sod_check", "path": pathlib.Path("build/security/rbac-sod-check-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
@@ -169,6 +172,7 @@ pack = {
         {"id": "G27", "text": "Budget failure runbook automatically summarizes violations and recommends next action, improving deterministic incident response."},
         {"id": "G28", "text": "Exactly-once million-duplicate proof demonstrates idempotent settlement behavior at extreme duplicate-injection volume."},
         {"id": "G29", "text": "Adversarial reliability bundle validates policy/ws/candle/snapshot/exactly-once defenses under hostile input patterns and records deterministic runbook evidence."},
+        {"id": "G30", "text": "Policy smoke evidence confirms policy-as-code signing and signature verification pipeline stays executable and auditable."},
     ],
 }
 

@@ -73,6 +73,11 @@
       "mustBeOk": true,
       "mustNotDetectAnomaly": true
     },
+    "policySmoke": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true
+    },
     "adversarial": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -94,6 +99,7 @@
     "changeAuditChain": "build/change-audit/verify-change-audit-chain-latest.json",
     "piiLogScan": "build/security/pii-log-scan-latest.json",
     "anomaly": "build/anomaly/anomaly-detector-latest.json",
+    "policySmoke": "build/policy-smoke/policy-smoke-latest.json",
     "adversarial": "build/adversarial/adversarial-tests-latest.json"
   }
 }
