@@ -1349,6 +1349,74 @@ func TestWSClientIPParsing(t *testing.T) {
 	}
 }
 
+func TestWithDBTimeoutAddsDeadlineWhenMissing(t *testing.T) {
+	s := &Server{cfg: Config{DBStatementTimeout: 750 * time.Millisecond}}
+	ctx, cancel := s.withDBTimeout(context.Background())
+	defer cancel()
+
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		t.Fatalf("expected db timeout context to include deadline")
+	}
+	remaining := time.Until(deadline)
+	if remaining <= 0 || remaining > time.Second {
+		t.Fatalf("unexpected db timeout deadline remaining=%s", remaining)
+	}
+}
+
+func TestWithDBTimeoutPreservesExistingDeadline(t *testing.T) {
+	s := &Server{cfg: Config{DBStatementTimeout: 2 * time.Second}}
+	parent, parentCancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
+	defer parentCancel()
+
+	parentDeadline, _ := parent.Deadline()
+	ctx, cancel := s.withDBTimeout(parent)
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		t.Fatalf("expected inherited deadline")
+	}
+	if !deadline.Equal(parentDeadline) {
+		t.Fatalf("expected deadline to be preserved: got=%s want=%s", deadline, parentDeadline)
+	}
+}
+
+func TestNewAppliesDBRuntimeDefaultsWhenUnset(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:          true,
+		WSQueueSize:        8,
+		APISecrets:         map[string]string{"test-key": testAPISecret},
+		TimestampSkew:      30 * time.Second,
+		ReplayTTL:          2 * time.Minute,
+		RateLimitPerMinute: 100,
+		CoreAddr:           coreAddr,
+		CoreTimeout:        2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer s.Close()
+
+	if s.cfg.DBMaxOpenConns <= 0 {
+		t.Fatalf("expected DBMaxOpenConns default to be set")
+	}
+	if s.cfg.DBMaxIdleConns <= 0 {
+		t.Fatalf("expected DBMaxIdleConns default to be set")
+	}
+	if s.cfg.DBConnMaxLifetime <= 0 {
+		t.Fatalf("expected DBConnMaxLifetime default to be set")
+	}
+	if s.cfg.DBConnMaxIdleTime <= 0 {
+		t.Fatalf("expected DBConnMaxIdleTime default to be set")
+	}
+	if s.cfg.DBStatementTimeout <= 0 {
+		t.Fatalf("expected DBStatementTimeout default to be set")
+	}
+}
+
 func TestWSConnectionAdmissionLimits(t *testing.T) {
 	s := &Server{
 		cfg: Config{

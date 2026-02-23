@@ -14,6 +14,11 @@ func main() {
 	cfg := gateway.Config{
 		Addr:               getenv("EDGE_ADDR", ":8080"),
 		DBDsn:              getenv("EDGE_DB_DSN", "postgres://exchange:exchange@localhost:25432/exchange?sslmode=disable"),
+		DBMaxOpenConns:     getenvInt("EDGE_DB_MAX_OPEN_CONNS", 32),
+		DBMaxIdleConns:     getenvInt("EDGE_DB_MAX_IDLE_CONNS", 16),
+		DBConnMaxLifetime:  time.Duration(getenvInt("EDGE_DB_CONN_MAX_LIFETIME_SEC", 900)) * time.Second,
+		DBConnMaxIdleTime:  time.Duration(getenvInt("EDGE_DB_CONN_MAX_IDLE_TIME_SEC", 300)) * time.Second,
+		DBStatementTimeout: time.Duration(getenvInt("EDGE_DB_STATEMENT_TIMEOUT_MS", 2000)) * time.Millisecond,
 		WSQueueSize:        getenvInt("EDGE_WS_QUEUE_SIZE", 128),
 		WSWriteDelay:       time.Duration(getenvInt("EDGE_WS_WRITE_DELAY_MS", 0)) * time.Millisecond,
 		WSMaxSubscriptions: getenvInt("EDGE_WS_MAX_SUBSCRIPTIONS", 64),

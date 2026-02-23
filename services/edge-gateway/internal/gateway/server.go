@@ -60,6 +60,11 @@ const apiKeyContextKey contextKey = "api_key"
 type Config struct {
 	Addr                     string
 	DBDsn                    string
+	DBMaxOpenConns           int
+	DBMaxIdleConns           int
+	DBConnMaxLifetime        time.Duration
+	DBConnMaxIdleTime        time.Duration
+	DBStatementTimeout       time.Duration
 	DisableDB                bool
 	DisableCore              bool
 	SeedMarketData           bool
@@ -534,6 +539,21 @@ func New(cfg Config) (*Server, error) {
 	if cfg.OrderGCInterval <= 0 {
 		cfg.OrderGCInterval = 30 * time.Second
 	}
+	if cfg.DBMaxOpenConns <= 0 {
+		cfg.DBMaxOpenConns = 32
+	}
+	if cfg.DBMaxIdleConns <= 0 {
+		cfg.DBMaxIdleConns = 16
+	}
+	if cfg.DBConnMaxLifetime <= 0 {
+		cfg.DBConnMaxLifetime = 15 * time.Minute
+	}
+	if cfg.DBConnMaxIdleTime <= 0 {
+		cfg.DBConnMaxIdleTime = 5 * time.Minute
+	}
+	if cfg.DBStatementTimeout <= 0 {
+		cfg.DBStatementTimeout = 2 * time.Second
+	}
 
 	wsAllowedOrigins := map[string]struct{}{}
 	for _, origin := range cfg.WSAllowedOrigins {
@@ -550,6 +570,10 @@ func New(cfg Config) (*Server, error) {
 		if err != nil {
 			return nil, fmt.Errorf("open db: %w", err)
 		}
+		db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+		db.SetMaxIdleConns(cfg.DBMaxIdleConns)
+		db.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
+		db.SetConnMaxIdleTime(cfg.DBConnMaxIdleTime)
 	}
 
 	var rdb *redis.Client
@@ -716,8 +740,24 @@ func (s *Server) httpServer() *http.Server {
 	}
 }
 
+func (s *Server) withDBTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if s.cfg.DBStatementTimeout <= 0 {
+		return context.WithCancel(ctx)
+	}
+	if _, ok := ctx.Deadline(); ok {
+		return context.WithCancel(ctx)
+	}
+	return context.WithTimeout(ctx, s.cfg.DBStatementTimeout)
+}
+
 func (s *Server) initSchema(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `
+	dbCtx, cancel := s.withDBTimeout(ctx)
+	defer cancel()
+
+	_, err := s.db.ExecContext(dbCtx, `
 		CREATE TABLE IF NOT EXISTS smoke_ledger_entries (
 			id BIGSERIAL PRIMARY KEY,
 			trade_id TEXT NOT NULL UNIQUE,
@@ -731,7 +771,7 @@ func (s *Server) initSchema(ctx context.Context) error {
 		return fmt.Errorf("init schema: %w", err)
 	}
 
-	_, err = s.db.ExecContext(ctx, `
+	_, err = s.db.ExecContext(dbCtx, `
 		CREATE TABLE IF NOT EXISTS web_users (
 			user_id TEXT PRIMARY KEY,
 			email TEXT NOT NULL UNIQUE,
@@ -743,7 +783,7 @@ func (s *Server) initSchema(ctx context.Context) error {
 		return fmt.Errorf("init users schema: %w", err)
 	}
 
-	_, err = s.db.ExecContext(ctx, `
+	_, err = s.db.ExecContext(dbCtx, `
 		CREATE TABLE IF NOT EXISTS web_wallet_balances (
 			user_id TEXT NOT NULL,
 			currency TEXT NOT NULL,
@@ -1236,7 +1276,10 @@ func (s *Server) createUser(ctx context.Context, email, passwordHash string) (us
 	defaults := defaultWalletBalances()
 
 	if s.db != nil {
-		tx, err := s.db.BeginTx(ctx, nil)
+		dbCtx, cancel := s.withDBTimeout(ctx)
+		defer cancel()
+
+		tx, err := s.db.BeginTx(dbCtx, nil)
 		if err != nil {
 			return userRecord{}, fmt.Errorf("begin tx: %w", err)
 		}
@@ -1248,7 +1291,7 @@ func (s *Server) createUser(ctx context.Context, email, passwordHash string) (us
 		}()
 
 		_, err = tx.ExecContext(
-			ctx,
+			dbCtx,
 			`INSERT INTO web_users(user_id, email, password_hash, created_at) VALUES ($1, $2, $3, to_timestamp($4 / 1000.0))`,
 			user.UserID,
 			user.Email,
@@ -1264,7 +1307,7 @@ func (s *Server) createUser(ctx context.Context, email, passwordHash string) (us
 
 		for currency, bal := range defaults {
 			_, err = tx.ExecContext(
-				ctx,
+				dbCtx,
 				`INSERT INTO web_wallet_balances(user_id, currency, available, hold) VALUES ($1, $2, $3, $4)
 				 ON CONFLICT (user_id, currency) DO UPDATE SET
 				 available = EXCLUDED.available,
@@ -1306,11 +1349,13 @@ func (s *Server) getUserByEmail(ctx context.Context, email string) (userRecord, 
 	if s.db == nil {
 		return userRecord{}, false, nil
 	}
+	dbCtx, cancel := s.withDBTimeout(ctx)
+	defer cancel()
 
 	var user userRecord
 	var createdAt time.Time
 	err := s.db.QueryRowContext(
-		ctx,
+		dbCtx,
 		`SELECT user_id, email, password_hash, created_at FROM web_users WHERE email = $1`,
 		email,
 	).Scan(&user.UserID, &user.Email, &user.PasswordHash, &createdAt)
@@ -1345,11 +1390,13 @@ func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bo
 	if s.db == nil {
 		return userRecord{}, false, nil
 	}
+	dbCtx, cancel := s.withDBTimeout(ctx)
+	defer cancel()
 
 	var user userRecord
 	var createdAt time.Time
 	err := s.db.QueryRowContext(
-		ctx,
+		dbCtx,
 		`SELECT user_id, email, password_hash, created_at FROM web_users WHERE user_id = $1`,
 		userID,
 	).Scan(&user.UserID, &user.Email, &user.PasswordHash, &createdAt)
@@ -1645,8 +1692,10 @@ func (s *Server) loadWalletFromDB(ctx context.Context, userID string) map[string
 	if s.db == nil {
 		return map[string]walletBalance{}
 	}
+	dbCtx, cancel := s.withDBTimeout(ctx)
+	defer cancel()
 	rows, err := s.db.QueryContext(
-		ctx,
+		dbCtx,
 		`SELECT currency, available, hold FROM web_wallet_balances WHERE user_id = $1`,
 		userID,
 	)
@@ -1678,8 +1727,10 @@ func (s *Server) persistWalletBalance(ctx context.Context, userID, currency stri
 	if s.db == nil {
 		return nil
 	}
+	dbCtx, cancel := s.withDBTimeout(ctx)
+	defer cancel()
 	_, err := s.db.ExecContext(
-		ctx,
+		dbCtx,
 		`INSERT INTO web_wallet_balances(user_id, currency, available, hold) VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (user_id, currency) DO UPDATE SET
 		 available = EXCLUDED.available,
