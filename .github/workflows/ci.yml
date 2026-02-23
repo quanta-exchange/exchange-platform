@@ -357,6 +357,8 @@ jobs:
             build/assurance/**
             build/external-replay/**
             build/release-gate/**
+            build/archive/**
+            build/access/**
 
   security-baseline:
     runs-on: ubuntu-latest
