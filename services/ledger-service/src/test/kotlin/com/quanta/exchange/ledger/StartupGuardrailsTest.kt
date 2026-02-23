@@ -13,6 +13,8 @@ class StartupGuardrailsTest {
             kafkaEnabled = false,
             kafkaBootstrapServers = "localhost:29092",
             coreGrpcAddress = "localhost:50051",
+            safetyLatchEnabled = true,
+            latchReleaseRequireDualApproval = false,
         )
         assertThat(violations).isEmpty()
     }
@@ -25,6 +27,8 @@ class StartupGuardrailsTest {
             kafkaEnabled = true,
             kafkaBootstrapServers = "redpanda-0:9092",
             coreGrpcAddress = "trading-core:50051",
+            safetyLatchEnabled = true,
+            latchReleaseRequireDualApproval = true,
         )
         assertThat(violations).anyMatch { it.contains("LEDGER_ADMIN_TOKEN") }
     }
@@ -37,6 +41,8 @@ class StartupGuardrailsTest {
             kafkaEnabled = false,
             kafkaBootstrapServers = "redpanda-0:9092",
             coreGrpcAddress = "trading-core:50051",
+            safetyLatchEnabled = true,
+            latchReleaseRequireDualApproval = true,
         )
         assertThat(violations).anyMatch { it.contains("LEDGER_KAFKA_ENABLED") }
     }
@@ -49,6 +55,8 @@ class StartupGuardrailsTest {
             kafkaEnabled = true,
             kafkaBootstrapServers = "localhost:29092,redpanda-0:9092",
             coreGrpcAddress = "trading-core:50051",
+            safetyLatchEnabled = true,
+            latchReleaseRequireDualApproval = true,
         )
         assertThat(violations).anyMatch { it.contains("LEDGER_KAFKA_BOOTSTRAP") }
     }
@@ -61,8 +69,38 @@ class StartupGuardrailsTest {
             kafkaEnabled = true,
             kafkaBootstrapServers = "redpanda-0:9092",
             coreGrpcAddress = "dns:///127.0.0.1:50051",
+            safetyLatchEnabled = true,
+            latchReleaseRequireDualApproval = true,
         )
         assertThat(violations).anyMatch { it.contains("LEDGER_RECONCILIATION_CORE_GRPC_ADDR") }
+    }
+
+    @Test
+    fun `rejects production when safety latch is disabled`() {
+        val violations = validateRuntimeGuardrails(
+            runtimeEnv = "prod",
+            adminToken = "secret",
+            kafkaEnabled = true,
+            kafkaBootstrapServers = "redpanda-0:9092",
+            coreGrpcAddress = "trading-core:50051",
+            safetyLatchEnabled = false,
+            latchReleaseRequireDualApproval = true,
+        )
+        assertThat(violations).anyMatch { it.contains("LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED") }
+    }
+
+    @Test
+    fun `rejects production when latch release dual approval is disabled`() {
+        val violations = validateRuntimeGuardrails(
+            runtimeEnv = "prod",
+            adminToken = "secret",
+            kafkaEnabled = true,
+            kafkaBootstrapServers = "redpanda-0:9092",
+            coreGrpcAddress = "trading-core:50051",
+            safetyLatchEnabled = true,
+            latchReleaseRequireDualApproval = false,
+        )
+        assertThat(violations).anyMatch { it.contains("LEDGER_RECONCILIATION_LATCH_RELEASE_REQUIRE_DUAL_APPROVAL") }
     }
 
     @Test
@@ -73,6 +111,8 @@ class StartupGuardrailsTest {
             kafkaEnabled = true,
             kafkaBootstrapServers = "redpanda-0:9092,redpanda-1:9092",
             coreGrpcAddress = "trading-core:50051",
+            safetyLatchEnabled = true,
+            latchReleaseRequireDualApproval = true,
         )
         assertThat(violations).isEmpty()
     }

@@ -183,7 +183,7 @@
     {
       "controlId": "CTRL-047",
       "frameworks": ["SOC2:CC6.1", "ISO27001:A.8.9"],
-      "description": "Ledger startup enforces production fail-closed guardrails for admin token, kafka enablement, and non-loopback broker/core endpoints"
+      "description": "Ledger startup enforces production fail-closed guardrails for admin token, kafka enablement, non-loopback broker/core endpoints, and reconciliation latch dual-approval safety settings"
     }
   ]
 }

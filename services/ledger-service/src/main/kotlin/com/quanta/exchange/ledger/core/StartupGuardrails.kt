@@ -17,6 +17,10 @@ class StartupGuardrails(
     private val kafkaBootstrapServers: String,
     @Value("\${ledger.reconciliation.core-grpc-address:localhost:50051}")
     private val coreGrpcAddress: String,
+    @Value("\${ledger.reconciliation.safety-latch-enabled:true}")
+    private val safetyLatchEnabled: Boolean,
+    @Value("\${ledger.reconciliation.latch-release-require-dual-approval:false}")
+    private val latchReleaseRequireDualApproval: Boolean,
 ) : ApplicationRunner {
     override fun run(args: ApplicationArguments) {
         val violations = validateRuntimeGuardrails(
@@ -25,6 +29,8 @@ class StartupGuardrails(
             kafkaEnabled = kafkaEnabled,
             kafkaBootstrapServers = kafkaBootstrapServers,
             coreGrpcAddress = coreGrpcAddress,
+            safetyLatchEnabled = safetyLatchEnabled,
+            latchReleaseRequireDualApproval = latchReleaseRequireDualApproval,
         )
         if (violations.isNotEmpty()) {
             throw IllegalStateException("production guardrail violation(s): ${violations.joinToString("; ")}")
@@ -38,6 +44,8 @@ internal fun validateRuntimeGuardrails(
     kafkaEnabled: Boolean,
     kafkaBootstrapServers: String,
     coreGrpcAddress: String,
+    safetyLatchEnabled: Boolean,
+    latchReleaseRequireDualApproval: Boolean,
 ): List<String> {
     if (!isProductionEnvironment(runtimeEnv)) {
         return emptyList()
@@ -54,6 +62,12 @@ internal fun validateRuntimeGuardrails(
     }
     if (containsLoopbackEndpoint(coreGrpcAddress)) {
         violations += "LEDGER_RECONCILIATION_CORE_GRPC_ADDR must not use localhost/loopback in production"
+    }
+    if (!safetyLatchEnabled) {
+        violations += "LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED must be true in production"
+    }
+    if (!latchReleaseRequireDualApproval) {
+        violations += "LEDGER_RECONCILIATION_LATCH_RELEASE_REQUIRE_DUAL_APPROVAL must be true in production"
     }
     return violations
 }

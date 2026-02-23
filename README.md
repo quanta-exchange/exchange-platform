@@ -158,6 +158,8 @@ npm run dev
   - `LEDGER_KAFKA_ENABLED=false`
   - `LEDGER_KAFKA_BOOTSTRAP` contains `localhost`, `127.0.0.1`, or `::1`
   - `LEDGER_RECONCILIATION_CORE_GRPC_ADDR` contains `localhost`, `127.0.0.1`, or `::1`
+  - `LEDGER_RECONCILIATION_SAFETY_LATCH_ENABLED=false`
+  - `LEDGER_RECONCILIATION_LATCH_RELEASE_REQUIRE_DUAL_APPROVAL=false`
 
 ### 1) Contracts
 If `buf` is installed locally:
