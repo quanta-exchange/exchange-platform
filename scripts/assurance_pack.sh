@@ -83,6 +83,7 @@ evidence = [
     {"id": "model_check", "path": pathlib.Path("build/model-check/model-check-latest.json"), "required": False},
     {"id": "service_modes", "path": pathlib.Path("build/service-modes/verify-service-modes-latest.json"), "required": False},
     {"id": "shadow_verify", "path": pathlib.Path("build/shadow/shadow-verify-latest.json"), "required": False},
+    {"id": "ws_resume_smoke", "path": pathlib.Path("build/ws/ws-resume-smoke.json"), "required": False},
     {"id": "safety_case_manifest", "path": pathlib.Path(rel(safety_case_manifest)) if safety_case_manifest else None, "required": True},
     {"id": "safety_case_artifact", "path": pathlib.Path(rel(safety_case_artifact)) if safety_case_artifact else None, "required": True},
     {"id": "safety_case_sha256", "path": pathlib.Path(rel(safety_case_sha)) if safety_case_sha else None, "required": True},
@@ -123,6 +124,7 @@ pack = {
         {"id": "G8", "text": "Idempotency scope is isolated by user and command type with server-clock TTL expiry."},
         {"id": "G9", "text": "Reconciliation latch release can enforce dual approval with distinct approvers."},
         {"id": "G10", "text": "Broker bounce drill confirms event log durability and post-restart produce/consume continuity."},
+        {"id": "G11", "text": "WS resume flow replays missed trade ranges and falls back to snapshot when history gaps are detected."},
     ],
 }
 

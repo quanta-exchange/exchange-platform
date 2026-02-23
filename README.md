@@ -39,7 +39,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->latch-approval->model-check->breakers->service-modes->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->idempotency->latch-approval->model-check->breakers->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
@@ -64,6 +64,8 @@ scripts/
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
   ws_smoke.sh             # WS slow-consumer backpressure smoke
+  ws_resume_smoke.sh      # WS resume/gap recovery smoke
+  ws_resume_client.go     # WS resume helper (SUB/RESUME assertion client)
 runbooks/
   lag_spike.sh            # reconciliation lag spike automated drill
   ws_drop_spike.sh        # ws drop spike automated drill
@@ -262,6 +264,15 @@ Success output includes:
 - `ws_smoke_success=true`
 - `ws_smoke_report=build/ws/ws-smoke.json`
 
+### 10.2) WS resume/gap-recovery smoke
+```bash
+make ws-resume-smoke
+```
+Success output includes:
+- `ws_resume_smoke_success=true`
+- `ws_resume_gap_first_type=Snapshot`
+- `ws_resume_smoke_report=build/ws/ws-resume-smoke.json`
+
 ### 11) Safety case bundle (extended)
 ```bash
 make safety-case-extended
@@ -277,6 +288,7 @@ make safety-case-extended
 - `build/reconciliation/smoke-reconciliation-safety.json`
 - `build/chaos/chaos-replay.json`
 - `build/ws/ws-smoke.json`
+- `build/ws/ws-resume-smoke.json`
 - `build/determinism/prove-determinism-latest.json`
 - `build/breakers/prove-breakers-latest.json`
 - `build/service-modes/verify-service-modes-latest.json`

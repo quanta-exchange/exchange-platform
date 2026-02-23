@@ -185,6 +185,12 @@
       "title": "Redpanda broker bounce proof evidence exists",
       "enforced": false,
       "required_evidence": ["build/chaos/redpanda-broker-bounce.json", "scripts/chaos/redpanda_broker_bounce.sh"]
+    },
+    {
+      "id": "CTRL-032",
+      "title": "WS resume gap-recovery smoke evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/ws/ws-resume-smoke.json", "scripts/ws_resume_smoke.sh", "scripts/ws_resume_client.go"]
     }
   ]
 }
