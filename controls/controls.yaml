@@ -179,6 +179,12 @@
       "title": "ClickHouse invariant summary evidence exists",
       "enforced": false,
       "required_evidence": ["build/invariants/clickhouse-invariants.json", "build/invariants/invariants-summary.json", "scripts/invariants.sh"]
+    },
+    {
+      "id": "CTRL-031",
+      "title": "Redpanda broker bounce proof evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/chaos/redpanda-broker-bounce.json", "scripts/chaos/redpanda_broker_bounce.sh"]
     }
   ]
 }

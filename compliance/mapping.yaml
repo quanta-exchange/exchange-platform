@@ -99,6 +99,11 @@
       "controlId": "CTRL-030",
       "frameworks": ["SOC2:CC7.1", "ISO27001:A.8.16"],
       "description": "ClickHouse market data invariant summary and anomaly detection evidence"
+    },
+    {
+      "controlId": "CTRL-031",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.2"],
+      "description": "Redpanda broker bounce drill evidence for message pipeline resilience"
     }
   ]
 }

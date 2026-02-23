@@ -132,6 +132,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/latch/prove-latch-approval-latest.json"
   "build/reconciliation/smoke-reconciliation-safety.json"
   "build/chaos/chaos-replay.json"
+  "build/chaos/redpanda-broker-bounce.json"
   "build/ws/ws-smoke.json"
   "build/determinism/prove-determinism-latest.json"
   "build/breakers/prove-breakers-latest.json"

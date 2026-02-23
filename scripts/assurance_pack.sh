@@ -75,6 +75,7 @@ evidence = [
     {"id": "exactly_once", "path": pathlib.Path("build/exactly-once/exactly-once-stress.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},
+    {"id": "redpanda_bounce", "path": pathlib.Path("build/chaos/redpanda-broker-bounce.json"), "required": False},
     {"id": "determinism", "path": pathlib.Path("build/determinism/prove-determinism-latest.json"), "required": False},
     {"id": "idempotency_scope", "path": pathlib.Path("build/idempotency/prove-idempotency-latest.json"), "required": False},
     {"id": "latch_dual_approval", "path": pathlib.Path("build/latch/prove-latch-approval-latest.json"), "required": False},
@@ -121,6 +122,7 @@ pack = {
         {"id": "G7", "text": "Shadow verification recomputes candles and balance hashes without divergence."},
         {"id": "G8", "text": "Idempotency scope is isolated by user and command type with server-clock TTL expiry."},
         {"id": "G9", "text": "Reconciliation latch release can enforce dual approval with distinct approvers."},
+        {"id": "G10", "text": "Broker bounce drill confirms event log durability and post-restart produce/consume continuity."},
     ],
 }
 
