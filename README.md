@@ -40,6 +40,7 @@ scripts/
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
   verification_factory.sh # G33 continuous verification wrapper (safety->controls->compliance->transparency->access->budget->assurance)
+  release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
@@ -366,6 +367,15 @@ Outputs:
 - `access_review_report=build/access/access-review-<timestamp>.json`
 - `access_review_latest=build/access/access-review-latest.json`
 - `access_review_ok=true|false`
+
+### 25) Release gate
+```bash
+make release-gate
+```
+Outputs:
+- `release_gate_report=build/release-gate/release-gate-<timestamp>.json`
+- `release_gate_latest=build/release-gate/release-gate-latest.json`
+- `release_gate_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
