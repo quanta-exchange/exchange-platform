@@ -187,6 +187,23 @@ class LedgerServiceIntegrationTest {
     }
 
     @Test
+    fun reconciliationReadPathDoesNotResetBreachSummaryMetric() {
+        ledgerService.updateEngineSeq("BTC-KRW", 25)
+        ledgerService.runReconciliationEvaluation(
+            lagThreshold = 1,
+            safetyMode = SafetyMode.CANCEL_ONLY,
+            autoSwitchEnabled = false,
+            safetyLatchEnabled = true,
+        )
+        assertEquals(1L, metricValue("reconciliation_breach_active"))
+
+        ledgerService.reconciliationAll()
+        ledgerService.reconciliation("BTC-KRW")
+
+        assertEquals(1L, metricValue("reconciliation_breach_active"))
+    }
+
+    @Test
     fun reconciliationEvaluationBreachesWhenStateIsStale() {
         ledgerService.updateEngineSeq("BTC-KRW", 10)
         jdbc.update(

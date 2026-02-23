@@ -395,6 +395,8 @@ Reconciliation metrics (ledger `/metrics`):
 - `reconciliation_safety_failure_total`
 - `invariant_safety_trigger_total`
 - `invariant_safety_failure_total`
+- `reconciliation_gap_by_symbol{symbol="..."}`
+- `reconciliation_age_ms_by_symbol{symbol="..."}`
 
 Edge readiness/consumer metrics (`/metrics`):
 - `edge_trade_consumer_running`

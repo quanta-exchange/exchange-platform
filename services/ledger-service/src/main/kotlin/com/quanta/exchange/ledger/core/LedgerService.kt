@@ -151,17 +151,11 @@ class LedgerService(
     }
 
     fun reconciliation(symbol: String): ReconciliationStatus {
-        val status = repo.reconciliation(symbol)
-        val ageMs = status.updatedAt?.let { Duration.between(it, Instant.now()).toMillis() } ?: 0L
-        metrics.setReconciliation(status.gap, ageMs)
-        return status
+        return repo.reconciliation(symbol)
     }
 
     fun reconciliationAll(): List<ReconciliationStatus> {
-        val statuses = repo.reconciliationAll()
-        val maxLag = statuses.maxOfOrNull { it.gap.coerceAtLeast(0) } ?: 0L
-        metrics.setReconciliationSummary(maxLag = maxLag, activeBreaches = 0)
-        return statuses
+        return repo.reconciliationAll()
     }
 
     fun runReconciliationEvaluation(
@@ -178,10 +172,12 @@ class LedgerService(
         val evaluations = mutableListOf<ReconciliationEvaluation>()
         var activeBreaches = 0L
         var maxLag = 0L
+        var maxAgeMs = 0L
 
         statuses.forEach { status ->
             val lag = status.lastEngineSeq - status.lastSettledSeq
             val stateAgeMs = stateAgeMs(status.updatedAt, checkedAt)
+            metrics.setReconciliationBySymbol(status.symbol, lag, stateAgeMs)
             val mismatch = lag < 0
             val thresholdBreached = lag > lagThreshold
             val staleThresholdBreached = staleThresholdMs > 0 && stateAgeMs > staleThresholdMs
@@ -239,6 +235,9 @@ class LedgerService(
             if (lag > maxLag) {
                 maxLag = lag
             }
+            if (stateAgeMs > maxAgeMs) {
+                maxAgeMs = stateAgeMs
+            }
 
             val evaluation = ReconciliationEvaluation(
                 symbol = status.symbol,
@@ -273,6 +272,7 @@ class LedgerService(
             evaluations += evaluation
         }
 
+        metrics.setReconciliation(maxLag.coerceAtLeast(0), maxAgeMs.coerceAtLeast(0))
         metrics.setReconciliationSummary(maxLag = maxLag.coerceAtLeast(0), activeBreaches = activeBreaches)
         return ReconciliationRunSummary(checkedAt = checkedAt, evaluations = evaluations)
     }

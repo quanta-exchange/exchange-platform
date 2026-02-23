@@ -1,6 +1,7 @@
 package com.quanta.exchange.ledger.core
 
 import org.springframework.stereotype.Component
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 @Component
@@ -28,6 +29,8 @@ class LedgerMetrics {
     private val reconciliationSafetyFailureTotal = AtomicLong(0)
     private val invariantSafetyTriggerTotal = AtomicLong(0)
     private val invariantSafetyFailureTotal = AtomicLong(0)
+    private val reconciliationGapBySymbol = ConcurrentHashMap<String, AtomicLong>()
+    private val reconciliationAgeBySymbol = ConcurrentHashMap<String, AtomicLong>()
 
     fun observeLedgerAppendLatency(ms: Long) = ledgerAppendLatencyMs.set(ms.coerceAtLeast(0))
     fun incrementUniqueViolation() = uniqueViolationTotal.incrementAndGet()
@@ -44,6 +47,14 @@ class LedgerMetrics {
     fun setReconciliation(gap: Long, ageMs: Long) {
         reconciliationGap.set(gap.coerceAtLeast(0))
         gapAgeMs.set(ageMs.coerceAtLeast(0))
+    }
+    fun setReconciliationBySymbol(symbol: String, gap: Long, ageMs: Long) {
+        val normalized = symbol.trim().uppercase()
+        if (normalized.isBlank()) {
+            return
+        }
+        reconciliationGapBySymbol.computeIfAbsent(normalized) { AtomicLong(0) }.set(gap.coerceAtLeast(0))
+        reconciliationAgeBySymbol.computeIfAbsent(normalized) { AtomicLong(0) }.set(ageMs.coerceAtLeast(0))
     }
     fun incrementCorrections() = correctionsTotal.incrementAndGet()
     fun setCorrectionPendingAgeMs(ms: Long) = correctionPendingAgeMs.set(ms.coerceAtLeast(0))
@@ -92,6 +103,15 @@ class LedgerMetrics {
             appendMetric("reconciliation_safety_failure_total", reconciliationSafetyFailureTotal.get())
             appendMetric("invariant_safety_trigger_total", invariantSafetyTriggerTotal.get())
             appendMetric("invariant_safety_failure_total", invariantSafetyFailureTotal.get())
+            appendReconciliationBySymbol()
+        }
+    }
+
+    private fun StringBuilder.appendReconciliationBySymbol() {
+        val symbols = (reconciliationGapBySymbol.keys + reconciliationAgeBySymbol.keys).sorted()
+        symbols.forEach { symbol ->
+            appendMetricWithLabel("reconciliation_gap_by_symbol", "symbol", symbol, reconciliationGapBySymbol[symbol]?.get() ?: 0)
+            appendMetricWithLabel("reconciliation_age_ms_by_symbol", "symbol", symbol, reconciliationAgeBySymbol[symbol]?.get() ?: 0)
         }
     }
 
@@ -100,5 +120,23 @@ class LedgerMetrics {
         append(' ')
         append(value)
         append('\n')
+    }
+
+    private fun StringBuilder.appendMetricWithLabel(name: String, label: String, labelValue: String, value: Long) {
+        append(name)
+        append('{')
+        append(label)
+        append("=\"")
+        append(escapeLabel(labelValue))
+        append("\"}")
+        append(' ')
+        append(value)
+        append('\n')
+    }
+
+    private fun escapeLabel(value: String): String {
+        return value
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
     }
 }
