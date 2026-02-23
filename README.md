@@ -249,6 +249,11 @@ make chaos-redpanda  # broker bounce drill
 - `chaos_replay_report=build/chaos/chaos-replay.json`
   - in stub-trade mode, `invariants_warning=negative_balances_present_under_stub_mode` can appear
 
+`chaos-redpanda` success output includes:
+- `redpanda_broker_bounce_success=true`
+- `redpanda_broker_bounce_report=build/chaos/redpanda-broker-bounce.json`
+- `invariants_ok=true|false` (controlled by `CHAOS_REDPANDA_CHECK_INVARIANTS=off|auto|require`, default `auto`)
+
 ### 10.1) WS slow-consumer smoke
 ```bash
 ./scripts/ws_smoke.sh
