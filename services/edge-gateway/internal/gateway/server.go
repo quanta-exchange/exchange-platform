@@ -221,7 +221,6 @@ type userRecord struct {
 type sessionRecord struct {
 	Token       string `json:"token"`
 	UserID      string `json:"userId"`
-	Email       string `json:"email"`
 	ExpiresAtMs int64  `json:"expiresAt"`
 }
 
@@ -1201,7 +1200,6 @@ func (s *Server) createSession(ctx context.Context, user userRecord) (sessionRec
 	session := sessionRecord{
 		Token:       token,
 		UserID:      user.UserID,
-		Email:       user.Email,
 		ExpiresAtMs: time.Now().Add(s.cfg.SessionTTL).UnixMilli(),
 	}
 

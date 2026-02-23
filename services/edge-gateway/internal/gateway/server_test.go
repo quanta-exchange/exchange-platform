@@ -535,6 +535,19 @@ func TestSessionAuthAndPortfolioFlow(t *testing.T) {
 	if signupResp.SessionToken == "" {
 		t.Fatalf("missing session token")
 	}
+	s.state.mu.Lock()
+	session, ok := s.state.sessionsMemory[signupResp.SessionToken]
+	s.state.mu.Unlock()
+	if !ok {
+		t.Fatalf("expected session to be stored in memory")
+	}
+	sessionRaw, err := json.Marshal(session)
+	if err != nil {
+		t.Fatalf("marshal session: %v", err)
+	}
+	if bytes.Contains(sessionRaw, []byte(`"email"`)) {
+		t.Fatalf("session payload should not store email, got %s", sessionRaw)
+	}
 
 	meReq := httptest.NewRequest(http.MethodGet, "/v1/auth/me", nil)
 	meReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
