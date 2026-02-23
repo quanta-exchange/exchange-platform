@@ -39,6 +39,21 @@
       "mustConfirmBreach": true,
       "mustRecover": true,
       "mustReleaseLatch": true
+    },
+    "auditChain": {
+      "required": false,
+      "mustBeOk": true,
+      "allowedModes": ["chained", "mixed"]
+    },
+    "piiLogScan": {
+      "required": false,
+      "mustBeOk": true,
+      "maxHits": 0
+    },
+    "anomaly": {
+      "required": false,
+      "mustBeOk": true,
+      "mustNotDetectAnomaly": true
     }
   },
   "reports": {
@@ -49,6 +64,9 @@
     "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",
     "ws": "build/ws/ws-smoke.json",
     "wsResume": "build/ws/ws-resume-smoke.json",
-    "reconciliationSmoke": "build/reconciliation/smoke-reconciliation-safety.json"
+    "reconciliationSmoke": "build/reconciliation/smoke-reconciliation-safety.json",
+    "auditChain": "build/audit/verify-audit-chain-latest.json",
+    "piiLogScan": "build/security/pii-log-scan-latest.json",
+    "anomaly": "build/anomaly/anomaly-detector-latest.json"
   }
 }

@@ -166,6 +166,38 @@ for key, budget in budgets.items():
         if bool(budget.get("mustReleaseLatch", False)) and not bool(checks.get("latch_released", False)):
             entry["ok"] = False
             entry["details"].append("latch_not_released")
+    elif key == "auditChain":
+        must_ok = bool(budget.get("mustBeOk", True))
+        chain_ok = bool(payload.get("ok", False))
+        mode = str(payload.get("mode", ""))
+        if must_ok and not chain_ok:
+            entry["ok"] = False
+            entry["details"].append("audit_chain_not_ok")
+        allowed_modes = budget.get("allowedModes")
+        if allowed_modes and mode and mode not in allowed_modes:
+            entry["ok"] = False
+            entry["details"].append(f"audit_chain_mode_not_allowed={mode}")
+    elif key == "piiLogScan":
+        must_ok = bool(budget.get("mustBeOk", True))
+        scan_ok = bool(payload.get("ok", False))
+        hit_count = int(payload.get("hit_count", 0))
+        max_hits = int(budget.get("maxHits", 0))
+        if must_ok and not scan_ok:
+            entry["ok"] = False
+            entry["details"].append("pii_log_scan_not_ok")
+        if hit_count > max_hits:
+            entry["ok"] = False
+            entry["details"].append(f"pii_hit_count={hit_count} > {max_hits}")
+    elif key == "anomaly":
+        must_ok = bool(budget.get("mustBeOk", True))
+        anomaly_ok = bool(payload.get("ok", False))
+        anomaly_detected = bool(payload.get("anomaly_detected", False))
+        if must_ok and not anomaly_ok:
+            entry["ok"] = False
+            entry["details"].append("anomaly_detector_not_ok")
+        if bool(budget.get("mustNotDetectAnomaly", False)) and anomaly_detected:
+            entry["ok"] = False
+            entry["details"].append("anomaly_detected")
 
     if not entry["ok"]:
         violations.append(f"{key}:{';'.join(entry['details'])}")

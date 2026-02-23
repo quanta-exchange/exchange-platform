@@ -335,6 +335,12 @@
       "title": "Audit-chain tamper runbook proves detection on modified logs",
       "enforced": false,
       "required_evidence": ["runbooks/audit_chain_tamper.sh", "runbooks/audit_chain_tamper.md", "RUNBOOK.md", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-057",
+      "title": "Safety budget evaluates audit chain, pii scan, and anomaly reports",
+      "enforced": false,
+      "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "README.md"]
     }
   ]
 }

@@ -229,6 +229,11 @@
       "controlId": "CTRL-056",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.2"],
       "description": "Audit-chain tamper drill confirms hash-chain verification rejects modified break-glass audit log copies"
+    },
+    {
+      "controlId": "CTRL-057",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.12.1.1"],
+      "description": "Safety budget gate evaluates audit-chain, pii-scan, and anomaly-detector reports as additional operational safety budgets"
     }
   ]
 }
