@@ -249,6 +249,7 @@ if not kafka_status.get("up"):
 
 controls_latest = read_latest_json("build/controls/controls-check-latest.json")
 controls_freshness_latest = read_latest_json("build/controls/prove-controls-freshness-latest.json")
+determinism_latest = read_latest_json("build/determinism/prove-determinism-latest.json")
 audit_chain_latest = read_latest_json("build/audit/verify-audit-chain-latest.json")
 change_audit_chain_latest = read_latest_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
@@ -407,6 +408,14 @@ report = {
                 "error": adversarial_latest.get("error"),
             },
             "proofs": {
+                "determinism": {
+                    "present": determinism_latest.get("present", False),
+                    "path": determinism_latest.get("path"),
+                    "ok": (determinism_latest.get("payload") or {}).get("ok"),
+                    "executed_runs": (determinism_latest.get("payload") or {}).get("executed_runs"),
+                    "distinct_hashes_count": len(((determinism_latest.get("payload") or {}).get("distinct_hashes", []) or [])),
+                    "error": determinism_latest.get("error"),
+                },
                 "controls_freshness": {
                     "present": controls_freshness_latest.get("present", False),
                     "path": controls_freshness_latest.get("path"),

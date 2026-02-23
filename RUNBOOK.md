@@ -173,6 +173,7 @@ Gate G1 operational check:
   - with policy tamper drill: `./scripts/verification_factory.sh --run-policy-tamper`
   - with network partition drill: `./scripts/verification_factory.sh --run-network-partition`
   - with redpanda bounce drill: `./scripts/verification_factory.sh --run-redpanda-bounce`
+  - with determinism proof: `./scripts/verification_factory.sh --run-determinism`
   - with adversarial drill: `./scripts/verification_factory.sh --run-adversarial`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - Change audit-chain verify: `./scripts/verify_change_audit_chain.sh --require-events`

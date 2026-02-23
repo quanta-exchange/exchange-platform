@@ -13,6 +13,7 @@ RUN_POLICY_SIGNATURE=false
 RUN_POLICY_TAMPER=false
 RUN_NETWORK_PARTITION=false
 RUN_REDPANDA_BOUNCE=false
+RUN_DETERMINISM=false
 STRICT_CONTROLS=false
 
 while [[ $# -gt 0 ]]; do
@@ -59,6 +60,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-redpanda-bounce)
       RUN_REDPANDA_BOUNCE=true
+      shift
+      ;;
+    --run-determinism)
+      RUN_DETERMINISM=true
       shift
       ;;
     --strict-controls)
@@ -108,6 +113,9 @@ fi
 if [[ "$RUN_REDPANDA_BOUNCE" == "true" ]]; then
   VERIFY_CMD+=("--run-redpanda-bounce")
 fi
+if [[ "$RUN_DETERMINISM" == "true" ]]; then
+  VERIFY_CMD+=("--run-determinism")
+fi
 
 set +e
 VERIFY_OUTPUT="$("${VERIFY_CMD[@]}" 2>&1)"
@@ -132,7 +140,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$STRICT_CONTROLS" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_DETERMINISM" "$STRICT_CONTROLS" <<'PY'
 import json
 import pathlib
 import sys
@@ -154,7 +162,8 @@ run_policy_signature = sys.argv[13].lower() == "true"
 run_policy_tamper = sys.argv[14].lower() == "true"
 run_network_partition = sys.argv[15].lower() == "true"
 run_redpanda_bounce = sys.argv[16].lower() == "true"
-strict_controls = sys.argv[17].lower() == "true"
+run_determinism = sys.argv[17].lower() == "true"
+strict_controls = sys.argv[18].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -177,6 +186,9 @@ network_partition_recovered = None
 redpanda_bounce_ok = None
 redpanda_bounce_during_reachable = None
 redpanda_bounce_recovered = None
+determinism_ok = None
+determinism_executed_runs = None
+determinism_distinct_hash_count = None
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -257,6 +269,17 @@ if redpanda_bounce_report_path:
         redpanda_bounce_ok = bool(redpanda_payload.get("ok", False))
         redpanda_bounce_during_reachable = connectivity.get("during_stop_broker_reachable")
         redpanda_bounce_recovered = connectivity.get("after_restart_broker_reachable")
+determinism_report_path = summary.get("artifacts", {}).get("prove_determinism_report")
+if determinism_report_path:
+    candidate = pathlib.Path(determinism_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            determinism_payload = json.load(f)
+        determinism_ok = bool(determinism_payload.get("ok", False))
+        determinism_executed_runs = determinism_payload.get("executed_runs")
+        determinism_distinct_hash_count = len(determinism_payload.get("distinct_hashes", []) or [])
 
 controls_gate_ok = True
 if strict_controls:
@@ -278,6 +301,7 @@ payload = {
     "run_policy_tamper": run_policy_tamper,
     "run_network_partition": run_network_partition,
     "run_redpanda_bounce": run_redpanda_bounce,
+    "run_determinism": run_determinism,
     "strict_controls": strict_controls,
     "controls_advisory_missing_count": controls_advisory_missing,
     "controls_advisory_stale_count": controls_advisory_stale,
@@ -295,6 +319,9 @@ payload = {
     "redpanda_bounce_ok": redpanda_bounce_ok,
     "redpanda_bounce_during_reachable": redpanda_bounce_during_reachable,
     "redpanda_bounce_recovered": redpanda_bounce_recovered,
+    "determinism_ok": determinism_ok,
+    "determinism_executed_runs": determinism_executed_runs,
+    "determinism_distinct_hash_count": determinism_distinct_hash_count,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),
@@ -304,6 +331,7 @@ payload = {
     "verification_run_policy_tamper": bool(summary.get("run_policy_tamper", False)),
     "verification_run_network_partition": bool(summary.get("run_network_partition", False)),
     "verification_run_redpanda_bounce": bool(summary.get("run_redpanda_bounce", False)),
+    "verification_run_determinism": bool(summary.get("run_determinism", False)),
     "verification_summary": str(verification_summary),
     "verification_step_count": len(summary.get("steps", [])),
     "failed_steps": [s.get("name") for s in summary.get("steps", []) if s.get("status") != "pass"],

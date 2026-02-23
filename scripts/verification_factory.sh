@@ -13,6 +13,7 @@ RUN_POLICY_SIGNATURE=false
 RUN_POLICY_TAMPER=false
 RUN_NETWORK_PARTITION=false
 RUN_REDPANDA_BOUNCE=false
+RUN_DETERMINISM=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -58,6 +59,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-redpanda-bounce)
       RUN_REDPANDA_BOUNCE=true
+      shift
+      ;;
+    --run-determinism)
+      RUN_DETERMINISM=true
       shift
       ;;
     *)
@@ -185,6 +190,11 @@ fi
 if ! run_step "anomaly-smoke" "$ROOT_DIR/scripts/anomaly_detector_smoke.sh"; then
   HAS_FAILURE=true
 fi
+if [[ "$RUN_DETERMINISM" == "true" ]]; then
+  if ! run_step "prove-determinism" "$ROOT_DIR/scripts/prove_determinism.sh"; then
+    HAS_FAILURE=true
+  fi
+fi
 if ! run_step "prove-idempotency" "$ROOT_DIR/scripts/prove_idempotency_scope.sh"; then
   HAS_FAILURE=true
 fi
@@ -279,6 +289,7 @@ VERIFY_CHANGE_AUDIT_CHAIN_LOG="$LOG_DIR/verify-change-audit-chain.log"
 PII_LOG_SCAN_LOG="$LOG_DIR/pii-log-scan.log"
 ANOMALY_DETECTOR_LOG="$LOG_DIR/anomaly-detector.log"
 ANOMALY_SMOKE_LOG="$LOG_DIR/anomaly-smoke.log"
+PROVE_DETERMINISM_LOG="$LOG_DIR/prove-determinism.log"
 PROVE_IDEMPOTENCY_LOG="$LOG_DIR/prove-idempotency.log"
 PROVE_LATCH_APPROVAL_LOG="$LOG_DIR/prove-latch-approval.log"
 PROVE_BUDGET_FRESHNESS_LOG="$LOG_DIR/prove-budget-freshness.log"
@@ -320,6 +331,7 @@ VERIFY_CHANGE_AUDIT_CHAIN_REPORT="$(extract_value "verify_change_audit_chain_rep
 PII_LOG_SCAN_REPORT="$(extract_value "pii_log_scan_report" "$PII_LOG_SCAN_LOG")"
 ANOMALY_DETECTOR_REPORT="$(extract_value "anomaly_report" "$ANOMALY_DETECTOR_LOG")"
 ANOMALY_SMOKE_REPORT="$(extract_value "anomaly_smoke_report" "$ANOMALY_SMOKE_LOG")"
+PROVE_DETERMINISM_REPORT="$(extract_value "prove_determinism_report" "$PROVE_DETERMINISM_LOG")"
 PROVE_IDEMPOTENCY_REPORT="$(extract_value "prove_idempotency_report" "$PROVE_IDEMPOTENCY_LOG")"
 PROVE_LATCH_APPROVAL_REPORT="$(extract_value "prove_latch_approval_report" "$PROVE_LATCH_APPROVAL_LOG")"
 PROVE_BUDGET_FRESHNESS_REPORT="$(extract_value "prove_budget_freshness_report" "$PROVE_BUDGET_FRESHNESS_LOG")"
@@ -343,7 +355,7 @@ REDPANDA_BOUNCE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$REDPANDA_BOU
 ADVERSARIAL_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$ADVERSARIAL_RUNBOOK_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_NETWORK_PARTITION" "$NETWORK_PARTITION_RUNBOOK_DIR" "$RUN_REDPANDA_BOUNCE" "$REDPANDA_BOUNCE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_DETERMINISM_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_NETWORK_PARTITION" "$NETWORK_PARTITION_RUNBOOK_DIR" "$RUN_REDPANDA_BOUNCE" "$REDPANDA_BOUNCE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$RUN_DETERMINISM" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -363,43 +375,45 @@ policy_smoke_report = sys.argv[13]
 prove_policy_tamper_report = sys.argv[14]
 controls_report = sys.argv[15]
 prove_controls_freshness_report = sys.argv[16]
-prove_idempotency_report = sys.argv[17]
-prove_latch_approval_report = sys.argv[18]
-prove_budget_freshness_report = sys.argv[19]
-model_check_report = sys.argv[20]
-prove_breakers_report = sys.argv[21]
-prove_candles_report = sys.argv[22]
-snapshot_verify_report = sys.argv[23]
-verify_service_modes_report = sys.argv[24]
-ws_resume_smoke_report = sys.argv[25]
-adversarial_tests_report = sys.argv[26]
-shadow_verify_report = sys.argv[27]
-compliance_report = sys.argv[28]
-transparency_report = sys.argv[29]
-access_review_report = sys.argv[30]
-safety_budget_report = sys.argv[31]
-assurance_json = sys.argv[32]
-run_startup_guardrails = sys.argv[33].lower() == "true"
-startup_guardrails_runbook_dir = sys.argv[34]
-run_change_workflow = sys.argv[35].lower() == "true"
-change_workflow_runbook_dir = sys.argv[36]
-budget_failure_runbook_dir = sys.argv[37]
-run_policy_signature = sys.argv[38].lower() == "true"
-policy_signature_runbook_dir = sys.argv[39]
-run_policy_tamper = sys.argv[40].lower() == "true"
-policy_tamper_runbook_dir = sys.argv[41]
-run_network_partition = sys.argv[42].lower() == "true"
-network_partition_runbook_dir = sys.argv[43]
-run_redpanda_bounce = sys.argv[44].lower() == "true"
-redpanda_bounce_runbook_dir = sys.argv[45]
-run_adversarial = sys.argv[46].lower() == "true"
-adversarial_runbook_dir = sys.argv[47]
-verify_audit_chain_report = sys.argv[48]
-verify_change_audit_chain_report = sys.argv[49]
-pii_log_scan_report = sys.argv[50]
-anomaly_detector_report = sys.argv[51]
-anomaly_smoke_report = sys.argv[52]
-rbac_sod_report = sys.argv[53]
+prove_determinism_report = sys.argv[17]
+prove_idempotency_report = sys.argv[18]
+prove_latch_approval_report = sys.argv[19]
+prove_budget_freshness_report = sys.argv[20]
+model_check_report = sys.argv[21]
+prove_breakers_report = sys.argv[22]
+prove_candles_report = sys.argv[23]
+snapshot_verify_report = sys.argv[24]
+verify_service_modes_report = sys.argv[25]
+ws_resume_smoke_report = sys.argv[26]
+adversarial_tests_report = sys.argv[27]
+shadow_verify_report = sys.argv[28]
+compliance_report = sys.argv[29]
+transparency_report = sys.argv[30]
+access_review_report = sys.argv[31]
+safety_budget_report = sys.argv[32]
+assurance_json = sys.argv[33]
+run_startup_guardrails = sys.argv[34].lower() == "true"
+startup_guardrails_runbook_dir = sys.argv[35]
+run_change_workflow = sys.argv[36].lower() == "true"
+change_workflow_runbook_dir = sys.argv[37]
+budget_failure_runbook_dir = sys.argv[38]
+run_policy_signature = sys.argv[39].lower() == "true"
+policy_signature_runbook_dir = sys.argv[40]
+run_policy_tamper = sys.argv[41].lower() == "true"
+policy_tamper_runbook_dir = sys.argv[42]
+run_network_partition = sys.argv[43].lower() == "true"
+network_partition_runbook_dir = sys.argv[44]
+run_redpanda_bounce = sys.argv[45].lower() == "true"
+redpanda_bounce_runbook_dir = sys.argv[46]
+run_adversarial = sys.argv[47].lower() == "true"
+adversarial_runbook_dir = sys.argv[48]
+run_determinism = sys.argv[49].lower() == "true"
+verify_audit_chain_report = sys.argv[50]
+verify_change_audit_chain_report = sys.argv[51]
+pii_log_scan_report = sys.argv[52]
+anomaly_detector_report = sys.argv[53]
+anomaly_smoke_report = sys.argv[54]
+rbac_sod_report = sys.argv[55]
 
 steps = []
 ok = True
@@ -431,6 +445,7 @@ summary = {
     "run_policy_tamper": run_policy_tamper,
     "run_network_partition": run_network_partition,
     "run_redpanda_bounce": run_redpanda_bounce,
+    "run_determinism": run_determinism,
     "run_adversarial": run_adversarial,
     "steps": steps,
     "artifacts": {
@@ -458,6 +473,7 @@ summary = {
         "anomaly_detector_report": anomaly_detector_report or None,
         "anomaly_smoke_report": anomaly_smoke_report or None,
         "rbac_sod_check_report": rbac_sod_report or None,
+        "prove_determinism_report": prove_determinism_report or None,
         "prove_idempotency_report": prove_idempotency_report or None,
         "prove_latch_approval_report": prove_latch_approval_report or None,
         "prove_budget_freshness_report": prove_budget_freshness_report or None,

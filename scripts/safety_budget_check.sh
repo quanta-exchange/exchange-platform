@@ -178,6 +178,24 @@ for key, budget in budgets.items():
         if must_ok and not inv_ok:
             entry["ok"] = False
             entry["details"].append("invariants_not_ok")
+    elif key == "determinism":
+        must_ok = bool(budget.get("mustBeOk", True))
+        det_ok = bool(payload.get("ok", False))
+        executed_runs = int(payload.get("executed_runs", 0))
+        distinct_hashes = payload.get("distinct_hashes", []) or []
+        if must_ok and not det_ok:
+            entry["ok"] = False
+            entry["details"].append("determinism_not_ok")
+        min_runs = int(budget.get("minExecutedRuns", 1))
+        if executed_runs < min_runs:
+            entry["ok"] = False
+            entry["details"].append(f"determinism_executed_runs={executed_runs} < {min_runs}")
+        max_distinct_hashes = int(budget.get("maxDistinctHashes", 1))
+        if len(distinct_hashes) > max_distinct_hashes:
+            entry["ok"] = False
+            entry["details"].append(
+                f"determinism_distinct_hashes={len(distinct_hashes)} > {max_distinct_hashes}"
+            )
     elif key == "invariantsSummary":
         must_clickhouse_ok = bool(budget.get("mustClickhouseBeOkWhenChecked", True))
         must_core_ok = bool(budget.get("mustCoreBeOkWhenChecked", True))

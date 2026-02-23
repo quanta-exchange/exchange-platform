@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -472,7 +472,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_determinism=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -740,6 +740,8 @@ make release-gate
 ./scripts/release_gate.sh --run-network-partition
 # include redpanda broker-bounce runbook in gate:
 ./scripts/release_gate.sh --run-redpanda-bounce
+# include deterministic replay proof in gate:
+./scripts/release_gate.sh --run-determinism
 # include adversarial reliability runbook in gate:
 ./scripts/release_gate.sh --run-adversarial
 # fail gate on advisory control gaps too:
@@ -755,6 +757,7 @@ Outputs:
 - report includes policy-tamper context: `policy_tamper_ok`, `policy_tamper_detected`
 - report includes network-partition context: `network_partition_ok`, `network_partition_during_reachable`, `network_partition_recovered`
 - report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
+- report includes determinism context: `determinism_ok`, `determinism_executed_runs`, `determinism_distinct_hash_count`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 
 ### 26) Legal archive capture + verify
@@ -811,6 +814,7 @@ Outputs:
 `--run-policy-tamper`를 주면 policy tamper runbook 단계가 추가 실행됩니다.
 `--run-network-partition`를 주면 kafka network-partition runbook 단계가 추가 실행됩니다.
 `--run-redpanda-bounce`를 주면 redpanda broker-bounce runbook 단계가 추가 실행됩니다.
+`--run-determinism`를 주면 deterministic replay proof 단계가 추가 실행됩니다.
 `--run-adversarial`를 주면 adversarial reliability runbook 단계가 추가 실행됩니다.
 
 ### 27) Determinism proof

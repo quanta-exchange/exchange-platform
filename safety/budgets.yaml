@@ -23,6 +23,13 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "determinism": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "minExecutedRuns": 1,
+      "maxDistinctHashes": 1
+    },
     "invariantsSummary": {
       "required": false,
       "mustClickhouseBeOkWhenChecked": true,
@@ -111,6 +118,7 @@
     "load": "build/load/load-smoke.json",
     "dr": "build/dr/dr-report.json",
     "invariants": "build/invariants/ledger-invariants.json",
+    "determinism": "build/determinism/prove-determinism-latest.json",
     "invariantsSummary": "build/invariants/invariants-summary.json",
     "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",
     "ws": "build/ws/ws-smoke.json",

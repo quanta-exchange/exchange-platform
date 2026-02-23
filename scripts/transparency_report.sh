@@ -44,6 +44,7 @@ dr = read_json("build/dr/dr-report.json")
 invariants = read_json("build/invariants/ledger-invariants.json")
 core_invariants = read_json("build/invariants/core-invariants.json")
 invariants_summary = read_json("build/invariants/invariants-summary.json")
+determinism = read_json("build/determinism/prove-determinism-latest.json")
 ws = read_json("build/ws/ws-smoke.json")
 ws_resume = read_json("build/ws/ws-resume-smoke.json")
 safety_budget = read_json("build/safety/safety-budget-latest.json")
@@ -69,6 +70,7 @@ sources = {
     "invariants": invariants,
     "core_invariants": core_invariants,
     "invariants_summary": invariants_summary,
+    "determinism": determinism,
     "ws": ws,
     "ws_resume": ws_resume,
     "safety_budget": safety_budget,
@@ -142,6 +144,8 @@ report = {
             "dr_invariant_violations": int(dr.get("invariant_violations")) if dr and dr.get("invariant_violations") is not None else None,
             "safety_budget_ok": bool(safety_budget.get("ok")) if safety_budget else None,
             "snapshot_verify_ok": bool(snapshot_verify.get("ok")) if snapshot_verify else None,
+            "determinism_ok": bool(determinism.get("ok")) if determinism else None,
+            "determinism_executed_runs": int(determinism.get("executed_runs")) if determinism and determinism.get("executed_runs") is not None else None,
         },
         "ws_proxy": {
             "ws_dropped_msgs": float(ws.get("metrics", {}).get("ws_dropped_msgs")) if ws else None,
@@ -231,6 +235,7 @@ report = {
         "invariants": "build/invariants/ledger-invariants.json",
         "core_invariants": "build/invariants/core-invariants.json",
         "invariants_summary": "build/invariants/invariants-summary.json",
+        "determinism": "build/determinism/prove-determinism-latest.json",
         "ws": "build/ws/ws-smoke.json",
         "ws_resume": "build/ws/ws-resume-smoke.json",
         "safety_budget": "build/safety/safety-budget-latest.json",

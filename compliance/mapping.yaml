@@ -419,6 +419,16 @@
       "controlId": "CTRL-094",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Verification and release gates can explicitly include Redpanda broker-bounce drill evidence in promotion decisions"
+    },
+    {
+      "controlId": "CTRL-095",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification and release gates can explicitly include deterministic replay proof evidence and surface its outcome in release decisions"
+    },
+    {
+      "controlId": "CTRL-096",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Safety budget tracks deterministic replay proof freshness and consistency so stale or divergent replay evidence is detected before trust decisions"
     }
   ]
 }
