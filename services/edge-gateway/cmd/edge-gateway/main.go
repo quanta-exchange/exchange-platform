@@ -61,6 +61,10 @@ func main() {
 		OrderRetention:           time.Duration(getenvInt("EDGE_ORDER_RETENTION_MINUTES", 1440)) * time.Minute,
 		OrderMaxRecords:          getenvInt("EDGE_ORDER_MAX_RECORDS", 100000),
 		OrderGCInterval:          time.Duration(getenvInt("EDGE_ORDER_GC_INTERVAL_SEC", 30)) * time.Second,
+		PolicyFile:               getenv("EDGE_POLICY_FILE", ""),
+		PolicySignatureFile:      getenv("EDGE_POLICY_SIGNATURE_FILE", ""),
+		PolicyPublicKeyFile:      getenv("EDGE_POLICY_PUBLIC_KEY_FILE", ""),
+		PolicyRequireSigned:      getenv("EDGE_POLICY_REQUIRE_SIGNED", "false") == "true",
 	}
 	srv, err := gateway.New(cfg)
 	if err != nil {

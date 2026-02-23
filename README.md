@@ -541,6 +541,10 @@ Configure auth in env:
 - `EDGE_WS_MAX_CONNS=20000` (global admission cap)
 - `EDGE_WS_MAX_CONNS_PER_IP=500` (per-IP admission cap)
 - `EDGE_WS_ALLOWED_ORIGINS=https://app.exchange.example,https://admin.exchange.example` (optional allowlist)
+- `EDGE_POLICY_REQUIRE_SIGNED=false` (when `true`, startup fails unless policy signature verification succeeds)
+- `EDGE_POLICY_FILE=policies/trading-policy.v1.json`
+- `EDGE_POLICY_SIGNATURE_FILE=build/policy-smoke/trading-policy.v1.sig`
+- `EDGE_POLICY_PUBLIC_KEY_FILE=build/policy-smoke/dev-public.pem`
 
 `EDGE_DISABLE_CORE=true`에서는 주문 API가 `core_unavailable`로 거절됩니다.
 주문/체결 플로우 테스트는 Trading Core 실행이 필요합니다.

@@ -2,11 +2,15 @@ package gateway
 
 import (
 	"context"
+	"crypto"
 	"crypto/hmac"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +18,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -105,6 +110,10 @@ type Config struct {
 	OrderRetention           time.Duration
 	OrderMaxRecords          int
 	OrderGCInterval          time.Duration
+	PolicyFile               string
+	PolicySignatureFile      string
+	PolicyPublicKeyFile      string
+	PolicyRequireSigned      bool
 }
 
 type OrderRequest struct {
@@ -538,6 +547,9 @@ func New(cfg Config) (*Server, error) {
 	if strings.TrimSpace(cfg.KafkaStartOffset) == "" {
 		cfg.KafkaStartOffset = "first"
 	}
+	if err := verifySignedPolicy(cfg); err != nil {
+		return nil, err
+	}
 	if cfg.OrderRetention <= 0 {
 		cfg.OrderRetention = 24 * time.Hour
 	}
@@ -702,6 +714,55 @@ func New(cfg Config) (*Server, error) {
 	s.startTradeConsumer()
 
 	return s, nil
+}
+
+func verifySignedPolicy(cfg Config) error {
+	policyFile := strings.TrimSpace(cfg.PolicyFile)
+	signatureFile := strings.TrimSpace(cfg.PolicySignatureFile)
+	publicKeyFile := strings.TrimSpace(cfg.PolicyPublicKeyFile)
+
+	if policyFile == "" && signatureFile == "" && publicKeyFile == "" {
+		if cfg.PolicyRequireSigned {
+			return errors.New("signed policy required but policy/signature/public key files are not configured")
+		}
+		return nil
+	}
+
+	if policyFile == "" || signatureFile == "" || publicKeyFile == "" {
+		return errors.New("policy signature verification requires policy, signature, and public key files")
+	}
+
+	policyRaw, err := os.ReadFile(policyFile)
+	if err != nil {
+		return fmt.Errorf("read policy file: %w", err)
+	}
+	signatureRaw, err := os.ReadFile(signatureFile)
+	if err != nil {
+		return fmt.Errorf("read policy signature file: %w", err)
+	}
+	pubRaw, err := os.ReadFile(publicKeyFile)
+	if err != nil {
+		return fmt.Errorf("read policy public key file: %w", err)
+	}
+
+	block, _ := pem.Decode(pubRaw)
+	if block == nil {
+		return errors.New("invalid PEM public key")
+	}
+	parsedKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("parse policy public key: %w", err)
+	}
+	rsaKey, ok := parsedKey.(*rsa.PublicKey)
+	if !ok {
+		return errors.New("policy public key is not RSA")
+	}
+
+	hash := sha256.Sum256(policyRaw)
+	if err := rsa.VerifyPKCS1v15(rsaKey, crypto.SHA256, hash[:], signatureRaw); err != nil {
+		return fmt.Errorf("policy signature verification failed: %w", err)
+	}
+	return nil
 }
 
 func (s *Server) Router() http.Handler { return s.router }

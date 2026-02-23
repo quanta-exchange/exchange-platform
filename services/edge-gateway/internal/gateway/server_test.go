@@ -3,13 +3,21 @@ package gateway
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"database/sql"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -122,6 +130,43 @@ func startTestCore(t *testing.T) (string, func()) {
 	}
 }
 
+func writeSignedPolicyFixture(t *testing.T, policyBody []byte) (policyPath string, signaturePath string, publicKeyPath string) {
+	t.Helper()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate rsa key: %v", err)
+	}
+	pubRaw, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		t.Fatalf("marshal public key: %v", err)
+	}
+
+	hash := sha256.Sum256(policyBody)
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, hash[:])
+	if err != nil {
+		t.Fatalf("sign policy: %v", err)
+	}
+
+	dir := t.TempDir()
+	policyPath = filepath.Join(dir, "policy.json")
+	signaturePath = filepath.Join(dir, "policy.sig")
+	publicKeyPath = filepath.Join(dir, "policy.pub.pem")
+
+	if err := os.WriteFile(policyPath, policyBody, 0o600); err != nil {
+		t.Fatalf("write policy file: %v", err)
+	}
+	if err := os.WriteFile(signaturePath, signature, 0o600); err != nil {
+		t.Fatalf("write signature file: %v", err)
+	}
+
+	pemRaw := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubRaw})
+	if err := os.WriteFile(publicKeyPath, pemRaw, 0o600); err != nil {
+		t.Fatalf("write public key file: %v", err)
+	}
+	return policyPath, signaturePath, publicKeyPath
+}
+
 func TestNewRejectsWeakAPISecret(t *testing.T) {
 	coreAddr, shutdownCore := startTestCore(t)
 	defer shutdownCore()
@@ -138,6 +183,74 @@ func TestNewRejectsWeakAPISecret(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "at least 16 characters") {
 		t.Fatalf("unexpected weak secret error: %v", err)
+	}
+}
+
+func TestNewRejectsMissingSignedPolicyFiles(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	_, err := New(Config{
+		DisableDB:           true,
+		WSQueueSize:         8,
+		CoreAddr:            coreAddr,
+		CoreTimeout:         2 * time.Second,
+		PolicyRequireSigned: true,
+	})
+	if err == nil {
+		t.Fatalf("expected signed policy requirement to fail without files")
+	}
+	if !strings.Contains(err.Error(), "signed policy required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNewAcceptsValidSignedPolicy(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	policyPath, signaturePath, publicKeyPath := writeSignedPolicyFixture(t, []byte(`{"policyVersion":"v1"}`))
+
+	s, err := New(Config{
+		DisableDB:           true,
+		WSQueueSize:         8,
+		CoreAddr:            coreAddr,
+		CoreTimeout:         2 * time.Second,
+		PolicyRequireSigned: true,
+		PolicyFile:          policyPath,
+		PolicySignatureFile: signaturePath,
+		PolicyPublicKeyFile: publicKeyPath,
+	})
+	if err != nil {
+		t.Fatalf("expected valid signed policy to pass, got err=%v", err)
+	}
+	_ = s.Close()
+}
+
+func TestNewRejectsInvalidSignedPolicy(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	policyPath, signaturePath, publicKeyPath := writeSignedPolicyFixture(t, []byte(`{"policyVersion":"v1"}`))
+	if err := os.WriteFile(policyPath, []byte(`{"policyVersion":"v2"}`), 0o600); err != nil {
+		t.Fatalf("mutate policy file: %v", err)
+	}
+
+	_, err := New(Config{
+		DisableDB:           true,
+		WSQueueSize:         8,
+		CoreAddr:            coreAddr,
+		CoreTimeout:         2 * time.Second,
+		PolicyRequireSigned: true,
+		PolicyFile:          policyPath,
+		PolicySignatureFile: signaturePath,
+		PolicyPublicKeyFile: publicKeyPath,
+	})
+	if err == nil {
+		t.Fatalf("expected invalid signature to fail")
+	}
+	if !strings.Contains(err.Error(), "policy signature verification failed") {
+		t.Fatalf("unexpected invalid signature error: %v", err)
 	}
 }
 
