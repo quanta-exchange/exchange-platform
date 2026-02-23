@@ -24,7 +24,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	exchangev1 "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
@@ -1302,7 +1302,7 @@ func (s *Server) createUser(ctx context.Context, email, passwordHash string) (us
 			user.CreatedAtMs,
 		)
 		if err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+			if isUniqueViolationError(err) {
 				return userRecord{}, fmt.Errorf("already_exists")
 			}
 			return userRecord{}, fmt.Errorf("insert user: %w", err)
@@ -3820,6 +3820,15 @@ func readBodyAndRestore(r *http.Request) ([]byte, error) {
 	}
 	r.Body = io.NopCloser(strings.NewReader(string(raw)))
 	return raw, nil
+}
+
+func isUniqueViolationError(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return string(pqErr.Code) == "23505"
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "unique")
 }
 
 type statusRecorder struct {

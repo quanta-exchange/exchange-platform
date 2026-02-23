@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lib/pq"
 	exchangev1 "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1"
 
 	"github.com/gorilla/websocket"
@@ -1381,6 +1383,18 @@ func TestNewDefaultsOTelSampleRatioWhenUnset(t *testing.T) {
 
 	if got := s.cfg.OTelSampleRatio; got != 0.1 {
 		t.Fatalf("expected default otel sample ratio 0.1, got %f", got)
+	}
+}
+
+func TestIsUniqueViolationError(t *testing.T) {
+	if !isUniqueViolationError(&pq.Error{Code: "23505"}) {
+		t.Fatalf("expected pq unique violation code to be detected")
+	}
+	if !isUniqueViolationError(errors.New("duplicate key value violates unique constraint")) {
+		t.Fatalf("expected duplicate/unique text fallback to be detected")
+	}
+	if isUniqueViolationError(errors.New("syntax error at or near SELECT")) {
+		t.Fatalf("expected non-unique errors to be ignored")
 	}
 }
 
