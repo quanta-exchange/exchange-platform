@@ -268,6 +268,7 @@ network_partition_latest = read_latest_json("build/chaos/network-partition-lates
 redpanda_bounce_latest = read_latest_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
 exactly_once_runbook_latest = read_latest_json("build/runbooks/exactly-once-million-latest.json")
+mapping_integrity_runbook_latest = read_latest_json("build/runbooks/mapping-integrity-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
@@ -454,6 +455,26 @@ report = {
                         exactly_once_runbook_latest.get("payload") or {}
                     ).get("recommended_action"),
                     "error": exactly_once_runbook_latest.get("error"),
+                },
+                "mapping_integrity": {
+                    "present": mapping_integrity_runbook_latest.get("present", False),
+                    "path": mapping_integrity_runbook_latest.get("path"),
+                    "proof_ok": (mapping_integrity_runbook_latest.get("payload") or {}).get(
+                        "proof_ok"
+                    ),
+                    "duplicate_probe_exit_code": (
+                        mapping_integrity_runbook_latest.get("payload") or {}
+                    ).get("duplicate_probe_exit_code"),
+                    "duplicate_mapping_ids_count": (
+                        mapping_integrity_runbook_latest.get("payload") or {}
+                    ).get("duplicate_mapping_ids_count"),
+                    "baseline_probe_exit_code": (
+                        mapping_integrity_runbook_latest.get("payload") or {}
+                    ).get("baseline_probe_exit_code"),
+                    "recommended_action": (
+                        mapping_integrity_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": mapping_integrity_runbook_latest.get("error"),
                 }
             },
             "proofs": {

@@ -14,6 +14,7 @@ RUN_POLICY_TAMPER=false
 RUN_NETWORK_PARTITION=false
 RUN_REDPANDA_BOUNCE=false
 RUN_EXACTLY_ONCE_RUNBOOK=false
+RUN_MAPPING_INTEGRITY_RUNBOOK=false
 RUN_DETERMINISM=false
 RUN_EXACTLY_ONCE_MILLION=false
 STRICT_CONTROLS=false
@@ -66,6 +67,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-exactly-once-runbook)
       RUN_EXACTLY_ONCE_RUNBOOK=true
+      shift
+      ;;
+    --run-mapping-integrity-runbook)
+      RUN_MAPPING_INTEGRITY_RUNBOOK=true
       shift
       ;;
     --run-determinism)
@@ -126,6 +131,9 @@ fi
 if [[ "$RUN_EXACTLY_ONCE_RUNBOOK" == "true" ]]; then
   VERIFY_CMD+=("--run-exactly-once-runbook")
 fi
+if [[ "$RUN_MAPPING_INTEGRITY_RUNBOOK" == "true" ]]; then
+  VERIFY_CMD+=("--run-mapping-integrity-runbook")
+fi
 if [[ "$RUN_DETERMINISM" == "true" ]]; then
   VERIFY_CMD+=("--run-determinism")
 fi
@@ -156,7 +164,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" "$RUN_MAPPING_INTEGRITY_RUNBOOK" <<'PY'
 import json
 import pathlib
 import sys
@@ -182,6 +190,7 @@ run_exactly_once_runbook = sys.argv[17].lower() == "true"
 run_determinism = sys.argv[18].lower() == "true"
 run_exactly_once_million = sys.argv[19].lower() == "true"
 strict_controls = sys.argv[20].lower() == "true"
+run_mapping_integrity_runbook = sys.argv[21].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -221,6 +230,8 @@ exactly_once_runbook_proof_ok = None
 exactly_once_runbook_proof_repeats = None
 exactly_once_runbook_recommended_action = None
 mapping_integrity_ok = None
+mapping_integrity_runbook_proof_ok = None
+mapping_integrity_runbook_recommended_action = None
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -365,6 +376,23 @@ if mapping_integrity_report_path:
         with open(candidate, "r", encoding="utf-8") as f:
             mapping_integrity_payload = json.load(f)
         mapping_integrity_ok = bool(mapping_integrity_payload.get("ok", False))
+mapping_integrity_runbook_dir = summary.get("artifacts", {}).get(
+    "mapping_integrity_runbook_dir"
+)
+if mapping_integrity_runbook_dir:
+    candidate_dir = pathlib.Path(mapping_integrity_runbook_dir)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "mapping-integrity-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            mapping_runbook_payload = json.load(f)
+        mapping_integrity_runbook_proof_ok = bool(
+            mapping_runbook_payload.get("proof_ok", False)
+        )
+        mapping_integrity_runbook_recommended_action = mapping_runbook_payload.get(
+            "recommended_action"
+        )
 
 controls_gate_ok = True
 if strict_controls:
@@ -387,6 +415,7 @@ payload = {
     "run_network_partition": run_network_partition,
     "run_redpanda_bounce": run_redpanda_bounce,
     "run_exactly_once_runbook": run_exactly_once_runbook,
+    "run_mapping_integrity_runbook": run_mapping_integrity_runbook,
     "run_determinism": run_determinism,
     "run_exactly_once_million": run_exactly_once_million,
     "strict_controls": strict_controls,
@@ -423,6 +452,8 @@ payload = {
     "exactly_once_runbook_proof_repeats": exactly_once_runbook_proof_repeats,
     "exactly_once_runbook_recommended_action": exactly_once_runbook_recommended_action,
     "mapping_integrity_ok": mapping_integrity_ok,
+    "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
+    "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook_recommended_action,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),
@@ -434,6 +465,9 @@ payload = {
     "verification_run_redpanda_bounce": bool(summary.get("run_redpanda_bounce", False)),
     "verification_run_exactly_once_runbook": bool(
         summary.get("run_exactly_once_runbook", False)
+    ),
+    "verification_run_mapping_integrity_runbook": bool(
+        summary.get("run_mapping_integrity_runbook", False)
     ),
     "verification_run_determinism": bool(summary.get("run_determinism", False)),
     "verification_run_exactly_once_million": bool(

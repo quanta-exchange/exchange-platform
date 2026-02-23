@@ -66,6 +66,7 @@ network_partition = read_json("build/chaos/network-partition-latest.json")
 redpanda_bounce = read_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 exactly_once_runbook = read_json("build/runbooks/exactly-once-million-latest.json")
+mapping_integrity_runbook = read_json("build/runbooks/mapping-integrity-latest.json")
 
 sources = {
     "load": load,
@@ -95,6 +96,7 @@ sources = {
     "redpanda_bounce": redpanda_bounce,
     "adversarial": adversarial,
     "exactly_once_runbook": exactly_once_runbook,
+    "mapping_integrity_runbook": mapping_integrity_runbook,
 }
 
 email_pattern = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -239,6 +241,8 @@ report = {
             "exactly_once_runbook_proof_ok": bool(exactly_once_runbook.get("proof_ok")) if exactly_once_runbook else None,
             "exactly_once_runbook_proof_repeats": int(exactly_once_runbook.get("proof_repeats")) if exactly_once_runbook and exactly_once_runbook.get("proof_repeats") is not None else None,
             "exactly_once_runbook_recommended_action": exactly_once_runbook.get("recommended_action") if exactly_once_runbook else None,
+            "mapping_integrity_runbook_proof_ok": bool(mapping_integrity_runbook.get("proof_ok")) if mapping_integrity_runbook else None,
+            "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook.get("recommended_action") if mapping_integrity_runbook else None,
             "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
             "budget_freshness_proof_ok": bool(budget_freshness.get("ok")) if budget_freshness else None,
         },
@@ -275,6 +279,7 @@ report = {
         "redpanda_bounce": "build/chaos/redpanda-broker-bounce-latest.json",
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
         "exactly_once_runbook": "build/runbooks/exactly-once-million-latest.json",
+        "mapping_integrity_runbook": "build/runbooks/mapping-integrity-latest.json",
     },
 }
 

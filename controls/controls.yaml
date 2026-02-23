@@ -631,6 +631,12 @@
       "title": "Mapping integrity proof is executed and surfaced in verification/release flows",
       "enforced": false,
       "required_evidence": ["scripts/prove_mapping_integrity.sh", "scripts/verification_factory.sh", "scripts/release_gate.sh", "build/compliance/prove-mapping-integrity-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-104",
+      "title": "Runbook-as-code exists for mapping integrity failures and can be included in release gates",
+      "enforced": false,
+      "required_evidence": ["runbooks/mapping_integrity_failure.sh", "runbooks/mapping_integrity_failure.md", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md", "RUNBOOK.md", "Makefile"]
     }
   ]
 }

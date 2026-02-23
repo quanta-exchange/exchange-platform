@@ -162,6 +162,7 @@ Gate G1 operational check:
 - Change workflow drill: `./runbooks/change_workflow.sh`
 - Budget failure drill: `./runbooks/budget_failure.sh`
 - Exactly-once million failure drill: `./runbooks/exactly_once_million_failure.sh`
+- Mapping integrity failure drill: `./runbooks/mapping_integrity_failure.sh`
 - Policy signature drill: `./runbooks/policy_signature.sh`
 - Policy tamper drill: `./runbooks/policy_tamper.sh`
 - Kafka network partition drill: `./runbooks/network_partition.sh`
@@ -175,6 +176,7 @@ Gate G1 operational check:
   - with network partition drill: `./scripts/verification_factory.sh --run-network-partition`
   - with redpanda bounce drill: `./scripts/verification_factory.sh --run-redpanda-bounce`
   - with exactly-once million runbook: `./scripts/verification_factory.sh --run-exactly-once-runbook`
+  - with mapping integrity runbook: `./scripts/verification_factory.sh --run-mapping-integrity-runbook`
   - with determinism proof: `./scripts/verification_factory.sh --run-determinism`
   - with exactly-once million proof: `./scripts/verification_factory.sh --run-exactly-once-million`
   - with adversarial drill: `./scripts/verification_factory.sh --run-adversarial`

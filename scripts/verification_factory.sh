@@ -14,6 +14,7 @@ RUN_POLICY_TAMPER=false
 RUN_NETWORK_PARTITION=false
 RUN_REDPANDA_BOUNCE=false
 RUN_EXACTLY_ONCE_RUNBOOK=false
+RUN_MAPPING_INTEGRITY_RUNBOOK=false
 RUN_DETERMINISM=false
 RUN_EXACTLY_ONCE_MILLION=false
 COMPLIANCE_REQUIRE_FULL_MAPPING="${COMPLIANCE_REQUIRE_FULL_MAPPING:-true}"
@@ -66,6 +67,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-exactly-once-runbook)
       RUN_EXACTLY_ONCE_RUNBOOK=true
+      shift
+      ;;
+    --run-mapping-integrity-runbook)
+      RUN_MAPPING_INTEGRITY_RUNBOOK=true
       shift
       ;;
     --run-determinism)
@@ -295,6 +300,11 @@ if [[ "$RUN_EXACTLY_ONCE_RUNBOOK" == "true" ]]; then
     HAS_FAILURE=true
   fi
 fi
+if [[ "$RUN_MAPPING_INTEGRITY_RUNBOOK" == "true" ]]; then
+  if ! run_step "runbook-mapping-integrity" env RUNBOOK_ALLOW_BUDGET_FAIL=true "$ROOT_DIR/runbooks/mapping_integrity_failure.sh"; then
+    HAS_FAILURE=true
+  fi
+fi
 if [[ "$RUN_ADVERSARIAL" == "true" ]]; then
   if ! run_step "runbook-adversarial-reliability" env RUNBOOK_ALLOW_BUDGET_FAIL=true "$ROOT_DIR/runbooks/adversarial_reliability.sh"; then
     HAS_FAILURE=true
@@ -345,6 +355,7 @@ POLICY_TAMPER_RUNBOOK_LOG="$LOG_DIR/runbook-policy-tamper.log"
 NETWORK_PARTITION_RUNBOOK_LOG="$LOG_DIR/runbook-network-partition.log"
 REDPANDA_BOUNCE_RUNBOOK_LOG="$LOG_DIR/runbook-redpanda-bounce.log"
 EXACTLY_ONCE_RUNBOOK_LOG="$LOG_DIR/runbook-exactly-once-million.log"
+MAPPING_INTEGRITY_RUNBOOK_LOG="$LOG_DIR/runbook-mapping-integrity.log"
 ADVERSARIAL_RUNBOOK_LOG="$LOG_DIR/runbook-adversarial-reliability.log"
 ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
@@ -390,10 +401,11 @@ POLICY_TAMPER_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$POLICY_TAMPER_
 NETWORK_PARTITION_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$NETWORK_PARTITION_RUNBOOK_LOG")"
 REDPANDA_BOUNCE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$REDPANDA_BOUNCE_RUNBOOK_LOG")"
 EXACTLY_ONCE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$EXACTLY_ONCE_RUNBOOK_LOG")"
+MAPPING_INTEGRITY_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$MAPPING_INTEGRITY_RUNBOOK_LOG")"
 ADVERSARIAL_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$ADVERSARIAL_RUNBOOK_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_DETERMINISM_REPORT" "$PROVE_EXACTLY_ONCE_MILLION_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_NETWORK_PARTITION" "$NETWORK_PARTITION_RUNBOOK_DIR" "$RUN_REDPANDA_BOUNCE" "$REDPANDA_BOUNCE_RUNBOOK_DIR" "$RUN_EXACTLY_ONCE_RUNBOOK" "$EXACTLY_ONCE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" "$COMPLIANCE_REQUIRE_FULL_MAPPING" "$PROVE_MAPPING_INTEGRITY_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_DETERMINISM_REPORT" "$PROVE_EXACTLY_ONCE_MILLION_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_NETWORK_PARTITION" "$NETWORK_PARTITION_RUNBOOK_DIR" "$RUN_REDPANDA_BOUNCE" "$REDPANDA_BOUNCE_RUNBOOK_DIR" "$RUN_EXACTLY_ONCE_RUNBOOK" "$EXACTLY_ONCE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" "$COMPLIANCE_REQUIRE_FULL_MAPPING" "$PROVE_MAPPING_INTEGRITY_REPORT" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$MAPPING_INTEGRITY_RUNBOOK_DIR" <<'PY'
 import json
 import sys
 
@@ -458,6 +470,8 @@ anomaly_smoke_report = sys.argv[58]
 rbac_sod_report = sys.argv[59]
 compliance_require_full_mapping = sys.argv[60].lower() == "true"
 prove_mapping_integrity_report = sys.argv[61]
+run_mapping_integrity_runbook = sys.argv[62].lower() == "true"
+mapping_integrity_runbook_dir = sys.argv[63]
 
 steps = []
 ok = True
@@ -490,6 +504,7 @@ summary = {
     "run_network_partition": run_network_partition,
     "run_redpanda_bounce": run_redpanda_bounce,
     "run_exactly_once_runbook": run_exactly_once_runbook,
+    "run_mapping_integrity_runbook": run_mapping_integrity_runbook,
     "run_determinism": run_determinism,
     "run_exactly_once_million": run_exactly_once_million,
     "run_adversarial": run_adversarial,
@@ -507,6 +522,7 @@ summary = {
         "network_partition_runbook_dir": network_partition_runbook_dir or None,
         "redpanda_bounce_runbook_dir": redpanda_bounce_runbook_dir or None,
         "exactly_once_runbook_dir": exactly_once_runbook_dir or None,
+        "mapping_integrity_runbook_dir": mapping_integrity_runbook_dir or None,
         "adversarial_runbook_dir": adversarial_runbook_dir or None,
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,

@@ -514,6 +514,11 @@
       "controlId": "CTRL-103",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Mapping integrity proof is executed in verification flow and surfaced in release/status/transparency contexts so mapping-schema regressions are detected with deterministic evidence"
+    },
+    {
+      "controlId": "CTRL-104",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for mapping integrity failure drills and can be executed in verification/release/status/transparency flows for deterministic operator remediation evidence"
     }
   ]
 }
