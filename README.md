@@ -35,6 +35,8 @@ scripts/
   smoke_e2e.sh            # minimal E2E: Edge -> Core -> Kafka -> Ledger
   smoke_match.sh          # Gate G1 real match smoke (BUY+SELL crossing)
   load_smoke.sh           # I-0105 load smoke harness
+  load_10k.sh             # staged load profile (10k orders baseline)
+  load_50k.sh             # staged load profile (50k orders baseline)
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
@@ -156,7 +158,9 @@ Rust protobuf build note (Trading Core):
 ### 2.1) Ops/Infra validation
 ```bash
 ./scripts/validate_infra.sh
-./scripts/load_smoke.sh
+make load-smoke
+make load-10k   # profile defaults can be overridden with LOAD_10K_* env vars
+make load-50k   # profile defaults can be overridden with LOAD_50K_* env vars
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
 ./scripts/snapshot_verify.sh
@@ -164,6 +168,9 @@ make safety-case
 # optional full safety-case proof set (exactly-once + idempotency-scope + latch-approval + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
 make safety-case-extended
 ```
+`load-*` profiles assume Trading Core is reachable (`EDGE_CORE_ADDR`, default `localhost:50051`).  
+For gateway-only dry-runs, set `EDGE_DISABLE_CORE=true` and disable threshold gate (`LOAD_CHECK=false`, `LOAD_10K_CHECK=false`, `LOAD_50K_CHECK=false`).
+
 `./scripts/invariants.sh` behavior:
 - always checks ledger invariants (`/v1/admin/invariants/check`)
 - Core WAL seq checks default to `INVARIANTS_CORE_MODE=auto`

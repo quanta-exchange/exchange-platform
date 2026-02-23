@@ -239,6 +239,12 @@
       "title": "WS resume gap runbook-as-code exists",
       "enforced": false,
       "required_evidence": ["runbooks/ws_resume_gap_spike.sh", "runbooks/ws_resume_gap_spike.md", "scripts/ws_resume_smoke.sh"]
+    },
+    {
+      "id": "CTRL-041",
+      "title": "Load profile scripts and thresholds exist (smoke/10k/50k)",
+      "enforced": false,
+      "required_evidence": ["scripts/load_smoke.sh", "scripts/load_10k.sh", "scripts/load_50k.sh", "infra/load/thresholds-smoke.json", "infra/load/thresholds-10k.json", "infra/load/thresholds-50k.json"]
     }
   ]
 }
