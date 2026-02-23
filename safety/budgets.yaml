@@ -6,6 +6,9 @@
     "load": {
       "required": true,
       "maxAgeSeconds": 604800,
+      "mustThresholdsChecked": true,
+      "mustThresholdsPass": true,
+      "minOrdersSucceeded": 1,
       "orderP99MsMax": 50.0,
       "orderErrorRateMax": 0.01
     },

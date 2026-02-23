@@ -142,6 +142,21 @@ for key, budget in budgets.items():
     if key == "load":
         p99 = float(payload.get("order_p99_ms", 0.0))
         err = float(payload.get("order_error_rate", 1.0))
+        thresholds_checked = bool(payload.get("thresholds_checked", False))
+        thresholds_passed = bool(payload.get("thresholds_passed", False))
+        orders_succeeded = int(payload.get("orders_succeeded", 0))
+        if bool(budget.get("mustThresholdsChecked", False)) and not thresholds_checked:
+            entry["ok"] = False
+            entry["details"].append("load_thresholds_not_checked")
+        if bool(budget.get("mustThresholdsPass", False)) and thresholds_checked and not thresholds_passed:
+            entry["ok"] = False
+            entry["details"].append("load_thresholds_not_passed")
+        min_orders_succeeded = budget.get("minOrdersSucceeded")
+        if min_orders_succeeded is not None and orders_succeeded < int(min_orders_succeeded):
+            entry["ok"] = False
+            entry["details"].append(
+                f"orders_succeeded={orders_succeeded} < {int(min_orders_succeeded)}"
+            )
         if p99 > float(budget.get("orderP99MsMax", 0)):
             entry["ok"] = False
             entry["details"].append(f"order_p99_ms={p99} > {budget['orderP99MsMax']}")

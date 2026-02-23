@@ -451,6 +451,10 @@ Success output includes:
   - top-level `freshness.defaultMaxAgeSeconds`
   - per-check override `budgets.<check>.maxAgeSeconds`
   - output fields: `age_seconds`, `max_age_seconds`, `report_time_source`
+- `load` check supports policy fields:
+  - `mustThresholdsChecked`
+  - `mustThresholdsPass`
+  - `minOrdersSucceeded`
 
 ### 17) System status snapshot
 ```bash

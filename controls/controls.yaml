@@ -433,6 +433,12 @@
       "title": "Release gate report exposes stale control counters",
       "enforced": false,
       "required_evidence": ["scripts/release_gate.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-072",
+      "title": "Safety budget load policy enforces threshold execution semantics",
+      "enforced": false,
+      "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "README.md"]
     }
   ]
 }
