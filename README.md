@@ -349,6 +349,9 @@ Request headers for trading endpoints:
 - `X-SIGNATURE` (HMAC-SHA256 of `METHOD\nPATH\nX-TS\nBODY`)
 - `Idempotency-Key` (POST/DELETE required)
 
+Auth hardening notes:
+- unknown `X-API-KEY` 요청도 client(IP) 단위 rate-limit가 적용되어 key enumeration 시도를 제한합니다.
+
 ## OTel config (I-0102)
 Edge env:
 - `EDGE_OTEL_ENDPOINT=localhost:24317`

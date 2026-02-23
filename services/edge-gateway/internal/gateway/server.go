@@ -949,6 +949,13 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		}
 		secret, ok := s.cfg.APISecrets[apiKey]
 		if !ok {
+			unknownKeyRateBucket := "unknown_key:" + wsClientIP(r.RemoteAddr)
+			nowMs := time.Now().UnixMilli()
+			if !s.allowRate(unknownKeyRateBucket, nowMs) {
+				s.authFail("unknown_key_rate_limit")
+				writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "TOO_MANY_REQUESTS"})
+				return
+			}
 			s.authFail("unknown_key")
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid api key"})
 			return

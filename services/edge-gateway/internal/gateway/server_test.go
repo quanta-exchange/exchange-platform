@@ -321,6 +321,38 @@ func TestRejectsInvalidSignature(t *testing.T) {
 	}
 }
 
+func TestUnknownKeyAuthIsRateLimitedByClient(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+	s.cfg.RateLimitPerMinute = 1
+
+	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1"}`)
+
+	first := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(body))
+	first.RemoteAddr = "203.0.113.10:40000"
+	first.Header.Set("X-API-KEY", "unknown-key")
+	first.Header.Set("X-TS", strconv.FormatInt(time.Now().UnixMilli(), 10))
+	first.Header.Set("X-SIGNATURE", "invalid")
+	first.Header.Set("Idempotency-Key", "idem-unknown-1")
+	firstW := httptest.NewRecorder()
+	s.Router().ServeHTTP(firstW, first)
+	if firstW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for first unknown key request, got %d body=%s", firstW.Code, firstW.Body.String())
+	}
+
+	second := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(body))
+	second.RemoteAddr = "203.0.113.10:40000"
+	second.Header.Set("X-API-KEY", "unknown-key")
+	second.Header.Set("X-TS", strconv.FormatInt(time.Now().UnixMilli(), 10))
+	second.Header.Set("X-SIGNATURE", "invalid")
+	second.Header.Set("Idempotency-Key", "idem-unknown-2")
+	secondW := httptest.NewRecorder()
+	s.Router().ServeHTTP(secondW, second)
+	if secondW.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 for repeated unknown key request, got %d body=%s", secondW.Code, secondW.Body.String())
+	}
+}
+
 func TestLoginReturns503WhenAuthStoreUnavailable(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()

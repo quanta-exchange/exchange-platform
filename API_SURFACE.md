@@ -27,6 +27,8 @@ Base: `/v1`
   - `METHOD + "\\n" + PATH + "\\n" + X-TS + "\\n" + RAW_BODY`
 - Replay defense:
   - duplicate `(api_key, signature, ts)` within replay window must be rejected
+- Unknown key defense:
+  - repeated requests with invalid `X-API-KEY` are rate-limited per client source
 - Idempotency conflict:
   - reusing same `Idempotency-Key` with different request payload returns `409 IDEMPOTENCY_CONFLICT`
 - Tracing:
