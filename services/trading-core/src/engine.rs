@@ -65,6 +65,8 @@ struct IdempotencyEntry {
     response: IdempotentResponse,
 }
 
+type IdempotencyKey = (String, String, String, String);
+
 #[derive(Debug)]
 pub struct TradingCore {
     cfg: CoreConfig,
@@ -77,7 +79,7 @@ pub struct TradingCore {
     outbox: Outbox,
     fencing: FencingCoordinator,
     leader_token: u64,
-    idempotency: HashMap<(String, String), IdempotencyEntry>,
+    idempotency: HashMap<IdempotencyKey, IdempotencyEntry>,
     seen_order_ids: HashSet<String>,
     last_state_hash: String,
     recent_events: Vec<CoreEvent>,
@@ -264,7 +266,7 @@ impl TradingCore {
         self.prune_idempotency();
         if let Some(idem) = self
             .idempotency
-            .get(&(meta.symbol.clone(), meta.idempotency_key.clone()))
+            .get(&Self::idempotency_scope(&meta, "place"))
         {
             if let IdempotentResponse::Place(existing) = &idem.response {
                 return Ok(existing.clone());
@@ -575,7 +577,7 @@ impl TradingCore {
         self.prune_idempotency();
         if let Some(idem) = self
             .idempotency
-            .get(&(meta.symbol.clone(), meta.idempotency_key.clone()))
+            .get(&Self::idempotency_scope(&meta, "cancel"))
         {
             if let IdempotentResponse::Cancel(existing) = &idem.response {
                 return Ok(existing.clone());
@@ -941,7 +943,7 @@ impl TradingCore {
 
     fn store_idempotent_place(&mut self, meta: &CommandMeta, response: &proto::PlaceOrderResponse) {
         self.idempotency.insert(
-            (meta.symbol.clone(), meta.idempotency_key.clone()),
+            Self::idempotency_scope(meta, "place"),
             IdempotencyEntry {
                 created_at_ms: meta.ts_server_ms,
                 response: IdempotentResponse::Place(response.clone()),
@@ -955,12 +957,21 @@ impl TradingCore {
         response: &proto::CancelOrderResponse,
     ) {
         self.idempotency.insert(
-            (meta.symbol.clone(), meta.idempotency_key.clone()),
+            Self::idempotency_scope(meta, "cancel"),
             IdempotencyEntry {
                 created_at_ms: meta.ts_server_ms,
                 response: IdempotentResponse::Cancel(response.clone()),
             },
         );
+    }
+
+    fn idempotency_scope(meta: &CommandMeta, command: &str) -> IdempotencyKey {
+        (
+            meta.symbol.clone(),
+            meta.user_id.clone(),
+            command.to_string(),
+            meta.idempotency_key.clone(),
+        )
     }
 
     fn prune_idempotency(&mut self) {

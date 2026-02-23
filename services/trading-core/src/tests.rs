@@ -245,6 +245,87 @@ fn idempotent_place_returns_same_response() {
 }
 
 #[test]
+fn idempotency_scope_isolated_per_user() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let first = core
+        .place_order(place_req(
+            "scope-user-1",
+            "idem-shared",
+            "u1",
+            "o-user-1",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(first.accepted);
+
+    let second = core
+        .place_order(place_req(
+            "scope-user-2",
+            "idem-shared",
+            "u2",
+            "o-user-2",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(second.accepted);
+    assert_eq!(second.order_id, "o-user-2");
+    assert_ne!(first.order_id, second.order_id);
+}
+
+#[test]
+fn idempotency_scope_isolated_per_command_type() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let first = core
+        .place_order(place_req(
+            "scope-cmd-place",
+            "idem-shared",
+            "u1",
+            "o-cmd-1",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(first.accepted);
+
+    let cancel = core
+        .cancel_order(cancel_req(
+            "scope-cmd-cancel",
+            "idem-shared",
+            "u1",
+            "o-cmd-1",
+        ))
+        .unwrap();
+    assert!(cancel.accepted);
+
+    let replayed = core
+        .place_order(place_req(
+            "scope-cmd-retry",
+            "idem-shared",
+            "u1",
+            "o-cmd-2",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "101",
+            "2",
+        ))
+        .unwrap();
+    assert_eq!(replayed.order_id, first.order_id);
+    assert_eq!(replayed.seq, first.seq);
+}
+
+#[test]
 fn duplicate_order_id_is_rejected() {
     let tmp = TempDir::new().unwrap();
     let mut core = make_engine(&tmp, FencingCoordinator::new());

@@ -462,6 +462,7 @@ Outputs:
 ## Gate G1 status
 - Trading Core implements:
   - command contract handling (`PlaceOrder`, `CancelOrder`, `SetSymbolMode`, `CancelAll`)
+  - idempotency response cache scoped by `symbol + user + command + idempotency_key`
   - price-time priority orderbook (FIFO in level, best-price across levels)
   - LIMIT/MARKET matching with deterministic sequencing
   - risk hot-path guards (reserve, rate/open-order limits, price band)
