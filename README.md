@@ -502,6 +502,7 @@ Success output includes:
 - `compliance_evidence_report=build/compliance/compliance-evidence-<timestamp>.json`
 - `compliance_evidence_latest=build/compliance/compliance-evidence-latest.json`
 - `compliance_evidence_ok=true|false`
+- report includes stale-evidence summaries: `failed_enforced_stale_count`, `advisory_stale_count`
 
 ### 20) Transparency report
 ```bash

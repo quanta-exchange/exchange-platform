@@ -62,6 +62,8 @@ controls_by_id = {r.get("id"): r for r in controls_payload.get("results", [])}
 rows = []
 missing_controls = []
 failed_controls = []
+failed_stale_controls = []
+advisory_stale_controls = []
 for item in mappings:
     cid = item.get("controlId")
     row = {
@@ -71,7 +73,10 @@ for item in mappings:
         "existsInCatalog": False,
         "controlOk": False,
         "enforced": False,
+        "maxEvidenceAgeSeconds": None,
         "missingEvidence": [],
+        "staleEvidence": [],
+        "evidenceAgeSeconds": {},
     }
     control = controls_by_id.get(cid)
     if control is None:
@@ -82,9 +87,16 @@ for item in mappings:
     row["existsInCatalog"] = True
     row["controlOk"] = bool(control.get("ok", False))
     row["enforced"] = bool(control.get("enforced", False))
+    row["maxEvidenceAgeSeconds"] = control.get("max_evidence_age_seconds")
     row["missingEvidence"] = list(control.get("missing_evidence", []) or [])
+    row["staleEvidence"] = list(control.get("stale_evidence", []) or [])
+    row["evidenceAgeSeconds"] = dict(control.get("evidence_age_seconds", {}) or {})
     if row["enforced"] and not row["controlOk"]:
         failed_controls.append(cid)
+    if row["enforced"] and row["staleEvidence"]:
+        failed_stale_controls.append(cid)
+    if not row["enforced"] and row["staleEvidence"]:
+        advisory_stale_controls.append(cid)
     rows.append(row)
 
 payload = {
@@ -93,6 +105,10 @@ payload = {
     "mapping_count": len(rows),
     "missing_controls": missing_controls,
     "failed_enforced_controls": failed_controls,
+    "failed_enforced_stale_controls": failed_stale_controls,
+    "failed_enforced_stale_count": len(failed_stale_controls),
+    "advisory_stale_controls": advisory_stale_controls,
+    "advisory_stale_count": len(advisory_stale_controls),
     "controls_report_source": str(controls_file),
     "mappings": rows,
 }

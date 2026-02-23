@@ -294,6 +294,11 @@
       "controlId": "CTRL-069",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "Operational status and transparency summaries expose freshness-proof posture for on-call and audit visibility"
+    },
+    {
+      "controlId": "CTRL-070",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.18.1.3"],
+      "description": "Compliance evidence pack includes stale-evidence metadata so control degradation is explicitly visible to auditors"
     }
   ]
 }

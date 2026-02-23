@@ -421,6 +421,12 @@
       "title": "Operational summaries expose freshness proof posture",
       "enforced": false,
       "required_evidence": ["scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-070",
+      "title": "Compliance evidence report includes stale-evidence metadata",
+      "enforced": false,
+      "required_evidence": ["scripts/compliance_evidence.sh", "README.md"]
     }
   ]
 }
