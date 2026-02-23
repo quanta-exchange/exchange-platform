@@ -8,6 +8,7 @@ use tonic::{transport::Server, Request, Response, Status};
 use trading_core::engine::{CoreConfig, TradingCore};
 use trading_core::kafka::KafkaTradePublisher;
 use trading_core::leader::FencingCoordinator;
+use trading_core::outbox::EventSink;
 
 use trading_core::contracts::exchange::v1::trading_core_service_server::{
     TradingCoreService, TradingCoreServiceServer,
@@ -19,8 +20,24 @@ use trading_core::contracts::exchange::v1::{
 
 struct CoreGrpcService {
     core: Arc<Mutex<TradingCore>>,
-    publisher: Arc<Mutex<KafkaTradePublisher>>,
+    publisher: Arc<Mutex<Box<dyn EventSink + Send>>>,
     publish_retries: usize,
+}
+
+impl CoreGrpcService {
+    fn flush_pending(&self) -> Result<(), Status> {
+        let core = self
+            .core
+            .lock()
+            .map_err(|_| Status::internal("core lock poisoned"))?;
+        let mut publisher = self
+            .publisher
+            .lock()
+            .map_err(|_| Status::internal("publisher lock poisoned"))?;
+        core.publish_pending(&mut **publisher, self.publish_retries)
+            .map_err(|e| Status::internal(format!("publish pending: {e}")))?;
+        Ok(())
+    }
 }
 
 #[tonic::async_trait]
@@ -44,19 +61,7 @@ impl TradingCoreService for CoreGrpcService {
             core.place_order(req)
                 .map_err(|e| Status::internal(format!("place order: {e}")))?
         };
-
-        {
-            let core = self
-                .core
-                .lock()
-                .map_err(|_| Status::internal("core lock poisoned"))?;
-            let mut publisher = self
-                .publisher
-                .lock()
-                .map_err(|_| Status::internal("publisher lock poisoned"))?;
-            core.publish_pending(&mut *publisher, self.publish_retries)
-                .map_err(|e| Status::internal(format!("publish pending: {e}")))?;
-        }
+        self.flush_pending()?;
 
         Ok(Response::new(response))
     }
@@ -73,6 +78,7 @@ impl TradingCoreService for CoreGrpcService {
             core.cancel_order(request.into_inner())
                 .map_err(|e| Status::internal(format!("cancel order: {e}")))?
         };
+        self.flush_pending()?;
         Ok(Response::new(response))
     }
 
@@ -88,6 +94,7 @@ impl TradingCoreService for CoreGrpcService {
             core.set_symbol_mode(request.into_inner())
                 .map_err(|e| Status::internal(format!("set symbol mode: {e}")))?
         };
+        self.flush_pending()?;
         Ok(Response::new(response))
     }
 
@@ -103,6 +110,7 @@ impl TradingCoreService for CoreGrpcService {
             core.cancel_all(request.into_inner())
                 .map_err(|e| Status::internal(format!("cancel all: {e}")))?
         };
+        self.flush_pending()?;
         Ok(Response::new(response))
     }
 }
@@ -116,12 +124,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let kafka_brokers = getenv("CORE_KAFKA_BROKERS", "localhost:29092");
     let kafka_topic = getenv("CORE_KAFKA_TRADE_TOPIC", "core.trade-events.v1");
     let publish_retries = getenv_usize("CORE_PUBLISH_RETRIES", 3);
+    let recent_events_limit = getenv_usize("CORE_RECENT_EVENTS_LIMIT", 4096);
     let stub_trades = getenv_bool("CORE_STUB_TRADES", false);
 
     let mut cfg = CoreConfig::default();
     cfg.symbol = symbol;
     cfg.wal_dir = wal_dir.into();
     cfg.outbox_dir = outbox_dir.into();
+    cfg.recent_events_limit = recent_events_limit;
     cfg.stub_trades = stub_trades;
 
     let core = TradingCore::new(cfg, FencingCoordinator::default())?;
@@ -135,7 +145,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let service = CoreGrpcService {
         core: Arc::new(Mutex::new(core)),
-        publisher: Arc::new(Mutex::new(publisher)),
+        publisher: Arc::new(Mutex::new(Box::new(publisher))),
         publish_retries,
     };
 
@@ -162,4 +172,131 @@ fn getenv_bool(key: &str, fallback: bool) -> bool {
         .ok()
         .and_then(|v| v.parse::<bool>().ok())
         .unwrap_or(fallback)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tempfile::TempDir;
+    use tonic::Request;
+    use trading_core::contracts::exchange::v1::trading_core_service_server::TradingCoreService;
+    use trading_core::contracts::exchange::v1::{
+        CancelAllRequest, CancelOrderRequest, CommandMetadata, OrderType, PlaceOrderRequest,
+        SetSymbolModeRequest, Side, SymbolMode, TimeInForce,
+    };
+
+    struct CountingSink {
+        published: Arc<AtomicUsize>,
+    }
+
+    impl EventSink for CountingSink {
+        fn publish(&mut self, _event: &trading_core::model::CoreEvent) -> Result<(), String> {
+            self.published.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    fn meta(command_id: &str, idem: &str, user_id: &str) -> Option<CommandMetadata> {
+        Some(CommandMetadata {
+            command_id: command_id.to_string(),
+            idempotency_key: idem.to_string(),
+            user_id: user_id.to_string(),
+            symbol: "BTC-KRW".to_string(),
+            ts_server: None,
+            trace_id: format!("trace-{command_id}"),
+            correlation_id: format!("corr-{command_id}"),
+        })
+    }
+
+    fn test_service(tmp: &TempDir, published: Arc<AtomicUsize>) -> CoreGrpcService {
+        let mut cfg = CoreConfig::default();
+        cfg.symbol = "BTC-KRW".to_string();
+        cfg.wal_dir = tmp.path().join("wal");
+        cfg.outbox_dir = tmp.path().join("outbox");
+        let mut core = TradingCore::new(cfg, FencingCoordinator::new()).unwrap();
+        core.set_balance("u1", "BTC", 1_000_000, 0);
+        core.set_balance("u1", "KRW", 1_000_000_000_000, 0);
+        CoreGrpcService {
+            core: Arc::new(Mutex::new(core)),
+            publisher: Arc::new(Mutex::new(Box::new(CountingSink { published }))),
+            publish_retries: 0,
+        }
+    }
+
+    #[tokio::test]
+    async fn cancel_order_flushes_pending_outbox_events() {
+        let tmp = TempDir::new().unwrap();
+        let published = Arc::new(AtomicUsize::new(0));
+        let service = test_service(&tmp, Arc::clone(&published));
+
+        let _ = TradingCoreService::place_order(
+            &service,
+            Request::new(PlaceOrderRequest {
+                meta: meta("place-1", "idem-place-1", "u1"),
+                order_id: "ord-1".to_string(),
+                side: Side::Buy as i32,
+                order_type: OrderType::Limit as i32,
+                price: "100".to_string(),
+                quantity: "1".to_string(),
+                time_in_force: TimeInForce::Gtc as i32,
+            }),
+        )
+        .await
+        .unwrap();
+        let baseline = published.load(Ordering::SeqCst);
+
+        let _ = TradingCoreService::cancel_order(
+            &service,
+            Request::new(CancelOrderRequest {
+                meta: meta("cancel-1", "idem-cancel-1", "u1"),
+                order_id: "ord-1".to_string(),
+            }),
+        )
+        .await
+        .unwrap();
+
+        assert!(published.load(Ordering::SeqCst) > baseline);
+    }
+
+    #[tokio::test]
+    async fn set_symbol_mode_flushes_pending_outbox_events() {
+        let tmp = TempDir::new().unwrap();
+        let published = Arc::new(AtomicUsize::new(0));
+        let service = test_service(&tmp, Arc::clone(&published));
+        let baseline = published.load(Ordering::SeqCst);
+
+        let _ = TradingCoreService::set_symbol_mode(
+            &service,
+            Request::new(SetSymbolModeRequest {
+                meta: meta("mode-1", "idem-mode-1", "admin"),
+                mode: SymbolMode::CancelOnly as i32,
+                reason: "test".to_string(),
+            }),
+        )
+        .await
+        .unwrap();
+
+        assert!(published.load(Ordering::SeqCst) > baseline);
+    }
+
+    #[tokio::test]
+    async fn cancel_all_flushes_pending_outbox_events() {
+        let tmp = TempDir::new().unwrap();
+        let published = Arc::new(AtomicUsize::new(0));
+        let service = test_service(&tmp, Arc::clone(&published));
+        let baseline = published.load(Ordering::SeqCst);
+
+        let _ = TradingCoreService::cancel_all(
+            &service,
+            Request::new(CancelAllRequest {
+                meta: meta("cancel-all-1", "idem-cancel-all-1", "admin"),
+                reason: "test".to_string(),
+            }),
+        )
+        .await
+        .unwrap();
+
+        assert!(published.load(Ordering::SeqCst) > baseline);
+    }
 }

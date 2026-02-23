@@ -94,7 +94,7 @@ impl Outbox {
         Ok(out)
     }
 
-    pub fn publish_pending<S: EventSink>(
+    pub fn publish_pending<S: EventSink + ?Sized>(
         &self,
         sink: &mut S,
         retries: usize,

@@ -32,6 +32,7 @@ pub struct CoreConfig {
     pub wal_dir: PathBuf,
     pub outbox_dir: PathBuf,
     pub max_wal_segment_bytes: u64,
+    pub recent_events_limit: usize,
     pub idempotency_ttl_ms: i64,
     pub risk: RiskConfig,
     pub stub_trades: bool,
@@ -44,6 +45,7 @@ impl Default for CoreConfig {
             wal_dir: PathBuf::from("/tmp/trading-core/wal"),
             outbox_dir: PathBuf::from("/tmp/trading-core/outbox"),
             max_wal_segment_bytes: 8 * 1024 * 1024,
+            recent_events_limit: 4096,
             idempotency_ttl_ms: 5 * 60 * 1000,
             risk: RiskConfig::default(),
             stub_trades: false,
@@ -149,7 +151,7 @@ impl TradingCore {
         Ok(self.outbox.pending_records()?)
     }
 
-    pub fn publish_pending<S: crate::outbox::EventSink>(
+    pub fn publish_pending<S: crate::outbox::EventSink + ?Sized>(
         &self,
         sink: &mut S,
         retries: usize,
@@ -741,12 +743,24 @@ impl TradingCore {
 
         self.wal.append(&record)?; // durable write first (commit line)
         self.outbox.enqueue(record.seq, &events)?; // publish path only after durable WAL
-        self.recent_events.extend(events);
+        self.append_recent_events(events);
         Ok(())
     }
 
     fn append_checkpoint(&mut self, _meta: &CommandMeta, _events: &mut Vec<CoreEvent>) {
         // checkpoint is appended centrally in persist_command
+    }
+
+    fn append_recent_events(&mut self, mut events: Vec<CoreEvent>) {
+        if self.cfg.recent_events_limit == 0 {
+            self.recent_events.clear();
+            return;
+        }
+        self.recent_events.append(&mut events);
+        if self.recent_events.len() > self.cfg.recent_events_limit {
+            let overflow = self.recent_events.len() - self.cfg.recent_events_limit;
+            self.recent_events.drain(0..overflow);
+        }
     }
 
     fn event_order_accepted(&mut self, order: &Order, meta: &CommandMeta) -> CoreEvent {

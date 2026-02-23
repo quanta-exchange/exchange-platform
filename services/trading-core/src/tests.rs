@@ -72,6 +72,7 @@ fn core_config(tmp: &TempDir) -> CoreConfig {
         wal_dir: tmp.path().join("wal"),
         outbox_dir: tmp.path().join("outbox"),
         max_wal_segment_bytes: 1024 * 1024,
+        recent_events_limit: 256,
         idempotency_ttl_ms: 60_000,
         risk: RiskConfig {
             max_open_orders_per_user_symbol: 1_000,
@@ -116,6 +117,33 @@ fn generated_contract_types_compile() {
         causation_id: "cause-1".to_string(),
     };
     assert_eq!(envelope.symbol, "BTC-KRW");
+}
+
+#[test]
+fn recent_events_is_bounded_by_configured_limit() {
+    let tmp = TempDir::new().unwrap();
+    let mut cfg = core_config(&tmp);
+    cfg.recent_events_limit = 8;
+    let mut core = TradingCore::new(cfg, FencingCoordinator::new()).unwrap();
+    core.set_balance("u1", "BTC", 1_000_000, 0);
+    core.set_balance("u1", "KRW", 1_000_000_000_000, 0);
+
+    for idx in 0..20 {
+        let _ = core
+            .place_order(place_req(
+                &format!("cmd-{idx}"),
+                &format!("idem-{idx}"),
+                "u1",
+                &format!("ord-{idx}"),
+                proto::Side::Buy,
+                proto::OrderType::Limit,
+                "100",
+                "1",
+            ))
+            .unwrap();
+    }
+
+    assert_eq!(core.recent_events().len(), 8);
 }
 
 #[test]

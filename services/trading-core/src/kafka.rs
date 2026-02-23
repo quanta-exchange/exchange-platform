@@ -99,11 +99,11 @@ impl TradeExecutedPayload {
             taker_order_id: event.taker_order_id.clone(),
             buyer_user_id: event.buyer_user_id.clone(),
             seller_user_id: event.seller_user_id.clone(),
-            price: parse_i64(&event.price),
-            quantity: parse_i64(&event.quantity),
-            quote_amount: parse_i64(&event.quote_amount),
-            fee_buyer: parse_i64(&event.fee_buyer),
-            fee_seller: parse_i64(&event.fee_seller),
+            price: parse_i64("price", &event.price)?,
+            quantity: parse_i64("quantity", &event.quantity)?,
+            quote_amount: parse_i64("quote_amount", &event.quote_amount)?,
+            fee_buyer: parse_i64("fee_buyer", &event.fee_buyer)?,
+            fee_seller: parse_i64("fee_seller", &event.fee_seller)?,
         })
     }
 }
@@ -127,6 +127,24 @@ impl EventEnvelopePayload {
     }
 }
 
-fn parse_i64(value: &str) -> i64 {
-    value.parse::<i64>().unwrap_or(0)
+fn parse_i64(field: &str, value: &str) -> Result<i64, String> {
+    value
+        .parse::<i64>()
+        .map_err(|e| format!("invalid {field} value '{value}': {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_i64_rejects_invalid_payload_numbers() {
+        let err = parse_i64("price", "not-a-number").unwrap_err();
+        assert!(err.contains("invalid price value"));
+    }
+
+    #[test]
+    fn parse_i64_accepts_valid_payload_numbers() {
+        assert_eq!(parse_i64("quantity", "42").unwrap(), 42);
+    }
 }
