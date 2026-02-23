@@ -513,7 +513,7 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
-- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `exactlyOnceMillion` gates
+- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingIntegrityRunbook`, `exactlyOnceMillion` gates
 - supports report freshness policy via `safety/budgets.yaml`:
   - top-level `freshness.defaultMaxAgeSeconds`
   - per-check override `budgets.<check>.maxAgeSeconds`

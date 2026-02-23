@@ -378,6 +378,12 @@ for key, budget in budgets.items():
         if must_ok and not mapping_integrity_ok:
             entry["ok"] = False
             entry["details"].append("mapping_integrity_not_ok")
+    elif key == "mappingIntegrityRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        runbook_proof_ok = bool(payload.get("proof_ok", False))
+        if must_ok and not runbook_proof_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_integrity_runbook_proof_not_ok")
     elif key == "chaosNetworkPartition":
         must_ok = bool(budget.get("mustBeOk", True))
         partition_ok = bool(payload.get("ok", False))

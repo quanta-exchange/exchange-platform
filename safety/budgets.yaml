@@ -113,6 +113,11 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "mappingIntegrityRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true
+    },
     "chaosNetworkPartition": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -155,6 +160,7 @@
     "policyTamper": "build/policy/prove-policy-tamper-latest.json",
     "complianceEvidence": "build/compliance/compliance-evidence-latest.json",
     "mappingIntegrity": "build/compliance/prove-mapping-integrity-latest.json",
+    "mappingIntegrityRunbook": "build/runbooks/mapping-integrity-latest.json",
     "chaosNetworkPartition": "build/chaos/network-partition-latest.json",
     "chaosRedpandaBounce": "build/chaos/redpanda-broker-bounce-latest.json",
     "adversarial": "build/adversarial/adversarial-tests-latest.json"
