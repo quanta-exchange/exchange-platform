@@ -159,6 +159,7 @@ Gate G1 operational check:
 - Startup guardrails drill: `./runbooks/startup_guardrails.sh`
 - Game-day anomaly drill: `./runbooks/game_day_anomaly.sh`
 - Audit-chain tamper drill: `./runbooks/audit_chain_tamper.sh`
+- Change workflow drill: `./runbooks/change_workflow.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
@@ -293,6 +294,21 @@ Success criteria:
 - output includes `runbook_audit_tamper_ok=true`
 - runbook output contains:
   - `audit-chain-tamper-summary.json` (`baseline_ok=true`, `tamper_detected=true`)
+  - `status-before.json` / `status-after.json`
+
+### 4.7 Change workflow drill
+Purpose:
+- 변경관리 흐름(proposal -> 2인 승인 -> apply -> change audit-chain verify)을 정기적으로 점검
+- 운영 승인 통제와 변경 이력 tamper-evidence를 단일 실행으로 확인
+
+Command:
+- `./runbooks/change_workflow.sh`
+
+Success criteria:
+- output includes `runbook_change_workflow_ok=true`
+- runbook output contains:
+  - `change-workflow-summary.json`
+  - `verify-change-audit-chain-*.json`
   - `status-before.json` / `status-after.json`
 
 ---

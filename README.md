@@ -86,6 +86,8 @@ runbooks/
   load_regression.sh      # load regression automated drill
   game_day_anomaly.sh     # anomaly game-day automated drill
   game_day_anomaly.md     # anomaly game-day drill notes
+  change_workflow.sh      # change workflow (proposal/approval/apply/audit-chain) automated drill
+  change_workflow.md      # change workflow drill notes
   startup_guardrails.sh   # startup guardrails verification drill
   startup_guardrails.md   # startup guardrails drill notes
   ws_drop_spike.sh        # ws drop spike automated drill
@@ -471,9 +473,10 @@ make runbook-crash-recovery
 make runbook-startup-guardrails
 make runbook-game-day-anomaly
 make runbook-audit-tamper
+make runbook-change-workflow
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 
@@ -524,6 +527,14 @@ Apply success output includes:
 - `change_apply_log=...`
 - `change_verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `change_audit_file=build/change-audit/audit.log`
+
+Runbook shortcut:
+```bash
+make runbook-change-workflow
+```
+Outputs:
+- `runbook_change_workflow_ok=true|false`
+- `runbook_output_dir=build/runbooks/change-workflow-<timestamp>`
 
 ### 23) Break-glass emergency mode
 ```bash

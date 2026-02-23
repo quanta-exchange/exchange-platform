@@ -254,6 +254,11 @@
       "controlId": "CTRL-061",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "Change audit-chain health is included in safety budgets and operational status/transparency summaries for continuous monitoring"
+    },
+    {
+      "controlId": "CTRL-062",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code drill validates end-to-end change proposal/approval/apply flow with deterministic change-audit-chain verification evidence"
     }
   ]
 }

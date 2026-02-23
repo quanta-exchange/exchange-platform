@@ -365,6 +365,12 @@
       "title": "Change audit-chain posture is surfaced in safety budgets and operations summaries",
       "enforced": false,
       "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-062",
+      "title": "Change workflow runbook-as-code drill exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/change_workflow.sh", "runbooks/change_workflow.md", "README.md", "RUNBOOK.md", "Makefile"]
     }
   ]
 }

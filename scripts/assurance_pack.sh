@@ -69,6 +69,7 @@ safety_case_sha = (
 startup_guardrails_runbook = newest(root.glob("build/runbooks/startup-guardrails-*/startup-guardrails.log"))
 game_day_anomaly_runbook = newest(root.glob("build/runbooks/game-day-anomaly-*/game-day-anomaly.log"))
 audit_chain_tamper_runbook = newest(root.glob("build/runbooks/audit-chain-tamper-*/audit-chain-tamper.log"))
+change_workflow_runbook = newest(root.glob("build/runbooks/change-workflow-*/change-workflow.log"))
 
 evidence = [
     {"id": "load_smoke", "path": pathlib.Path("build/load/load-smoke.json"), "required": True},
@@ -76,6 +77,7 @@ evidence = [
     {"id": "startup_guardrails_runbook", "path": pathlib.Path(rel(startup_guardrails_runbook)) if startup_guardrails_runbook else None, "required": False},
     {"id": "game_day_anomaly_runbook", "path": pathlib.Path(rel(game_day_anomaly_runbook)) if game_day_anomaly_runbook else None, "required": False},
     {"id": "audit_chain_tamper_runbook", "path": pathlib.Path(rel(audit_chain_tamper_runbook)) if audit_chain_tamper_runbook else None, "required": False},
+    {"id": "change_workflow_runbook", "path": pathlib.Path(rel(change_workflow_runbook)) if change_workflow_runbook else None, "required": False},
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "verify_change_audit_chain", "path": pathlib.Path("build/change-audit/verify-change-audit-chain-latest.json"), "required": False},
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
@@ -153,6 +155,7 @@ pack = {
         {"id": "G21", "text": "Audit-chain tamper drill demonstrates verification failure on modified audit-log copies, confirming tamper detection path."},
         {"id": "G22", "text": "RBAC SoD check enforces role separation constraints and fails on restricted-permission overlaps."},
         {"id": "G23", "text": "Change workflow proposal/approval/apply history is captured with a hash chain and independently verifiable for tamper evidence."},
+        {"id": "G24", "text": "Runbook-as-code drill validates the full change workflow and emits reproducible operational evidence with before/after posture snapshots."},
     ],
 }
 
