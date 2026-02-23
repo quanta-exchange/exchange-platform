@@ -613,6 +613,12 @@
       "title": "Verification and release gates can include exactly-once million runbook evidence",
       "enforced": false,
       "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "runbooks/exactly_once_million_failure.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-101",
+      "title": "Operational status and transparency reports expose exactly-once runbook summary",
+      "enforced": false,
+      "required_evidence": ["runbooks/exactly_once_million_failure.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
     }
   ]
 }

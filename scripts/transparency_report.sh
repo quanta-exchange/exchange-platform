@@ -64,6 +64,7 @@ policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
 network_partition = read_json("build/chaos/network-partition-latest.json")
 redpanda_bounce = read_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
+exactly_once_runbook = read_json("build/runbooks/exactly-once-million-latest.json")
 
 sources = {
     "load": load,
@@ -91,6 +92,7 @@ sources = {
     "network_partition": network_partition,
     "redpanda_bounce": redpanda_bounce,
     "adversarial": adversarial,
+    "exactly_once_runbook": exactly_once_runbook,
 }
 
 email_pattern = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -230,6 +232,9 @@ report = {
                 if adversarial
                 else None
             ),
+            "exactly_once_runbook_proof_ok": bool(exactly_once_runbook.get("proof_ok")) if exactly_once_runbook else None,
+            "exactly_once_runbook_proof_repeats": int(exactly_once_runbook.get("proof_repeats")) if exactly_once_runbook and exactly_once_runbook.get("proof_repeats") is not None else None,
+            "exactly_once_runbook_recommended_action": exactly_once_runbook.get("recommended_action") if exactly_once_runbook else None,
             "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
             "budget_freshness_proof_ok": bool(budget_freshness.get("ok")) if budget_freshness else None,
         },
@@ -264,6 +269,7 @@ report = {
         "network_partition": "build/chaos/network-partition-latest.json",
         "redpanda_bounce": "build/chaos/redpanda-broker-bounce-latest.json",
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
+        "exactly_once_runbook": "build/runbooks/exactly-once-million-latest.json",
     },
 }
 

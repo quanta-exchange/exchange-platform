@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TS_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/runbooks/exactly-once-million-${TS_ID}}"
 LOG_FILE="$OUT_DIR/exactly-once-million.log"
+LATEST_SUMMARY_FILE="$ROOT_DIR/build/runbooks/exactly-once-million-latest.json"
 
 RUNBOOK_REPEATS="${RUNBOOK_REPEATS:-1000000}"
 RUNBOOK_CONCURRENCY="${RUNBOOK_CONCURRENCY:-64}"
@@ -109,6 +110,7 @@ with open(summary_file, "w", encoding="utf-8") as f:
     json.dump(summary, f, indent=2, sort_keys=True)
     f.write("\n")
 PY
+  cp "$SUMMARY_FILE" "$LATEST_SUMMARY_FILE"
 
   "$ROOT_DIR/scripts/system_status.sh" --out-dir "$OUT_DIR" --report-name "status-after.json" || true
 
@@ -173,6 +175,8 @@ PY
   echo "exactly_once_million_proof_runner_exit_code=$SUMMARY_PROOF_RUNNER_EXIT_CODE"
   echo "runbook_budget_ok=$BUDGET_OK"
   echo "exactly_once_million_recommended_action=$RECOMMENDED_ACTION"
+  echo "exactly_once_million_summary_file=$SUMMARY_FILE"
+  echo "exactly_once_million_summary_latest=$LATEST_SUMMARY_FILE"
   echo "runbook_exactly_once_million_ok=$RUNBOOK_OK"
   echo "runbook_output_dir=$OUT_DIR"
 

@@ -553,7 +553,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.evidence_pack`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `exactly_once_million`, `controls_freshness`, `budget_freshness`)
+- report includes `checks.compliance.evidence_pack`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `exactly_once_million`, `controls_freshness`, `budget_freshness`)
 
 ### 17.1) Anomaly detector
 ```bash
@@ -619,7 +619,7 @@ Success output includes:
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
 - integrity summary includes `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20) External replay demo
 ```bash
@@ -702,6 +702,8 @@ Outputs:
 - `runbook_exactly_once_million_ok=true|false`
 - `exactly_once_million_proof_ok=true|false`
 - `exactly_once_million_recommended_action=...`
+- `exactly_once_million_summary_file=build/runbooks/exactly-once-million-<timestamp>/exactly-once-million-summary.json`
+- `exactly_once_million_summary_latest=build/runbooks/exactly-once-million-latest.json`
 - `runbook_output_dir=build/runbooks/exactly-once-million-<timestamp>`
 
 Runbook shortcut:

@@ -264,6 +264,7 @@ policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest
 network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
 redpanda_bounce_latest = read_latest_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
+exactly_once_runbook_latest = read_latest_json("build/runbooks/exactly-once-million-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
@@ -429,6 +430,25 @@ report = {
                     None,
                 ),
                 "error": adversarial_latest.get("error"),
+            },
+            "runbooks": {
+                "exactly_once_million": {
+                    "present": exactly_once_runbook_latest.get("present", False),
+                    "path": exactly_once_runbook_latest.get("path"),
+                    "proof_ok": (exactly_once_runbook_latest.get("payload") or {}).get(
+                        "proof_ok"
+                    ),
+                    "proof_repeats": (exactly_once_runbook_latest.get("payload") or {}).get(
+                        "proof_repeats"
+                    ),
+                    "proof_concurrency": (
+                        exactly_once_runbook_latest.get("payload") or {}
+                    ).get("proof_concurrency"),
+                    "recommended_action": (
+                        exactly_once_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": exactly_once_runbook_latest.get("error"),
+                }
             },
             "proofs": {
                 "determinism": {

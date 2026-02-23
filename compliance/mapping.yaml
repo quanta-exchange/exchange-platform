@@ -499,6 +499,11 @@
       "controlId": "CTRL-100",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Verification and release gates can explicitly execute exactly-once million runbook drills and surface their evidence context in promotion decisions"
+    },
+    {
+      "controlId": "CTRL-101",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
+      "description": "System status and transparency reports expose exactly-once runbook summary context so on-call and governance views can track duplicate-proof drill outcomes"
     }
   ]
 }

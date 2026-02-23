@@ -24,6 +24,8 @@ make runbook-exactly-once-million
 - `exactly_once_million_proof_concurrency=<n>`
 - `exactly_once_million_proof_runner_exit_code=<code>`
 - `exactly_once_million_recommended_action=...`
+- `exactly_once_million_summary_file=build/runbooks/exactly-once-million-<timestamp>/exactly-once-million-summary.json`
+- `exactly_once_million_summary_latest=build/runbooks/exactly-once-million-latest.json`
 - `runbook_output_dir=build/runbooks/exactly-once-million-<timestamp>`
 
 ## Recommended actions
