@@ -13,6 +13,7 @@ Optional inputs:
 - `APPLY_COMMAND="echo dry-run"`: 적용 명령 교체
 - `REQUESTED_BY/APPROVER_A/APPROVER_B/APPLIED_BY`: 주체명 커스터마이징
 - `OUT_DIR=...`: 산출물 경로 고정
+- `RUNBOOK_SKIP_VERIFICATION=false`: `apply_change` 단계에서 full verification 실행
 
 ## What It Does
 1. 실행 전 `system_status.sh` 스냅샷(`status-before.json`) 저장

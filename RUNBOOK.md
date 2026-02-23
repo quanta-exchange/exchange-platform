@@ -307,6 +307,7 @@ Purpose:
 
 Command:
 - `./runbooks/change_workflow.sh`
+- full verification apply: `RUNBOOK_SKIP_VERIFICATION=false ./runbooks/change_workflow.sh`
 
 Success criteria:
 - output includes `runbook_change_workflow_ok=true`

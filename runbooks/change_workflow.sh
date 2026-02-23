@@ -12,6 +12,7 @@ APPROVER_A="${APPROVER_A:-runbook-approver-a}"
 APPROVER_B="${APPROVER_B:-runbook-approver-b}"
 APPLIED_BY="${APPLIED_BY:-runbook-applier}"
 APPLY_COMMAND="${APPLY_COMMAND:-echo runbook-apply-ok}"
+RUNBOOK_SKIP_VERIFICATION="${RUNBOOK_SKIP_VERIFICATION:-true}"
 
 CHANGE_ROOT="$OUT_DIR/changes/requests"
 CHANGE_AUDIT_FILE="$OUT_DIR/change-audit.log"
@@ -47,11 +48,15 @@ mkdir -p "$OUT_DIR"
     --approver "$APPROVER_B" \
     --note "runbook approval B"
 
-  CHANGE_AUDIT_FILE="$CHANGE_AUDIT_FILE" "$ROOT_DIR/scripts/apply_change.sh" \
-    --change-dir "$CHANGE_DIR" \
-    --command "$APPLY_COMMAND" \
-    --skip-verification \
+  APPLY_ARGS=(
+    --change-dir "$CHANGE_DIR"
+    --command "$APPLY_COMMAND"
     --applied-by "$APPLIED_BY"
+  )
+  if [[ "$RUNBOOK_SKIP_VERIFICATION" == "true" ]]; then
+    APPLY_ARGS+=(--skip-verification)
+  fi
+  CHANGE_AUDIT_FILE="$CHANGE_AUDIT_FILE" "$ROOT_DIR/scripts/apply_change.sh" "${APPLY_ARGS[@]}"
 
   VERIFY_OUT="$(
     "$ROOT_DIR/scripts/verify_change_audit_chain.sh" \
@@ -66,7 +71,7 @@ mkdir -p "$OUT_DIR"
   VERIFY_HEAD="$(printf '%s\n' "$VERIFY_OUT" | awk -F= '/^verify_change_audit_chain_head=/{print $2}')"
 
   SUMMARY_FILE="$OUT_DIR/change-workflow-summary.json"
-  python3 - "$SUMMARY_FILE" "$CHANGE_ID" "$CHANGE_DIR" "$CHANGE_AUDIT_FILE" "$VERIFY_REPORT" "$VERIFY_HEAD" <<'PY'
+  python3 - "$SUMMARY_FILE" "$CHANGE_ID" "$CHANGE_DIR" "$CHANGE_AUDIT_FILE" "$VERIFY_REPORT" "$VERIFY_HEAD" "$RUNBOOK_SKIP_VERIFICATION" <<'PY'
 import json
 import pathlib
 import sys
@@ -81,6 +86,7 @@ payload = {
     "change_audit_file": sys.argv[4],
     "verify_change_audit_chain_report": sys.argv[5],
     "verify_change_audit_chain_head": sys.argv[6],
+    "verification_skipped": sys.argv[7].lower() == "true",
 }
 summary_file.parent.mkdir(parents=True, exist_ok=True)
 with open(summary_file, "w", encoding="utf-8") as f:

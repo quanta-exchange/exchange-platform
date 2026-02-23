@@ -575,6 +575,8 @@ Apply success output includes:
 Runbook shortcut:
 ```bash
 make runbook-change-workflow
+# include full verification in apply step:
+RUNBOOK_SKIP_VERIFICATION=false make runbook-change-workflow
 ```
 Outputs:
 - `runbook_change_workflow_ok=true|false`

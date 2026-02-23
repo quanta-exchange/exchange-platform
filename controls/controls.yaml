@@ -464,6 +464,12 @@
       "enforced": false,
       "max_evidence_age_seconds": 2592000,
       "required_evidence": ["scripts/prove_exactly_once_million.sh", "scripts/exactly_once_stress.sh", "build/exactly-once/prove-exactly-once-million-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-077",
+      "title": "Change workflow runbook can execute apply with full verification",
+      "enforced": false,
+      "required_evidence": ["runbooks/change_workflow.sh", "runbooks/change_workflow.md", "README.md", "RUNBOOK.md"]
     }
   ]
 }
