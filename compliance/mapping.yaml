@@ -309,6 +309,11 @@
       "controlId": "CTRL-072",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Safety budget load policy requires threshold execution metadata and minimum successful order counts to avoid trusting incomplete load artifacts"
+    },
+    {
+      "controlId": "CTRL-073",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.12.4.1"],
+      "description": "Release gate report embeds safety budget violation context so blocked promotions include concrete budget failure evidence"
     }
   ]
 }

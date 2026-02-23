@@ -601,6 +601,7 @@ Outputs:
 - `release_gate_latest=build/release-gate/release-gate-latest.json`
 - `release_gate_ok=true|false`
 - report includes control health counters: `controls_advisory_missing_count`, `controls_advisory_stale_count`, `controls_failed_enforced_stale_count`
+- report includes safety budget context: `safety_budget_ok`, `safety_budget_violations`
 
 ### 26) Legal archive capture + verify
 ```bash

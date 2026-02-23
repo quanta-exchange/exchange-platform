@@ -115,9 +115,12 @@ with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
 
 controls_report_path = summary.get("artifacts", {}).get("controls_check_report")
+budget_report_path = summary.get("artifacts", {}).get("safety_budget_report")
 controls_advisory_missing = None
 controls_advisory_stale = None
 controls_failed_enforced_stale = None
+safety_budget_ok = None
+safety_budget_violations = []
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -130,6 +133,15 @@ if controls_report_path:
         controls_failed_enforced_stale = int(
             controls_payload.get("failed_enforced_stale_count", 0)
         )
+if budget_report_path:
+    candidate = pathlib.Path(budget_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            budget_payload = json.load(f)
+        safety_budget_ok = bool(budget_payload.get("ok", False))
+        safety_budget_violations = list(budget_payload.get("violations", []) or [])
 
 controls_gate_ok = True
 if strict_controls:
@@ -150,6 +162,8 @@ payload = {
     "controls_advisory_missing_count": controls_advisory_missing,
     "controls_advisory_stale_count": controls_advisory_stale,
     "controls_failed_enforced_stale_count": controls_failed_enforced_stale,
+    "safety_budget_ok": safety_budget_ok,
+    "safety_budget_violations": safety_budget_violations,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),
