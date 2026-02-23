@@ -30,6 +30,18 @@
       "minExecutedRuns": 1,
       "maxDistinctHashes": 1
     },
+    "idempotencyScope": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "minPassed": 1
+    },
+    "latchApproval": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "maxMissingTests": 0
+    },
     "exactlyOnceMillion": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -146,6 +158,8 @@
     "dr": "build/dr/dr-report.json",
     "invariants": "build/invariants/ledger-invariants.json",
     "determinism": "build/determinism/prove-determinism-latest.json",
+    "idempotencyScope": "build/idempotency/prove-idempotency-latest.json",
+    "latchApproval": "build/latch/prove-latch-approval-latest.json",
     "exactlyOnceMillion": "build/exactly-once/prove-exactly-once-million-latest.json",
     "invariantsSummary": "build/invariants/invariants-summary.json",
     "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",

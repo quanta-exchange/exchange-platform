@@ -643,6 +643,12 @@
       "title": "Safety budget tracks mapping integrity runbook proof freshness and status",
       "enforced": false,
       "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "runbooks/mapping_integrity_failure.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-106",
+      "title": "Idempotency and latch proof artifacts are surfaced in release/status/transparency and safety budgets",
+      "enforced": false,
+      "required_evidence": ["safety/budgets.yaml", "scripts/safety_budget_check.sh", "scripts/release_gate.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/prove_idempotency_scope.sh", "scripts/prove_latch_approval.sh", "README.md"]
     }
   ]
 }

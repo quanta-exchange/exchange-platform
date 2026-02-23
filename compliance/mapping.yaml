@@ -524,6 +524,11 @@
       "controlId": "CTRL-105",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Safety budget checks include mapping integrity runbook proof artifacts so stale or failed runbook evidence is detected before release trust decisions"
+    },
+    {
+      "controlId": "CTRL-106",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
+      "description": "Idempotency scope and latch approval proof artifacts are budgeted and surfaced in release/status/transparency contexts for operational trust decisions"
     }
   ]
 }

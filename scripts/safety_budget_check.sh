@@ -196,6 +196,38 @@ for key, budget in budgets.items():
             entry["details"].append(
                 f"determinism_distinct_hashes={len(distinct_hashes)} > {max_distinct_hashes}"
             )
+    elif key == "idempotencyScope":
+        must_ok = bool(budget.get("mustBeOk", True))
+        idempotency_ok = bool(payload.get("ok", False))
+        passed = int(payload.get("passed", 0))
+        failed = int(payload.get("failed", 0))
+        if must_ok and not idempotency_ok:
+            entry["ok"] = False
+            entry["details"].append("idempotency_scope_not_ok")
+        min_passed = int(budget.get("minPassed", 1))
+        if passed < min_passed:
+            entry["ok"] = False
+            entry["details"].append(f"idempotency_passed={passed} < {min_passed}")
+        if failed > 0:
+            entry["ok"] = False
+            entry["details"].append(f"idempotency_failed={failed}")
+    elif key == "latchApproval":
+        must_ok = bool(budget.get("mustBeOk", True))
+        latch_ok = bool(payload.get("ok", False))
+        missing_tests = len(payload.get("missing_tests", []) or [])
+        failed_tests = len(payload.get("failed_tests", []) or [])
+        if must_ok and not latch_ok:
+            entry["ok"] = False
+            entry["details"].append("latch_approval_not_ok")
+        max_missing_tests = int(budget.get("maxMissingTests", 0))
+        if missing_tests > max_missing_tests:
+            entry["ok"] = False
+            entry["details"].append(
+                f"latch_missing_tests={missing_tests} > {max_missing_tests}"
+            )
+        if failed_tests > 0:
+            entry["ok"] = False
+            entry["details"].append(f"latch_failed_tests={failed_tests}")
     elif key == "exactlyOnceMillion":
         must_ok = bool(budget.get("mustBeOk", True))
         exactly_once_ok = bool(payload.get("ok", False))

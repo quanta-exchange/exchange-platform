@@ -223,6 +223,12 @@ redpanda_bounce_recovered = None
 determinism_ok = None
 determinism_executed_runs = None
 determinism_distinct_hash_count = None
+idempotency_scope_ok = None
+idempotency_scope_passed = None
+idempotency_scope_failed = None
+latch_approval_ok = None
+latch_approval_missing_tests_count = None
+latch_approval_failed_tests_count = None
 exactly_once_million_ok = None
 exactly_once_million_repeats = None
 exactly_once_million_concurrency = None
@@ -342,6 +348,28 @@ if determinism_report_path:
         determinism_ok = bool(determinism_payload.get("ok", False))
         determinism_executed_runs = determinism_payload.get("executed_runs")
         determinism_distinct_hash_count = len(determinism_payload.get("distinct_hashes", []) or [])
+idempotency_scope_report_path = summary.get("artifacts", {}).get("prove_idempotency_report")
+if idempotency_scope_report_path:
+    candidate = pathlib.Path(idempotency_scope_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            idempotency_payload = json.load(f)
+        idempotency_scope_ok = bool(idempotency_payload.get("ok", False))
+        idempotency_scope_passed = idempotency_payload.get("passed")
+        idempotency_scope_failed = idempotency_payload.get("failed")
+latch_approval_report_path = summary.get("artifacts", {}).get("prove_latch_approval_report")
+if latch_approval_report_path:
+    candidate = pathlib.Path(latch_approval_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            latch_payload = json.load(f)
+        latch_approval_ok = bool(latch_payload.get("ok", False))
+        latch_approval_missing_tests_count = len(latch_payload.get("missing_tests", []) or [])
+        latch_approval_failed_tests_count = len(latch_payload.get("failed_tests", []) or [])
 exactly_once_million_report_path = summary.get("artifacts", {}).get(
     "prove_exactly_once_million_report"
 )
@@ -445,6 +473,12 @@ payload = {
     "determinism_ok": determinism_ok,
     "determinism_executed_runs": determinism_executed_runs,
     "determinism_distinct_hash_count": determinism_distinct_hash_count,
+    "idempotency_scope_ok": idempotency_scope_ok,
+    "idempotency_scope_passed": idempotency_scope_passed,
+    "idempotency_scope_failed": idempotency_scope_failed,
+    "latch_approval_ok": latch_approval_ok,
+    "latch_approval_missing_tests_count": latch_approval_missing_tests_count,
+    "latch_approval_failed_tests_count": latch_approval_failed_tests_count,
     "exactly_once_million_ok": exactly_once_million_ok,
     "exactly_once_million_repeats": exactly_once_million_repeats,
     "exactly_once_million_concurrency": exactly_once_million_concurrency,
