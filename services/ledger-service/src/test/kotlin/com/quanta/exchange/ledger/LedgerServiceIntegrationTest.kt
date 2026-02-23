@@ -18,6 +18,9 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import java.time.Instant
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -423,6 +426,57 @@ class LedgerServiceIntegrationTest {
             )
         }
         assertEquals("unsupported_correction_mode", error.message)
+    }
+
+    @Test
+    fun concurrentApprovalsRemainConsistent() {
+        assertTrue(ledgerService.adjustAvailable(adjustment("corr-race-base", "alice", "USD", 500)))
+        ledgerService.createCorrection(
+            correctionId = "corr-race-1",
+            originalEntryId = "le_adj_corr-race-base",
+            mode = "REVERSAL",
+            reason = "race check",
+            ticketId = "TKT-RACE",
+            requestedBy = "ops-a",
+        )
+
+        val pool = Executors.newFixedThreadPool(2)
+        val start = java.util.concurrent.CountDownLatch(1)
+        val errorRef = AtomicReference<Throwable?>()
+
+        try {
+            val futures = listOf("ops-b", "ops-c").map { approver ->
+                pool.submit {
+                    start.await(2, TimeUnit.SECONDS)
+                    try {
+                        ledgerService.approveCorrection("corr-race-1", approver)
+                    } catch (ex: Throwable) {
+                        errorRef.compareAndSet(null, ex)
+                    }
+                }
+            }
+            start.countDown()
+            futures.forEach { it.get(5, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+        }
+
+        val error = errorRef.get()
+        if (error != null) {
+            throw AssertionError("concurrent approval failed", error)
+        }
+
+        val row = jdbc.queryForMap(
+            "SELECT status, approver1, approver2 FROM correction_requests WHERE correction_id = ?",
+            "corr-race-1",
+        )
+        val status = row["status"]?.toString()
+        val approver1 = row["approver1"]?.toString()
+        val approver2 = row["approver2"]?.toString()
+        assertEquals("APPROVED", status)
+        assertTrue(!approver1.isNullOrBlank())
+        assertTrue(!approver2.isNullOrBlank())
+        assertEquals(setOf("ops-b", "ops-c"), setOf(approver1!!, approver2!!))
     }
 
     private fun seedBalancesAndReserves() {

@@ -526,7 +526,7 @@ class LedgerRepository(
 
     @Transactional
     fun approveCorrection(correctionId: String, approver: String): CorrectionRequest {
-        val current = getCorrection(correctionId)
+        val current = getCorrectionForUpdate(correctionId)
         if (current.status == "APPLIED") {
             return current
         }
@@ -574,19 +574,20 @@ class LedgerRepository(
             FROM correction_requests
             WHERE correction_id = ?
             """.trimIndent(),
-            { rs, _ ->
-                CorrectionRequest(
-                    correctionId = rs.getString("correction_id"),
-                    originalEntryId = rs.getString("original_entry_id"),
-                    mode = rs.getString("mode"),
-                    reason = rs.getString("reason"),
-                    ticketId = rs.getString("ticket_id"),
-                    requestedBy = rs.getString("requested_by"),
-                    approver1 = rs.getString("approver1"),
-                    approver2 = rs.getString("approver2"),
-                    status = rs.getString("status"),
-                )
-            },
+            { rs, _ -> toCorrectionRequest(rs) },
+            correctionId,
+        )!!
+    }
+
+    private fun getCorrectionForUpdate(correctionId: String): CorrectionRequest {
+        return jdbc.queryForObject(
+            """
+            SELECT correction_id, original_entry_id, mode, reason, ticket_id, requested_by, approver1, approver2, status
+            FROM correction_requests
+            WHERE correction_id = ?
+            FOR UPDATE
+            """.trimIndent(),
+            { rs, _ -> toCorrectionRequest(rs) },
             correctionId,
         )!!
     }
@@ -669,6 +670,20 @@ class LedgerRepository(
             lastSettledSeq = lastSettledSeq,
             gap = lastEngineSeq - lastSettledSeq,
             updatedAt = updatedAt?.toInstant(),
+        )
+    }
+
+    private fun toCorrectionRequest(rs: ResultSet): CorrectionRequest {
+        return CorrectionRequest(
+            correctionId = rs.getString("correction_id"),
+            originalEntryId = rs.getString("original_entry_id"),
+            mode = rs.getString("mode"),
+            reason = rs.getString("reason"),
+            ticketId = rs.getString("ticket_id"),
+            requestedBy = rs.getString("requested_by"),
+            approver1 = rs.getString("approver1"),
+            approver2 = rs.getString("approver2"),
+            status = rs.getString("status"),
         )
     }
 
