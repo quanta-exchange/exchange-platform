@@ -50,6 +50,8 @@ scripts/
 runbooks/
   lag_spike.sh            # reconciliation lag spike automated drill
   ws_drop_spike.sh        # ws drop spike automated drill
+tools/external-replay/
+  external_replay_demo.sh # external verifier demo for safety-case artifacts
 policies/
   trading-policy.v1.json  # baseline policy-as-code document
 safety/
@@ -306,6 +308,14 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
+
+### 20) External replay demo
+```bash
+make external-replay-demo
+```
+Success output includes:
+- `external_replay_demo_report=build/external-replay/<timestamp>/external-replay-demo.json`
+- `external_replay_demo_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

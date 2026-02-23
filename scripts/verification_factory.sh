@@ -83,6 +83,9 @@ HAS_FAILURE=false
 if ! run_step "safety-case" "${SAFETY_CASE_CMD[@]}"; then
   HAS_FAILURE=true
 fi
+if ! run_step "external-replay-demo" "$ROOT_DIR/tools/external-replay/external_replay_demo.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "controls-check" "$ROOT_DIR/scripts/controls_check.sh"; then
   HAS_FAILURE=true
 fi
@@ -100,6 +103,7 @@ if ! run_step "assurance-pack" "$ROOT_DIR/scripts/assurance_pack.sh"; then
 fi
 
 SAFETY_LOG="$LOG_DIR/safety-case.log"
+EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
 COMPLIANCE_LOG="$LOG_DIR/compliance-evidence.log"
 TRANSPARENCY_LOG="$LOG_DIR/transparency-report.log"
@@ -108,13 +112,14 @@ ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
 SAFETY_MANIFEST="$(extract_value "safety_case_manifest" "$SAFETY_LOG")"
 SAFETY_ARTIFACT="$(extract_value "safety_case_artifact" "$SAFETY_LOG")"
+EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL_REPLAY_LOG")"
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 COMPLIANCE_REPORT="$(extract_value "compliance_evidence_report" "$COMPLIANCE_LOG")"
 TRANSPARENCY_REPORT="$(extract_value "transparency_report_file" "$TRANSPARENCY_LOG")"
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$CONTROLS_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$EXTERNAL_REPLAY_REPORT" "$CONTROLS_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" <<'PY'
 import json
 import sys
 
@@ -125,11 +130,12 @@ run_extended_checks = sys.argv[4].lower() == "true"
 steps_tsv = sys.argv[5]
 safety_manifest = sys.argv[6]
 safety_artifact = sys.argv[7]
-controls_report = sys.argv[8]
-compliance_report = sys.argv[9]
-transparency_report = sys.argv[10]
-safety_budget_report = sys.argv[11]
-assurance_json = sys.argv[12]
+external_replay_report = sys.argv[8]
+controls_report = sys.argv[9]
+compliance_report = sys.argv[10]
+transparency_report = sys.argv[11]
+safety_budget_report = sys.argv[12]
+assurance_json = sys.argv[13]
 
 steps = []
 ok = True
@@ -158,6 +164,7 @@ summary = {
     "artifacts": {
         "safety_case_manifest": safety_manifest or None,
         "safety_case_artifact": safety_artifact or None,
+        "external_replay_report": external_replay_report or None,
         "controls_check_report": controls_report or None,
         "compliance_evidence_report": compliance_report or None,
         "transparency_report": transparency_report or None,
