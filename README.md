@@ -321,6 +321,9 @@ Configure auth in env:
 - `EDGE_KAFKA_BROKERS=localhost:29092` (core trade event consume)
 - `EDGE_KAFKA_TRADE_TOPIC=core.trade-events.v1`
 - `EDGE_KAFKA_GROUP_ID=edge-trades-v1`
+- `EDGE_ORDER_RETENTION_MINUTES=1440` (terminal order record TTL in edge memory)
+- `EDGE_ORDER_MAX_RECORDS=100000` (in-memory order map upper bound)
+- `EDGE_ORDER_GC_INTERVAL_SEC=30` (order record GC cadence)
 - `EDGE_WS_MAX_SUBSCRIPTIONS=64` (per connection)
 - `EDGE_WS_COMMAND_RATE_LIMIT=240` (commands per window)
 - `EDGE_WS_COMMAND_WINDOW_SEC=60`

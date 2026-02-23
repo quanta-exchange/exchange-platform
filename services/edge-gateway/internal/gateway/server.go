@@ -84,6 +84,9 @@ type Config struct {
 	KafkaBrokers        string
 	KafkaTradeTopic     string
 	KafkaGroupID        string
+	OrderRetention      time.Duration
+	OrderMaxRecords     int
+	OrderGCInterval     time.Duration
 }
 
 type OrderRequest struct {
@@ -146,6 +149,7 @@ type OrderRecord struct {
 	Side            string  `json:"-"`
 	Qty             float64 `json:"-"`
 	FilledQty       float64 `json:"filledQty,omitempty"`
+	TerminalAt      int64   `json:"-"`
 }
 
 type tradeEventEnvelope struct {
@@ -259,6 +263,7 @@ type state struct {
 	replayDetected     uint64
 	wsPolicyCloses     uint64
 	wsRateLimitCloses  uint64
+	nextOrderGcAtMs    int64
 }
 
 type wsSubscription struct {
@@ -472,6 +477,15 @@ func New(cfg Config) (*Server, error) {
 	}
 	if cfg.KafkaGroupID == "" {
 		cfg.KafkaGroupID = "edge-trades-v1"
+	}
+	if cfg.OrderRetention <= 0 {
+		cfg.OrderRetention = 24 * time.Hour
+	}
+	if cfg.OrderMaxRecords <= 0 {
+		cfg.OrderMaxRecords = 100_000
+	}
+	if cfg.OrderGCInterval <= 0 {
+		cfg.OrderGCInterval = 30 * time.Second
 	}
 
 	wsAllowedOrigins := map[string]struct{}{}
@@ -1621,6 +1635,10 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	if statusUpper == "PARTIAL" {
 		statusUpper = "PARTIALLY_FILLED"
 	}
+	terminalAt := int64(0)
+	if isTerminalOrderStatus(statusUpper) {
+		terminalAt = time.Now().UnixMilli()
+	}
 	if (!coreResp.Accepted || statusUpper == "REJECTED" || statusUpper == "CANCELED") && reserveCurrency != "" && reserveAmount > 0 {
 		s.releaseReserve(apiKey, reserveCurrency, reserveAmount)
 		reserveCurrency = ""
@@ -1639,10 +1657,12 @@ func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		ReserveAmount:   reserveAmount,
 		Side:            strings.ToUpper(strings.TrimSpace(req.Side)),
 		Qty:             qty,
+		TerminalAt:      terminalAt,
 	}
 	s.state.mu.Lock()
 	s.state.orders[coreResp.OrderId] = record
 	s.state.ordersTotal++
+	s.pruneOrdersLocked(time.Now().UnixMilli())
 	s.state.mu.Unlock()
 
 	resp := OrderResponse{
@@ -1751,12 +1771,18 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		record.Status = "CANCELED"
 		record.Seq = coreResp.Seq
 		record.CanceledAt = canceledAt
+		if canceledAt > 0 {
+			record.TerminalAt = canceledAt
+		} else {
+			record.TerminalAt = time.Now().UnixMilli()
+		}
 		releaseAmount := record.ReserveAmount - record.ReserveConsumed
 		if releaseAmount < 0 {
 			releaseAmount = 0
 		}
 		record.ReserveAmount -= releaseAmount
 		s.state.orders[orderID] = record
+		s.pruneOrdersLocked(time.Now().UnixMilli())
 		s.state.mu.Unlock()
 
 		if releaseAmount > 0 && record.ReserveCurrency != "" && record.OwnerUserID != "" {
@@ -2271,6 +2297,7 @@ func (s *Server) applyOrderFill(orderID string, fillQty, fillPrice int64, seq ui
 		if record.Qty > 0 && record.FilledQty >= record.Qty-1e-9 {
 			record.FilledQty = record.Qty
 			record.Status = "FILLED"
+			record.TerminalAt = time.Now().UnixMilli()
 			remainingReserve := record.ReserveAmount - record.ReserveConsumed
 			if remainingReserve > 1e-9 && record.OwnerUserID != "" && record.ReserveCurrency != "" {
 				release = &reserveRelease{
@@ -2288,12 +2315,81 @@ func (s *Server) applyOrderFill(orderID string, fillQty, fillPrice int64, seq ui
 			record.Seq = seq
 		}
 		s.state.orders[orderID] = record
+		s.pruneOrdersLocked(time.Now().UnixMilli())
 	}
 	s.state.mu.Unlock()
 
 	if release != nil {
 		s.releaseReserve(release.userID, release.currency, release.amount)
 	}
+}
+
+func isTerminalOrderStatus(status string) bool {
+	normalized := strings.ToUpper(strings.TrimSpace(status))
+	return normalized == "FILLED" || normalized == "CANCELED" || normalized == "REJECTED"
+}
+
+func (s *Server) pruneOrdersLocked(nowMs int64) {
+	if s.cfg.OrderMaxRecords <= 0 {
+		return
+	}
+	if len(s.state.orders) == 0 {
+		s.state.nextOrderGcAtMs = nowMs + s.cfg.OrderGCInterval.Milliseconds()
+		return
+	}
+	if len(s.state.orders) <= s.cfg.OrderMaxRecords && nowMs < s.state.nextOrderGcAtMs {
+		return
+	}
+
+	retentionCutoff := nowMs - s.cfg.OrderRetention.Milliseconds()
+	if retentionCutoff < 0 {
+		retentionCutoff = 0
+	}
+
+	for orderID, record := range s.state.orders {
+		if !isTerminalOrderStatus(record.Status) {
+			continue
+		}
+		if record.TerminalAt > 0 && record.TerminalAt <= retentionCutoff {
+			delete(s.state.orders, orderID)
+		}
+	}
+
+	if len(s.state.orders) > s.cfg.OrderMaxRecords {
+		type terminalRecord struct {
+			orderID    string
+			terminalAt int64
+		}
+		terminal := make([]terminalRecord, 0, len(s.state.orders))
+		for orderID, record := range s.state.orders {
+			if !isTerminalOrderStatus(record.Status) {
+				continue
+			}
+			terminalAt := record.TerminalAt
+			if terminalAt <= 0 {
+				terminalAt = record.CanceledAt
+			}
+			if terminalAt <= 0 {
+				terminalAt = record.AcceptedAt
+			}
+			terminal = append(terminal, terminalRecord{
+				orderID:    orderID,
+				terminalAt: terminalAt,
+			})
+		}
+		sort.Slice(terminal, func(i, j int) bool {
+			if terminal[i].terminalAt == terminal[j].terminalAt {
+				return terminal[i].orderID < terminal[j].orderID
+			}
+			return terminal[i].terminalAt < terminal[j].terminalAt
+		})
+		need := len(s.state.orders) - s.cfg.OrderMaxRecords
+		for i := 0; i < need && i < len(terminal); i++ {
+			delete(s.state.orders, terminal[i].orderID)
+		}
+	}
+
+	s.state.nextOrderGcAtMs = nowMs + s.cfg.OrderGCInterval.Milliseconds()
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {

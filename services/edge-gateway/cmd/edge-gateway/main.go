@@ -47,6 +47,9 @@ func main() {
 		KafkaBrokers:       getenv("EDGE_KAFKA_BROKERS", ""),
 		KafkaTradeTopic:    getenv("EDGE_KAFKA_TRADE_TOPIC", "core.trade-events.v1"),
 		KafkaGroupID:       getenv("EDGE_KAFKA_GROUP_ID", "edge-trades-v1"),
+		OrderRetention:     time.Duration(getenvInt("EDGE_ORDER_RETENTION_MINUTES", 1440)) * time.Minute,
+		OrderMaxRecords:    getenvInt("EDGE_ORDER_MAX_RECORDS", 100000),
+		OrderGCInterval:    time.Duration(getenvInt("EDGE_ORDER_GC_INTERVAL_SEC", 30)) * time.Second,
 	}
 	srv, err := gateway.New(cfg)
 	if err != nil {

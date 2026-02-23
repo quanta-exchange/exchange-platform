@@ -812,6 +812,82 @@ func TestOriginAllowed(t *testing.T) {
 	}
 }
 
+func TestPruneOrdersLockedDropsExpiredTerminalOrders(t *testing.T) {
+	now := time.Now().UnixMilli()
+	s := &Server{
+		cfg: Config{
+			OrderRetention:  1 * time.Second,
+			OrderMaxRecords: 10,
+			OrderGCInterval: 0,
+		},
+		state: &state{
+			orders: map[string]OrderRecord{
+				"open":       {OrderID: "open", Status: "ACCEPTED"},
+				"old-fill":   {OrderID: "old-fill", Status: "FILLED", TerminalAt: now - 5_000},
+				"new-cancel": {OrderID: "new-cancel", Status: "CANCELED", TerminalAt: now - 100},
+			},
+		},
+	}
+
+	s.state.mu.Lock()
+	s.pruneOrdersLocked(now)
+	_, hasOpen := s.state.orders["open"]
+	_, hasOldFill := s.state.orders["old-fill"]
+	_, hasNewCancel := s.state.orders["new-cancel"]
+	s.state.mu.Unlock()
+
+	if !hasOpen {
+		t.Fatalf("expected non-terminal order to remain")
+	}
+	if hasOldFill {
+		t.Fatalf("expected expired terminal order to be pruned")
+	}
+	if !hasNewCancel {
+		t.Fatalf("expected recent terminal order to remain")
+	}
+}
+
+func TestPruneOrdersLockedBoundsTotalRecordCount(t *testing.T) {
+	now := time.Now().UnixMilli()
+	s := &Server{
+		cfg: Config{
+			OrderRetention:  24 * time.Hour,
+			OrderMaxRecords: 3,
+			OrderGCInterval: 0,
+		},
+		state: &state{
+			orders: map[string]OrderRecord{
+				"open": {OrderID: "open", Status: "ACCEPTED"},
+				"t1":   {OrderID: "t1", Status: "FILLED", TerminalAt: now - 3_000},
+				"t2":   {OrderID: "t2", Status: "CANCELED", TerminalAt: now - 2_000},
+				"t3":   {OrderID: "t3", Status: "REJECTED", TerminalAt: now - 1_000},
+			},
+		},
+	}
+
+	s.state.mu.Lock()
+	s.pruneOrdersLocked(now)
+	_, hasOpen := s.state.orders["open"]
+	_, hasT1 := s.state.orders["t1"]
+	_, hasT2 := s.state.orders["t2"]
+	_, hasT3 := s.state.orders["t3"]
+	got := len(s.state.orders)
+	s.state.mu.Unlock()
+
+	if got != 3 {
+		t.Fatalf("expected bounded order records=3, got %d", got)
+	}
+	if !hasOpen {
+		t.Fatalf("expected non-terminal order to remain after pruning")
+	}
+	if hasT1 {
+		t.Fatalf("expected oldest terminal record to be pruned")
+	}
+	if !hasT2 || !hasT3 {
+		t.Fatalf("expected newer terminal records to remain")
+	}
+}
+
 func TestHandleResumeReplaysTradesOnlyForTradeSubscription(t *testing.T) {
 	s := &Server{
 		state: &state{
