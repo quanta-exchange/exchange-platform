@@ -9,6 +9,7 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -84,6 +85,13 @@ class LedgerController(
     @Value("\${ledger.admin.token:}")
     private val adminToken: String,
 ) {
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<Map<String, String>> {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            mapOf("error" to (ex.message ?: "invalid_request")),
+        )
+    }
+
     @PostMapping("/internal/trades/executed")
     fun tradeExecuted(@RequestBody req: TradeExecutedDto): Map<String, Any> {
         val result = ledgerService.consumeTrade(req.toModel())

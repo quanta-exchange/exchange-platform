@@ -18,15 +18,26 @@ data class EventEnvelopeDto(
     val causationId: String,
 ) {
     fun toModel(): EventEnvelope {
+        val normalizedSymbol = symbol.trim().uppercase()
+        require(eventId.isNotBlank()) { "event_id_required" }
+        require(eventVersion == 1) { "unsupported_event_version" }
+        require(seq >= 0) { "seq_must_be_non_negative" }
+        require(SYMBOL_PATTERN.matches(normalizedSymbol)) { "invalid_symbol" }
+        require(correlationId.isNotBlank()) { "correlation_id_required" }
+        require(causationId.isNotBlank()) { "causation_id_required" }
         return EventEnvelope(
             eventId = eventId,
             eventVersion = eventVersion,
-            symbol = symbol,
+            symbol = normalizedSymbol,
             seq = seq,
             occurredAt = occurredAt,
             correlationId = correlationId,
             causationId = causationId,
         )
+    }
+
+    companion object {
+        private val SYMBOL_PATTERN = Regex("^[A-Z0-9]{2,16}-[A-Z0-9]{2,16}$")
     }
 }
 
