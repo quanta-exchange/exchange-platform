@@ -47,6 +47,7 @@ scripts/
   change_proposal.sh      # G10 change proposal creation
   change_approve.sh       # G10 approval recording
   apply_change.sh         # G10 apply + verification evidence
+  break_glass.sh          # G10 emergency privilege with TTL + audit log
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
@@ -342,6 +343,17 @@ Apply success output includes:
 - `change_apply_success=true`
 - `change_apply_log=...`
 - `change_verification_summary=build/verification/<timestamp>/verification-summary.json`
+
+### 23) Break-glass emergency mode
+```bash
+./scripts/break_glass.sh enable --ttl-sec 900 --actor oncall --reason "incident response"
+./scripts/break_glass.sh status
+./scripts/break_glass.sh disable --actor oncall --reason "incident resolved"
+```
+Outputs:
+- `break_glass_enabled=true|false`
+- `break_glass_status={...}`
+- audit log: `build/break-glass/audit.log`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

@@ -158,6 +158,10 @@ Gate G1 operational check:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`
   - apply change (with verification): `./scripts/apply_change.sh ...`
+- Break-glass workflow:
+  - enable: `./scripts/break_glass.sh enable --ttl-sec 900 --actor <oncall> --reason <incident>`
+  - status: `./scripts/break_glass.sh status`
+  - disable: `./scripts/break_glass.sh disable --actor <oncall> --reason <resolved>`
 
 ### 4.1 Crash recovery drill
 Purpose:
