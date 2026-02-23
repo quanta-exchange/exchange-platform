@@ -38,6 +38,7 @@ scripts/
   dr_rehearsal.sh         # I-0106 backup/restore rehearsal
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
+  controls_check.sh       # G32 controls catalog automated checker
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -218,6 +219,15 @@ Success output includes:
 - `assurance_pack_json=build/assurance/<timestamp>/assurance-pack.json`
 - `assurance_pack_markdown=build/assurance/<timestamp>/assurance-pack.md`
 - `assurance_pack_ok=true|false`
+
+### 13) Controls check (controls catalog gate)
+```bash
+make controls-check
+```
+Success output includes:
+- `controls_check_report=build/controls/controls-check-<timestamp>.json`
+- `controls_check_latest=build/controls/controls-check-latest.json`
+- `controls_check_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

@@ -195,6 +195,7 @@ with open(manifest_path, "w", encoding="utf-8") as f:
     json.dump(manifest, f, indent=2, sort_keys=True)
     f.write("\n")
 PY
+cp "$MANIFEST" "$OUT_DIR/manifest.json"
 
 ARTIFACT_BASENAME="safety-case-${COMMIT:0:12}-${TS_ID}"
 TARBALL="$OUT_DIR/${ARTIFACT_BASENAME}.tar.gz"

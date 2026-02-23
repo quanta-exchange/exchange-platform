@@ -1,0 +1,124 @@
+{
+  "controls": [
+    {
+      "id": "CTRL-001",
+      "title": "Load smoke evidence exists",
+      "enforced": true,
+      "required_evidence": ["build/load/load-smoke.json"]
+    },
+    {
+      "id": "CTRL-002",
+      "title": "DR rehearsal evidence exists",
+      "enforced": true,
+      "required_evidence": ["build/dr/dr-report.json"]
+    },
+    {
+      "id": "CTRL-003",
+      "title": "Invariant report evidence exists",
+      "enforced": true,
+      "required_evidence": ["build/invariants/ledger-invariants.json"]
+    },
+    {
+      "id": "CTRL-004",
+      "title": "Safety case artifact exists",
+      "enforced": true,
+      "required_evidence": ["build/safety-case/safety-case-*.tar.gz", "build/safety-case/safety-case-*.tar.gz.sha256"]
+    },
+    {
+      "id": "CTRL-005",
+      "title": "Safety case manifest exists",
+      "enforced": true,
+      "required_evidence": ["build/safety-case/manifest.json"]
+    },
+    {
+      "id": "CTRL-006",
+      "title": "Assurance GSN template is versioned",
+      "enforced": true,
+      "required_evidence": ["assurance/GSN.md"]
+    },
+    {
+      "id": "CTRL-007",
+      "title": "Exactly-once stress proof available",
+      "enforced": false,
+      "required_evidence": ["build/exactly-once/exactly-once-stress.json"]
+    },
+    {
+      "id": "CTRL-008",
+      "title": "Reconciliation smoke proof available",
+      "enforced": false,
+      "required_evidence": ["build/reconciliation/smoke-reconciliation-safety.json"]
+    },
+    {
+      "id": "CTRL-009",
+      "title": "Chaos replay proof available",
+      "enforced": false,
+      "required_evidence": ["build/chaos/chaos-replay.json"]
+    },
+    {
+      "id": "CTRL-010",
+      "title": "Prometheus reconciliation alerts tracked",
+      "enforced": false,
+      "required_evidence": ["infra/observability/reconciliation-alert-rules.example.yml"]
+    },
+    {
+      "id": "CTRL-011",
+      "title": "Runbook is documented",
+      "enforced": false,
+      "required_evidence": ["RUNBOOK.md"]
+    },
+    {
+      "id": "CTRL-012",
+      "title": "API surface document exists",
+      "enforced": false,
+      "required_evidence": ["API_SURFACE.md"]
+    },
+    {
+      "id": "CTRL-013",
+      "title": "Security rotation drill artifact exists",
+      "enforced": false,
+      "required_evidence": ["build/security/rotation-drill.json"]
+    },
+    {
+      "id": "CTRL-014",
+      "title": "Reconciliation safety smoke script exists",
+      "enforced": false,
+      "required_evidence": ["scripts/smoke_reconciliation_safety.sh"]
+    },
+    {
+      "id": "CTRL-015",
+      "title": "Exactly-once stress script exists",
+      "enforced": false,
+      "required_evidence": ["scripts/exactly_once_stress.sh"]
+    },
+    {
+      "id": "CTRL-016",
+      "title": "Chaos replay script exists",
+      "enforced": false,
+      "required_evidence": ["scripts/chaos_replay.sh"]
+    },
+    {
+      "id": "CTRL-017",
+      "title": "Safety case script exists",
+      "enforced": false,
+      "required_evidence": ["scripts/safety_case.sh"]
+    },
+    {
+      "id": "CTRL-018",
+      "title": "Assurance pack script exists",
+      "enforced": false,
+      "required_evidence": ["scripts/assurance_pack.sh"]
+    },
+    {
+      "id": "CTRL-019",
+      "title": "Compose stack definition exists",
+      "enforced": false,
+      "required_evidence": ["infra/compose/docker-compose.yml"]
+    },
+    {
+      "id": "CTRL-020",
+      "title": "Monorepo architecture doc exists",
+      "enforced": false,
+      "required_evidence": ["ARCHITECTURE.md"]
+    }
+  ]
+}
