@@ -257,6 +257,12 @@
       "title": "Load regression runbook-as-code exists",
       "enforced": false,
       "required_evidence": ["runbooks/load_regression.sh", "runbooks/load_regression.md", "scripts/load_all.sh"]
+    },
+    {
+      "id": "CTRL-044",
+      "title": "Release gate supports strict advisory-control enforcement mode",
+      "enforced": false,
+      "required_evidence": ["scripts/release_gate.sh", "README.md"]
     }
   ]
 }

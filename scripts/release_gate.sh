@@ -6,6 +6,7 @@ OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/release-gate}"
 RUN_CHECKS=false
 RUN_EXTENDED_CHECKS=false
 RUN_LOAD_PROFILES=false
+STRICT_CONTROLS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -23,6 +24,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-load-profiles)
       RUN_LOAD_PROFILES=true
+      shift
+      ;;
+    --strict-controls)
+      STRICT_CONTROLS=true
       shift
       ;;
     *)
@@ -61,7 +66,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STRICT_CONTROLS" <<'PY'
 import json
 import pathlib
 import sys
@@ -75,18 +80,37 @@ git_branch = sys.argv[5]
 run_checks = sys.argv[6].lower() == "true"
 run_extended_checks = sys.argv[7].lower() == "true"
 run_load_profiles = sys.argv[8].lower() == "true"
+strict_controls = sys.argv[9].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
 
+controls_report_path = summary.get("artifacts", {}).get("controls_check_report")
+controls_advisory_missing = None
+if controls_report_path:
+    candidate = pathlib.Path(controls_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            controls_payload = json.load(f)
+        controls_advisory_missing = int(controls_payload.get("advisory_missing_count", 0))
+
+controls_gate_ok = True
+if strict_controls:
+    controls_gate_ok = controls_advisory_missing == 0
+
 payload = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "ok": verification_ok and bool(summary.get("ok", False)),
+    "ok": verification_ok and bool(summary.get("ok", False)) and controls_gate_ok,
     "git_commit": git_commit,
     "git_branch": git_branch,
     "run_checks": run_checks,
     "run_extended_checks": run_extended_checks,
     "run_load_profiles": run_load_profiles,
+    "strict_controls": strict_controls,
+    "controls_advisory_missing_count": controls_advisory_missing,
+    "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_summary": str(verification_summary),
     "verification_step_count": len(summary.get("steps", [])),

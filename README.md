@@ -483,6 +483,8 @@ Outputs:
 make release-gate
 # include staged load profiles in gate:
 ./scripts/release_gate.sh --run-load-profiles
+# fail gate on advisory control gaps too:
+./scripts/release_gate.sh --strict-controls
 ```
 Outputs:
 - `release_gate_report=build/release-gate/release-gate-<timestamp>.json`
