@@ -74,6 +74,11 @@ evidence = [
     {"id": "exactly_once", "path": pathlib.Path("build/exactly-once/exactly-once-stress.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},
+    {"id": "determinism", "path": pathlib.Path("build/determinism/prove-determinism-latest.json"), "required": False},
+    {"id": "circuit_breakers", "path": pathlib.Path("build/breakers/prove-breakers-latest.json"), "required": False},
+    {"id": "model_check", "path": pathlib.Path("build/model-check/model-check-latest.json"), "required": False},
+    {"id": "service_modes", "path": pathlib.Path("build/service-modes/verify-service-modes-latest.json"), "required": False},
+    {"id": "shadow_verify", "path": pathlib.Path("build/shadow/shadow-verify-latest.json"), "required": False},
     {"id": "safety_case_manifest", "path": pathlib.Path(rel(safety_case_manifest)) if safety_case_manifest else None, "required": True},
     {"id": "safety_case_artifact", "path": pathlib.Path(rel(safety_case_artifact)) if safety_case_artifact else None, "required": True},
     {"id": "safety_case_sha256", "path": pathlib.Path(rel(safety_case_sha)) if safety_case_sha else None, "required": True},
@@ -108,6 +113,9 @@ pack = {
         {"id": "G2", "text": "Duplicate event injection has exactly-once effect on balances."},
         {"id": "G3", "text": "Reconciliation breach triggers safety mode and requires explicit release."},
         {"id": "G4", "text": "Crash drills preserve deterministic core hash and prevent ledger double-apply."},
+        {"id": "G5", "text": "Order notional/quantity circuit breakers reject oversized risk-taking orders."},
+        {"id": "G6", "text": "Service mode matrix is verified against executable tests for mode enforcement."},
+        {"id": "G7", "text": "Shadow verification recomputes candles and balance hashes without divergence."},
     ],
 }
 
