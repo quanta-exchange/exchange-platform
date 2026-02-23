@@ -313,6 +313,7 @@ REPEATS=1000000 CONCURRENCY=64 ./scripts/exactly_once_stress.sh
 This script verifies:
 - same `tradeId` is injected repeatedly
 - ledger applies exactly once (`applied=true` only once)
+- `settlement_idempotency.trade_id` reservation is written once and reused on duplicates
 - all other submissions are blocked as duplicates
 - balances reflect a single settlement effect
 

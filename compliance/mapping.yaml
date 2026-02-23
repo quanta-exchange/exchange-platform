@@ -399,6 +399,11 @@
       "controlId": "CTRL-090",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Verification and release gates can explicitly include Kafka network-partition drill evidence in promotion decisions"
+    },
+    {
+      "controlId": "CTRL-091",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
+      "description": "Settlement trade processing reserves idempotency keys in a dedicated table before ledger append, providing deterministic duplicate suppression evidence"
     }
   ]
 }

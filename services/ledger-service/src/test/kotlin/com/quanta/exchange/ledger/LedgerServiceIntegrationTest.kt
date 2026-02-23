@@ -75,6 +75,16 @@ class LedgerServiceIntegrationTest {
             Long::class.java,
         )!!
         assertEquals(1L, count)
+        val idempotencyCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM settlement_idempotency WHERE trade_id='trade-1'",
+            Long::class.java,
+        )!!
+        assertEquals(1L, idempotencyCount)
+        val idempotencyEntryId = jdbc.queryForObject(
+            "SELECT ledger_entry_id FROM settlement_idempotency WHERE trade_id='trade-1'",
+            String::class.java,
+        )!!
+        assertEquals("le_trade_trade-1", idempotencyEntryId)
 
         val badSymbolTrade = trade.copy(
             tradeId = "trade-2",

@@ -28,6 +28,10 @@ class LedgerRepository(
             throw IllegalArgumentException("entry is not balanced per currency")
         }
 
+        if (!reserveSettlementIdempotency(command)) {
+            return false
+        }
+
         try {
             jdbc.update(
                 """
@@ -74,6 +78,29 @@ class LedgerRepository(
         }
 
         return true
+    }
+
+    private fun reserveSettlementIdempotency(command: LedgerEntryCommand): Boolean {
+        if (command.referenceType.uppercase() != "TRADE") {
+            return true
+        }
+        return try {
+            jdbc.update(
+                """
+                INSERT INTO settlement_idempotency(trade_id, ledger_entry_id)
+                VALUES (?, ?)
+                """.trimIndent(),
+                command.referenceId,
+                command.entryId,
+            )
+            true
+        } catch (ex: DataIntegrityViolationException) {
+            if (isUniqueViolation(ex)) {
+                false
+            } else {
+                throw ex
+            }
+        }
     }
 
     fun appendDlq(tradeId: String, reason: String, payload: String) {
