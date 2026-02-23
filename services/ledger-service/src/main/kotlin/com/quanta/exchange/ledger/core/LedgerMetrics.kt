@@ -29,6 +29,10 @@ class LedgerMetrics {
     private val reconciliationSafetyFailureTotal = AtomicLong(0)
     private val invariantSafetyTriggerTotal = AtomicLong(0)
     private val invariantSafetyFailureTotal = AtomicLong(0)
+    private val reconciliationLatchReleaseAttemptTotal = AtomicLong(0)
+    private val reconciliationLatchReleaseSuccessTotal = AtomicLong(0)
+    private val reconciliationLatchReleaseDeniedTotal = AtomicLong(0)
+    private val reconciliationLatchReleaseDeniedByReason = ConcurrentHashMap<String, AtomicLong>()
     private val reconciliationGapBySymbol = ConcurrentHashMap<String, AtomicLong>()
     private val reconciliationAgeBySymbol = ConcurrentHashMap<String, AtomicLong>()
 
@@ -77,6 +81,13 @@ class LedgerMetrics {
             invariantSafetyFailureTotal.addAndGet(delta)
         }
     }
+    fun incrementReconciliationLatchReleaseAttempt() = reconciliationLatchReleaseAttemptTotal.incrementAndGet()
+    fun incrementReconciliationLatchReleaseSuccess() = reconciliationLatchReleaseSuccessTotal.incrementAndGet()
+    fun incrementReconciliationLatchReleaseDenied(reason: String) {
+        reconciliationLatchReleaseDeniedTotal.incrementAndGet()
+        val normalized = reason.trim().lowercase().ifBlank { "unknown" }
+        reconciliationLatchReleaseDeniedByReason.computeIfAbsent(normalized) { AtomicLong(0) }.incrementAndGet()
+    }
 
     fun renderPrometheus(): String {
         return buildString {
@@ -103,8 +114,20 @@ class LedgerMetrics {
             appendMetric("reconciliation_safety_failure_total", reconciliationSafetyFailureTotal.get())
             appendMetric("invariant_safety_trigger_total", invariantSafetyTriggerTotal.get())
             appendMetric("invariant_safety_failure_total", invariantSafetyFailureTotal.get())
+            appendMetric("reconciliation_latch_release_attempt_total", reconciliationLatchReleaseAttemptTotal.get())
+            appendMetric("reconciliation_latch_release_success_total", reconciliationLatchReleaseSuccessTotal.get())
+            appendMetric("reconciliation_latch_release_denied_total", reconciliationLatchReleaseDeniedTotal.get())
+            appendReconciliationLatchDeniedByReason()
             appendReconciliationBySymbol()
         }
+    }
+
+    private fun StringBuilder.appendReconciliationLatchDeniedByReason() {
+        reconciliationLatchReleaseDeniedByReason.entries
+            .sortedBy { it.key }
+            .forEach { (reason, value) ->
+                appendMetricWithLabel("reconciliation_latch_release_denied_reason_total", "reason", reason, value.get())
+            }
     }
 
     private fun StringBuilder.appendReconciliationBySymbol() {

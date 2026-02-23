@@ -457,6 +457,19 @@ class LedgerServiceIntegrationTest {
             autoSwitchEnabled = false,
             safetyLatchEnabled = true,
         )
+        val attemptsBefore = metricValue("reconciliation_latch_release_attempt_total")
+        val deniedBefore = metricValue("reconciliation_latch_release_denied_total")
+        val successBefore = metricValue("reconciliation_latch_release_success_total")
+        val dualRequiredBefore = metricValueWithLabel(
+            "reconciliation_latch_release_denied_reason_total",
+            "reason",
+            "dual_approval_required",
+        )
+        val dualDistinctBefore = metricValueWithLabel(
+            "reconciliation_latch_release_denied_reason_total",
+            "reason",
+            "dual_approval_distinct_required",
+        )
 
         val missingSecond = ledgerService.releaseReconciliationLatch(
             symbol = "BTC-KRW",
@@ -496,6 +509,17 @@ class LedgerServiceIntegrationTest {
         )
         assertTrue(release.released) { "release=$release" }
         assertEquals("ops-a,ops-b", release.releasedBy)
+        assertEquals(attemptsBefore + 3, metricValue("reconciliation_latch_release_attempt_total"))
+        assertEquals(deniedBefore + 2, metricValue("reconciliation_latch_release_denied_total"))
+        assertEquals(successBefore + 1, metricValue("reconciliation_latch_release_success_total"))
+        assertEquals(
+            dualRequiredBefore + 1,
+            metricValueWithLabel("reconciliation_latch_release_denied_reason_total", "reason", "dual_approval_required"),
+        )
+        assertEquals(
+            dualDistinctBefore + 1,
+            metricValueWithLabel("reconciliation_latch_release_denied_reason_total", "reason", "dual_approval_distinct_required"),
+        )
     }
 
     @Test
@@ -807,6 +831,15 @@ class LedgerServiceIntegrationTest {
         val line = ledgerMetrics.renderPrometheus()
             .lineSequence()
             .firstOrNull { it.startsWith("$name ") }
+            ?: return 0
+        return line.substringAfter(' ').trim().toLong()
+    }
+
+    private fun metricValueWithLabel(name: String, label: String, labelValue: String): Long {
+        val prefix = "$name{$label=\"$labelValue\"} "
+        val line = ledgerMetrics.renderPrometheus()
+            .lineSequence()
+            .firstOrNull { it.startsWith(prefix) }
             ?: return 0
         return line.substringAfter(' ').trim().toLong()
     }

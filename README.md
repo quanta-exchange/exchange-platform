@@ -702,6 +702,10 @@ Reconciliation metrics (ledger `/metrics`):
 - `reconciliation_stale_total`
 - `reconciliation_safety_trigger_total`
 - `reconciliation_safety_failure_total`
+- `reconciliation_latch_release_attempt_total`
+- `reconciliation_latch_release_success_total`
+- `reconciliation_latch_release_denied_total`
+- `reconciliation_latch_release_denied_reason_total{reason="..."}`
 - `invariant_safety_trigger_total`
 - `invariant_safety_failure_total`
 - `reconciliation_gap_by_symbol{symbol="..."}`

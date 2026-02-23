@@ -376,10 +376,12 @@ class LedgerService(
         requireDualApproval: Boolean = false,
     ): ReconciliationLatchReleaseResult {
         val safeSymbol = symbol.trim().uppercase()
+        metrics.incrementReconciliationLatchReleaseAttempt()
         val primaryApprover = approvedBy.trim()
         val secondaryApprover = secondApprover?.trim().orEmpty()
         val safeReason = reason.trim()
         if (primaryApprover.isBlank()) {
+            metrics.incrementReconciliationLatchReleaseDenied("approved_by_required")
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
@@ -395,6 +397,7 @@ class LedgerService(
             )
         }
         if (safeReason.isBlank()) {
+            metrics.incrementReconciliationLatchReleaseDenied("reason_required")
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
@@ -411,6 +414,7 @@ class LedgerService(
         }
         if (requireDualApproval) {
             if (secondaryApprover.isBlank()) {
+                metrics.incrementReconciliationLatchReleaseDenied("dual_approval_required")
                 return ReconciliationLatchReleaseResult(
                     symbol = safeSymbol,
                     released = false,
@@ -426,6 +430,7 @@ class LedgerService(
                 )
             }
             if (secondaryApprover == primaryApprover) {
+                metrics.incrementReconciliationLatchReleaseDenied("dual_approval_distinct_required")
                 return ReconciliationLatchReleaseResult(
                     symbol = safeSymbol,
                     released = false,
@@ -454,6 +459,7 @@ class LedgerService(
         val thresholdBreached = lag > lagThreshold
         val staleThresholdBreached = staleStateThresholdMs > 0 && stateAgeMs > staleStateThresholdMs
         if (mismatch || thresholdBreached || staleThresholdBreached) {
+            metrics.incrementReconciliationLatchReleaseDenied(if (staleThresholdBreached) "state_stale" else "still_breached")
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
@@ -470,20 +476,24 @@ class LedgerService(
         }
 
         val safety = repo.reconciliationSafetyState(safeSymbol)
-            ?: return ReconciliationLatchReleaseResult(
-                symbol = safeSymbol,
-                released = false,
-                modeRestored = false,
-                reason = "safety_state_not_found",
-                lag = lag,
-                mismatch = mismatch,
-                thresholdBreached = thresholdBreached,
-                invariantsOk = false,
-                invariantViolations = emptyList(),
-                releasedAt = null,
-                releasedBy = null,
-            )
+            ?: run {
+                metrics.incrementReconciliationLatchReleaseDenied("safety_state_not_found")
+                return ReconciliationLatchReleaseResult(
+                    symbol = safeSymbol,
+                    released = false,
+                    modeRestored = false,
+                    reason = "safety_state_not_found",
+                    lag = lag,
+                    mismatch = mismatch,
+                    thresholdBreached = thresholdBreached,
+                    invariantsOk = false,
+                    invariantViolations = emptyList(),
+                    releasedAt = null,
+                    releasedBy = null,
+                )
+            }
         if (!safety.latchEngaged) {
+            metrics.incrementReconciliationLatchReleaseDenied("latch_not_engaged")
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
@@ -504,6 +514,7 @@ class LedgerService(
             invariantResult.violations.all { it.startsWith("negative_balances=") }
         val invariantGatePass = invariantResult.ok || (allowNegativeBalanceViolations && negativeOnlyViolation)
         if (!invariantGatePass) {
+            metrics.incrementReconciliationLatchReleaseDenied("invariants_failed")
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
@@ -526,6 +537,7 @@ class LedgerService(
             false
         }
         if (restoreSymbolMode && !modeRestored) {
+            metrics.incrementReconciliationLatchReleaseDenied("mode_restore_failed")
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
@@ -553,6 +565,7 @@ class LedgerService(
             releasedAt = releasedAt,
         )
         if (!released) {
+            metrics.incrementReconciliationLatchReleaseDenied("release_not_applied")
             return ReconciliationLatchReleaseResult(
                 symbol = safeSymbol,
                 released = false,
@@ -588,6 +601,7 @@ class LedgerService(
         val maxLag = refreshedStatuses.maxOfOrNull { it.gap.coerceAtLeast(0) } ?: 0L
         val activeBreaches = refreshedSafety.values.count { it.breachActive }.toLong()
         metrics.setReconciliationSummary(maxLag = maxLag, activeBreaches = activeBreaches)
+        metrics.incrementReconciliationLatchReleaseSuccess()
 
         return ReconciliationLatchReleaseResult(
             symbol = safeSymbol,
