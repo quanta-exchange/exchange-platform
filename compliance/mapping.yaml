@@ -94,6 +94,11 @@
       "controlId": "CTRL-029",
       "frameworks": ["SOC2:CC6.2", "ISO27001:A.5.2"],
       "description": "Reconciliation latch release dual-approval enforcement verification"
+    },
+    {
+      "controlId": "CTRL-030",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.8.16"],
+      "description": "ClickHouse market data invariant summary and anomaly detection evidence"
     }
   ]
 }

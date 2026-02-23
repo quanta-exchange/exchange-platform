@@ -173,6 +173,12 @@
       "title": "Reconciliation latch dual-approval proof evidence exists",
       "enforced": false,
       "required_evidence": ["build/latch/prove-latch-approval-latest.json", "scripts/prove_latch_approval.sh", "services/ledger-service/src/test/kotlin/com/quanta/exchange/ledger/LedgerServiceIntegrationTest.kt"]
+    },
+    {
+      "id": "CTRL-030",
+      "title": "ClickHouse invariant summary evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/invariants/clickhouse-invariants.json", "build/invariants/invariants-summary.json", "scripts/invariants.sh"]
     }
   ]
 }
