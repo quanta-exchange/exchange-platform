@@ -130,10 +130,42 @@ if not paths:
     sys.exit(0)
 
 violations = []
+order_transition_violations = []
 last_global = None
 last_by_symbol = {}
 records = 0
 symbols = set()
+order_state = {}
+
+
+def norm_order_id(value):
+    order_id = str(value or "").strip()
+    if not order_id:
+        return ""
+    if order_id.startswith("stub-") or order_id == "stub-maker":
+        return ""
+    return order_id
+
+
+def event_variant(evt):
+    if not isinstance(evt, dict) or len(evt) != 1:
+        return None, None
+    kind, payload = next(iter(evt.items()))
+    if not isinstance(payload, dict):
+        payload = {}
+    return str(kind), payload
+
+
+def order_violation(kind, order_id, seq, state, detail):
+    payload = {
+        "kind": kind,
+        "order_id": order_id,
+        "seq": seq,
+        "state": state,
+        "detail": detail,
+    }
+    order_transition_violations.append(payload)
+    violations.append(payload)
 
 for path in paths:
     with open(path, "rb") as f:
@@ -193,10 +225,96 @@ for path in paths:
         last_global = seq
         last_by_symbol[symbol] = seq
 
+        events = rec.get("events") or []
+        if not isinstance(events, list):
+            continue
+        for evt in events:
+            kind, payload = event_variant(evt)
+            if not kind:
+                continue
+            if kind == "OrderAccepted":
+                order_id = norm_order_id(payload.get("order_id") or payload.get("orderId"))
+                if not order_id:
+                    continue
+                prev = order_state.get(order_id)
+                if prev is not None:
+                    order_violation(
+                        "order_duplicate_accept",
+                        order_id,
+                        seq,
+                        prev,
+                        "OrderAccepted observed after initial state",
+                    )
+                order_state[order_id] = "ACCEPTED"
+            elif kind == "OrderRejected":
+                order_id = norm_order_id(payload.get("order_id") or payload.get("orderId"))
+                if not order_id:
+                    continue
+                prev = order_state.get(order_id)
+                if prev is not None:
+                    order_violation(
+                        "order_reject_after_state",
+                        order_id,
+                        seq,
+                        prev,
+                        "OrderRejected observed after prior lifecycle events",
+                    )
+                order_state[order_id] = "REJECTED"
+            elif kind == "OrderCanceled":
+                order_id = norm_order_id(payload.get("order_id") or payload.get("orderId"))
+                if not order_id:
+                    continue
+                prev = order_state.get(order_id)
+                if prev is None:
+                    order_violation(
+                        "order_cancel_without_accept",
+                        order_id,
+                        seq,
+                        "NONE",
+                        "OrderCanceled observed before OrderAccepted",
+                    )
+                elif prev in {"REJECTED", "CANCELED", "FILLED"}:
+                    order_violation(
+                        "order_cancel_after_terminal",
+                        order_id,
+                        seq,
+                        prev,
+                        "OrderCanceled observed after terminal state",
+                    )
+                order_state[order_id] = "CANCELED"
+            elif kind == "TradeExecuted":
+                maker = norm_order_id(payload.get("maker_order_id") or payload.get("makerOrderId"))
+                taker = norm_order_id(payload.get("taker_order_id") or payload.get("takerOrderId"))
+                for order_id in (maker, taker):
+                    if not order_id:
+                        continue
+                    prev = order_state.get(order_id)
+                    if prev is None:
+                        order_violation(
+                            "trade_before_accept",
+                            order_id,
+                            seq,
+                            "NONE",
+                            "TradeExecuted references order before OrderAccepted",
+                        )
+                        continue
+                    if prev in {"REJECTED", "CANCELED", "FILLED"}:
+                        order_violation(
+                            "trade_after_terminal",
+                            order_id,
+                            seq,
+                            prev,
+                            "TradeExecuted references order in terminal state",
+                        )
+                        continue
+                    order_state[order_id] = "PARTIAL_OR_FILLED"
+
 result = {
     "ok": len(violations) == 0,
     "records": records,
     "symbols": len(symbols),
+    "order_transition_violations": len(order_transition_violations),
+    "tracked_orders": len(order_state),
     "violations": violations[:20],
 }
 print(json.dumps(result))

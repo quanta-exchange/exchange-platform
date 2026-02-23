@@ -167,6 +167,7 @@ make safety-case-extended
   - `auto`: run only when WAL directory (`CORE_WAL_DIR`) exists
   - `require`: fail if WAL is unavailable or non-monotonic seq is detected
   - `off`: skip Core checks
+  - includes order lifecycle consistency checks (`OrderAccepted` → trade/cancel/reject without illegal back-transitions)
 - ClickHouse checks default to `INVARIANTS_CLICKHOUSE_MODE=auto`
   - `auto`: run only when ClickHouse is reachable
   - `require`: fail if ClickHouse is unreachable or invalid rows are found

@@ -215,6 +215,12 @@
       "title": "Snapshot verify rehearsal evidence exists",
       "enforced": false,
       "required_evidence": ["build/snapshot/snapshot-verify-latest.json", "scripts/snapshot_verify.sh", "services/trading-core/src/bin/snapshot-tool.rs"]
+    },
+    {
+      "id": "CTRL-037",
+      "title": "Order lifecycle transition invariant evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/invariants/core-invariants.json", "scripts/invariants.sh"]
     }
   ]
 }

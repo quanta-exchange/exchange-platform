@@ -111,6 +111,7 @@ report = {
         "integrity_proxy": {
             "invariants_ok": bool(invariants.get("ok")) if invariants else None,
             "core_invariants_ok": bool(core_invariants.get("ok")) if core_invariants else None,
+            "core_order_transition_violations": int(core_invariants.get("order_transition_violations")) if core_invariants and core_invariants.get("order_transition_violations") is not None else None,
             "clickhouse_invariants_ok": bool(invariants_summary.get("clickhouse", {}).get("ok")) if invariants_summary else None,
             "dr_invariant_violations": int(dr.get("invariant_violations")) if dr and dr.get("invariant_violations") is not None else None,
             "safety_budget_ok": bool(safety_budget.get("ok")) if safety_budget else None,

@@ -130,6 +130,7 @@ pack = {
         {"id": "G11", "text": "WS resume flow replays missed trade ranges and falls back to snapshot when history gaps are detected."},
         {"id": "G12", "text": "Candle correctness proof confirms canonical rebuild and online aggregation converge under out-of-order and duplicate trades."},
         {"id": "G13", "text": "Snapshot verify drill validates checksum and snapshot+WAL restore rehearsal consistency."},
+        {"id": "G14", "text": "Core invariants scan enforces sequence monotonicity and rejects illegal order lifecycle transitions in WAL events."},
     ],
 }
 
