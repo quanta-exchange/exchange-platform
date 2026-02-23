@@ -13,7 +13,7 @@ use crate::risk::{RiskConfig, RiskManager};
 use crate::snapshot::Snapshot;
 use crate::wal::{Wal, WalError, WalRecord};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, thiserror::Error)]
@@ -76,6 +76,7 @@ pub struct TradingCore {
     fencing: FencingCoordinator,
     leader_token: u64,
     idempotency: HashMap<(String, String), IdempotencyEntry>,
+    seen_order_ids: HashSet<String>,
     last_state_hash: String,
     recent_events: Vec<CoreEvent>,
     mode_transitions: Vec<String>,
@@ -99,6 +100,7 @@ impl TradingCore {
             fencing,
             leader_token,
             idempotency: HashMap::new(),
+            seen_order_ids: HashSet::new(),
             last_state_hash: String::new(),
             recent_events: Vec::new(),
             mode_transitions: Vec::new(),
@@ -204,6 +206,7 @@ impl TradingCore {
         self.recent_events.clear();
         self.mode_transitions.clear();
         self.idempotency.clear();
+        self.seen_order_ids.clear();
 
         for record in records {
             for event in &record.events {
@@ -264,6 +267,38 @@ impl TradingCore {
             if let IdempotentResponse::Place(existing) = &idem.response {
                 return Ok(existing.clone());
             }
+        }
+
+        if self.order_book.get_order(&req.order_id).is_some()
+            || self.seen_order_ids.contains(&req.order_id)
+        {
+            let reject_order = Order {
+                order_id: req.order_id.clone(),
+                user_id: meta.user_id.clone(),
+                symbol: meta.symbol.clone(),
+                side: Side::Buy,
+                order_type: OrderType::Limit,
+                tif: TimeInForce::Gtc,
+                price: None,
+                original_qty: 0,
+                remaining_qty: 0,
+                accepted_seq: 0,
+            };
+            let mut events = vec![self.event_order_rejected(
+                &reject_order,
+                &meta,
+                RejectCode::Validation,
+                "duplicate_order_id",
+            )];
+            self.append_checkpoint(&meta, &mut events);
+            self.persist_command(&meta.command_id, events)?;
+            let resp = self.make_place_reject_response(
+                &req.order_id,
+                &meta.correlation_id,
+                RejectCode::Validation,
+            );
+            self.store_idempotent_place(&meta, &resp);
+            return Ok(resp);
         }
 
         let side = match to_side(req.side) {
@@ -500,6 +535,7 @@ impl TradingCore {
 
         self.append_checkpoint(&meta, &mut events);
         self.persist_command(&meta.command_id, events)?;
+        self.seen_order_ids.insert(order.order_id.clone());
         self.store_idempotent_place(&meta, &response);
         Ok(response)
     }
@@ -513,6 +549,27 @@ impl TradingCore {
             Err(code) => return Ok(self.make_cancel_reject_response(&req.order_id, "", code)),
         };
 
+        if !self.is_leader_valid() {
+            self.transition_mode(SymbolMode::HardHalt, "fencing-token-invalid");
+            let resp = self.make_cancel_reject_response(
+                &req.order_id,
+                &meta.correlation_id,
+                RejectCode::FencingToken,
+            );
+            self.store_idempotent_cancel(&meta, &resp);
+            return Ok(resp);
+        }
+
+        if meta.symbol != self.cfg.symbol {
+            let resp = self.make_cancel_reject_response(
+                &req.order_id,
+                &meta.correlation_id,
+                RejectCode::Validation,
+            );
+            self.store_idempotent_cancel(&meta, &resp);
+            return Ok(resp);
+        }
+
         self.prune_idempotency();
         if let Some(idem) = self
             .idempotency
@@ -520,6 +577,25 @@ impl TradingCore {
         {
             if let IdempotentResponse::Cancel(existing) = &idem.response {
                 return Ok(existing.clone());
+            }
+        }
+
+        if let Some(order) = self.order_book.get_order(&req.order_id) {
+            if order.user_id != meta.user_id {
+                let mut events = vec![self.event_cancel_rejected(
+                    &req.order_id,
+                    &meta,
+                    RejectCode::UnknownOrder,
+                )];
+                self.append_checkpoint(&meta, &mut events);
+                self.persist_command(&meta.command_id, events)?;
+                let resp = self.make_cancel_reject_response(
+                    &req.order_id,
+                    &meta.correlation_id,
+                    RejectCode::UnknownOrder,
+                );
+                self.store_idempotent_cancel(&meta, &resp);
+                return Ok(resp);
             }
         }
 
@@ -563,16 +639,21 @@ impl TradingCore {
         &mut self,
         req: proto::SetSymbolModeRequest,
     ) -> Result<proto::SetSymbolModeResponse, EngineError> {
-        let meta = from_proto_meta(&req.meta).unwrap_or(CommandMeta {
-            command_id: "unknown".to_string(),
-            idempotency_key: "unknown".to_string(),
-            user_id: "admin".to_string(),
-            symbol: self.cfg.symbol.clone(),
-            trace_id: "unknown".to_string(),
-            correlation_id: "unknown".to_string(),
-            ts_server_ms: 0,
-        });
-        let mode = to_symbol_mode(req.mode).unwrap_or(SymbolMode::Normal);
+        let meta = match from_proto_meta(&req.meta) {
+            Ok(v) => v,
+            Err(code) => return Ok(self.make_set_mode_reject_response(code.as_str())),
+        };
+        if !self.is_leader_valid() {
+            self.transition_mode(SymbolMode::HardHalt, "fencing-token-invalid");
+            return Ok(self.make_set_mode_reject_response(RejectCode::FencingToken.as_str()));
+        }
+        if meta.symbol != self.cfg.symbol {
+            return Ok(self.make_set_mode_reject_response(RejectCode::Validation.as_str()));
+        }
+        let mode = match to_symbol_mode(req.mode) {
+            Ok(v) => v,
+            Err(code) => return Ok(self.make_set_mode_reject_response(code.as_str())),
+        };
         self.transition_mode(mode, &req.reason);
         let mut events = Vec::new();
         self.append_checkpoint(&meta, &mut events);
@@ -591,15 +672,17 @@ impl TradingCore {
         &mut self,
         req: proto::CancelAllRequest,
     ) -> Result<proto::CancelAllResponse, EngineError> {
-        let meta = from_proto_meta(&req.meta).unwrap_or(CommandMeta {
-            command_id: "unknown".to_string(),
-            idempotency_key: "unknown".to_string(),
-            user_id: "admin".to_string(),
-            symbol: self.cfg.symbol.clone(),
-            trace_id: "unknown".to_string(),
-            correlation_id: "unknown".to_string(),
-            ts_server_ms: 0,
-        });
+        let meta = match from_proto_meta(&req.meta) {
+            Ok(v) => v,
+            Err(code) => return Ok(self.make_cancel_all_reject_response(code.as_str())),
+        };
+        if !self.is_leader_valid() {
+            self.transition_mode(SymbolMode::HardHalt, "fencing-token-invalid");
+            return Ok(self.make_cancel_all_reject_response(RejectCode::FencingToken.as_str()));
+        }
+        if meta.symbol != self.cfg.symbol {
+            return Ok(self.make_cancel_all_reject_response(RejectCode::Validation.as_str()));
+        }
 
         let orders = self.order_book.all_orders();
         let mut events = Vec::new();
@@ -822,6 +905,26 @@ impl TradingCore {
         }
     }
 
+    fn make_set_mode_reject_response(&self, reason: &str) -> proto::SetSymbolModeResponse {
+        proto::SetSymbolModeResponse {
+            accepted: false,
+            symbol: self.cfg.symbol.clone(),
+            seq: self.seq,
+            acted_at: now_timestamp(),
+            reason: reason.to_string(),
+        }
+    }
+
+    fn make_cancel_all_reject_response(&self, reason: &str) -> proto::CancelAllResponse {
+        proto::CancelAllResponse {
+            accepted: false,
+            symbol: self.cfg.symbol.clone(),
+            seq: self.seq,
+            acted_at: now_timestamp(),
+            reason: reason.to_string(),
+        }
+    }
+
     fn store_idempotent_place(&mut self, meta: &CommandMeta, response: &proto::PlaceOrderResponse) {
         self.idempotency.insert(
             (meta.symbol.clone(), meta.idempotency_key.clone()),
@@ -883,6 +986,7 @@ impl TradingCore {
         self.seq = self.seq.max(env.seq);
         match event {
             CoreEvent::OrderAccepted(e) => {
+                self.seen_order_ids.insert(e.order_id.clone());
                 let order = Order {
                     order_id: e.order_id.clone(),
                     user_id: e.user_id.clone(),

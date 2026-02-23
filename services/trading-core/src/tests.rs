@@ -215,6 +215,41 @@ fn idempotent_place_returns_same_response() {
 }
 
 #[test]
+fn duplicate_order_id_is_rejected() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let first = core
+        .place_order(place_req(
+            "d1",
+            "idem-d1",
+            "u1",
+            "o-dup",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(first.accepted);
+
+    let second = core
+        .place_order(place_req(
+            "d2",
+            "idem-d2",
+            "u1",
+            "o-dup",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "1",
+        ))
+        .unwrap();
+    assert!(!second.accepted);
+    assert_eq!(second.reject_code, RejectCode::Validation.as_str());
+}
+
+#[test]
 fn fifo_matching_same_price_level() {
     let tmp = TempDir::new().unwrap();
     let mut core = make_engine(&tmp, FencingCoordinator::new());
@@ -494,6 +529,33 @@ fn cancel_removes_order_and_rejects_second_cancel() {
 }
 
 #[test]
+fn cancel_rejects_non_owner_as_unknown_order() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let placed = core
+        .place_order(place_req(
+            "pc1",
+            "idem-pc1",
+            "u1",
+            "o-owned",
+            proto::Side::Buy,
+            proto::OrderType::Limit,
+            "100",
+            "10",
+        ))
+        .unwrap();
+    assert!(placed.accepted);
+
+    let cancel = core
+        .cancel_order(cancel_req("cc1", "idem-cc1", "u2", "o-owned"))
+        .unwrap();
+    assert!(!cancel.accepted);
+    assert_eq!(cancel.reject_code, RejectCode::UnknownOrder.as_str());
+    assert_eq!(core.open_order_count(), 1);
+}
+
+#[test]
 fn risk_rejects_overspend() {
     let tmp = TempDir::new().unwrap();
     let mut core = make_engine(&tmp, FencingCoordinator::new());
@@ -742,6 +804,89 @@ fn split_brain_old_leader_cannot_commit() {
     assert!(!resp.accepted);
     assert_eq!(resp.reject_code, RejectCode::FencingToken.as_str());
     assert_eq!(old.symbol_mode(), SymbolMode::HardHalt);
+}
+
+#[test]
+fn admin_commands_fail_closed_without_valid_meta_or_mode() {
+    let tmp = TempDir::new().unwrap();
+    let mut core = make_engine(&tmp, FencingCoordinator::new());
+
+    let missing_meta_mode = core
+        .set_symbol_mode(proto::SetSymbolModeRequest {
+            meta: None,
+            mode: proto::SymbolMode::CancelOnly as i32,
+            reason: "test".to_string(),
+        })
+        .unwrap();
+    assert!(!missing_meta_mode.accepted);
+    assert_eq!(missing_meta_mode.reason, RejectCode::Validation.as_str());
+    assert_eq!(core.symbol_mode(), SymbolMode::Normal);
+
+    let invalid_mode = core
+        .set_symbol_mode(proto::SetSymbolModeRequest {
+            meta: meta(
+                "mode-invalid",
+                "idem-mode-invalid",
+                "admin",
+                "BTC-KRW",
+                "corr-mode-invalid",
+            ),
+            mode: 9999,
+            reason: "bad-mode".to_string(),
+        })
+        .unwrap();
+    assert!(!invalid_mode.accepted);
+    assert_eq!(invalid_mode.reason, RejectCode::Validation.as_str());
+    assert_eq!(core.symbol_mode(), SymbolMode::Normal);
+
+    let missing_meta_cancel_all = core
+        .cancel_all(proto::CancelAllRequest {
+            meta: None,
+            reason: "test".to_string(),
+        })
+        .unwrap();
+    assert!(!missing_meta_cancel_all.accepted);
+    assert_eq!(
+        missing_meta_cancel_all.reason,
+        RejectCode::Validation.as_str()
+    );
+}
+
+#[test]
+fn split_brain_old_leader_cannot_apply_admin_commands() {
+    let fence = FencingCoordinator::new();
+    let t1 = TempDir::new().unwrap();
+    let t2 = TempDir::new().unwrap();
+
+    let mut old = make_engine(&t1, fence.clone());
+    let _new = make_engine(&t2, fence);
+
+    let mode_resp = old
+        .set_symbol_mode(set_mode_req(
+            "mode-fence",
+            "idem-mode-fence",
+            proto::SymbolMode::CancelOnly,
+            "fence-check",
+        ))
+        .unwrap();
+    assert!(!mode_resp.accepted);
+    assert_eq!(mode_resp.reason, RejectCode::FencingToken.as_str());
+    assert_eq!(old.symbol_mode(), SymbolMode::HardHalt);
+
+    let cancel_all_resp = old
+        .cancel_all(proto::CancelAllRequest {
+            meta: meta(
+                "cancel-all-fence",
+                "idem-cancel-all-fence",
+                "admin",
+                "BTC-KRW",
+                "corr-cancel-all-fence",
+            ),
+            reason: "fence-check".to_string(),
+        })
+        .unwrap();
+    assert!(!cancel_all_resp.accepted);
+    assert_eq!(cancel_all_resp.reason, RejectCode::FencingToken.as_str());
 }
 
 #[test]
