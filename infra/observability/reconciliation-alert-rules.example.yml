@@ -40,3 +40,23 @@ groups:
         annotations:
           summary: "Safety mode trigger attempt failed"
           description: "Ledger reconciliation detected a breach but could not apply safety mode."
+
+      - alert: LedgerLatchReleaseDenied
+        expr: increase(reconciliation_latch_release_denied_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: ledger-service
+        annotations:
+          summary: "Reconciliation latch release denied"
+          description: "One or more manual latch release attempts were denied in the last 10 minutes."
+
+      - alert: LedgerLatchReleaseDeniedSpike
+        expr: increase(reconciliation_latch_release_denied_total[10m]) >= 3
+        for: 0m
+        labels:
+          severity: critical
+          service: ledger-service
+        annotations:
+          summary: "Repeated latch release denial spike"
+          description: "Three or more latch release denials occurred in 10 minutes; investigate release conditions or approval flow."

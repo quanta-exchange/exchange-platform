@@ -693,6 +693,7 @@ Safety latch release contract:
 
 Reconciliation alert rule examples:
 - `infra/observability/reconciliation-alert-rules.example.yml`
+  - includes breach/stale/safety-trigger alerts and latch-release denied alerts
 
 Reconciliation metrics (ledger `/metrics`):
 - `reconciliation_lag_max`
