@@ -530,6 +530,19 @@ Outputs:
 - `budget_recommended_action=...`
 - `runbook_output_dir=build/runbooks/budget-failure-<timestamp>`
 
+### 16.2) Exactly-once million failure runbook
+```bash
+make runbook-exactly-once-million
+```
+Outputs:
+- `runbook_exactly_once_million_ok=true|false`
+- `exactly_once_million_proof_ok=true|false`
+- `exactly_once_million_proof_repeats=<n>`
+- `exactly_once_million_proof_concurrency=<n>`
+- `exactly_once_million_proof_runner_exit_code=<code>`
+- `exactly_once_million_recommended_action=...`
+- `runbook_output_dir=build/runbooks/exactly-once-million-<timestamp>`
+
 ### 17) System status snapshot
 ```bash
 make system-status
@@ -567,6 +580,7 @@ make runbook-game-day-anomaly
 make runbook-audit-tamper
 make runbook-change-workflow
 make runbook-budget-failure
+make runbook-exactly-once-million
 make runbook-policy-signature
 make runbook-policy-tamper
 make runbook-network-partition
@@ -574,7 +588,7 @@ make runbook-redpanda-bounce
 make runbook-adversarial-reliability
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_policy_signature_ok=true` or `runbook_policy_tamper_ok=true` or `runbook_network_partition_ok=true` or `runbook_redpanda_broker_bounce_ok=true` or `runbook_adversarial_reliability_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_exactly_once_million_ok=true` or `runbook_policy_signature_ok=true` or `runbook_policy_tamper_ok=true` or `runbook_network_partition_ok=true` or `runbook_redpanda_broker_bounce_ok=true` or `runbook_adversarial_reliability_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 
@@ -673,6 +687,20 @@ Outputs:
 - `runbook_redpanda_broker_bounce_ok=true|false`
 - `redpanda_broker_bounce_recommended_action=...`
 - `runbook_output_dir=build/runbooks/redpanda-broker-bounce-<timestamp>`
+
+Runbook shortcut:
+```bash
+make runbook-exactly-once-million
+# lightweight diagnostic run:
+RUNBOOK_REPEATS=10000 RUNBOOK_CONCURRENCY=16 make runbook-exactly-once-million
+# allow drill to continue while collecting evidence:
+RUNBOOK_ALLOW_PROOF_FAIL=true make runbook-exactly-once-million
+```
+Outputs:
+- `runbook_exactly_once_million_ok=true|false`
+- `exactly_once_million_proof_ok=true|false`
+- `exactly_once_million_recommended_action=...`
+- `runbook_output_dir=build/runbooks/exactly-once-million-<timestamp>`
 
 Runbook shortcut:
 ```bash

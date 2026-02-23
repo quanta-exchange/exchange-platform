@@ -489,6 +489,11 @@
       "controlId": "CTRL-098",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
       "description": "Verification and safety budget flows can ingest and evaluate million-duplicate exactly-once proof artifacts so duplicate-settlement resilience evidence is visible in promotion decisions"
+    },
+    {
+      "controlId": "CTRL-099",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for exactly-once million failure scenarios so operators can capture deterministic diagnostics and recommended remediation during duplicate-settlement incident drills"
     }
   ]
 }
