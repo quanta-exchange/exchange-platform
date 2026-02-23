@@ -929,9 +929,24 @@ func TestConsumeTradeMessageRejectsUnsupportedEventVersion(t *testing.T) {
 }
 
 func TestTickerEndpointAfterSmokeTrade(t *testing.T) {
-	s, cleanup := newTestServer(t)
-	defer cleanup()
-	s.cfg.EnableSmokeRoutes = true
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:          true,
+		WSQueueSize:        8,
+		EnableSmokeRoutes:  true,
+		APISecrets:         map[string]string{"test-key": testAPISecret},
+		TimestampSkew:      30 * time.Second,
+		ReplayTTL:          2 * time.Minute,
+		RateLimitPerMinute: 100,
+		CoreAddr:           coreAddr,
+		CoreTimeout:        2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer func() { _ = s.Close() }()
 
 	body := []byte(`{"tradeId":"trade-1","symbol":"BTC-KRW","price":"100","qty":"2"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/smoke/trades", bytes.NewReader(body))
@@ -982,8 +997,8 @@ func TestSmokeTradeRouteDisabledByDefault(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	s.Router().ServeHTTP(w, req)
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected smoke route forbidden by default, got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected smoke route to be unregistered by default, got %d", w.Code)
 	}
 }
 

@@ -704,7 +704,9 @@ func New(cfg Config) (*Server, error) {
 		protected.Post("/v1/orders", s.handleCreateOrder)
 		protected.Delete("/v1/orders/{orderId}", s.handleCancelOrder)
 		protected.Get("/v1/orders/{orderId}", s.handleGetOrder)
-		protected.Post("/v1/smoke/trades", s.handleSmokeTrade)
+		if cfg.EnableSmokeRoutes {
+			protected.Post("/v1/smoke/trades", s.handleSmokeTrade)
+		}
 	})
 
 	r.Get("/ws", s.handleWS)
