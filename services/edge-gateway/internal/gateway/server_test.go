@@ -25,13 +25,15 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const testAPISecret = "test-secret-123456"
+
 func newTestServer(t *testing.T) (*Server, func()) {
 	t.Helper()
 	coreAddr, shutdownCore := startTestCore(t)
 	s, err := New(Config{
 		DisableDB:          true,
 		WSQueueSize:        8,
-		APISecrets:         map[string]string{"test-key": "secret"},
+		APISecrets:         map[string]string{"test-key": testAPISecret},
 		TimestampSkew:      30 * time.Second,
 		ReplayTTL:          2 * time.Minute,
 		RateLimitPerMinute: 100,
@@ -53,7 +55,7 @@ func signHeaders(t *testing.T, method, path string, body []byte, tsMs int64) htt
 	h.Set("X-API-KEY", "test-key")
 	h.Set("X-TS", strconv.FormatInt(tsMs, 10))
 	canonical := method + "\n" + path + "\n" + strconv.FormatInt(tsMs, 10) + "\n" + string(body)
-	h.Set("X-SIGNATURE", sign("secret", canonical))
+	h.Set("X-SIGNATURE", sign(testAPISecret, canonical))
 	return h
 }
 
@@ -115,6 +117,25 @@ func startTestCore(t *testing.T) (string, func()) {
 	return listener.Addr().String(), func() {
 		server.Stop()
 		_ = listener.Close()
+	}
+}
+
+func TestNewRejectsWeakAPISecret(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	_, err := New(Config{
+		DisableDB:   true,
+		WSQueueSize: 8,
+		APISecrets:  map[string]string{"weak-key": "short"},
+		CoreAddr:    coreAddr,
+		CoreTimeout: 2 * time.Second,
+	})
+	if err == nil {
+		t.Fatalf("expected weak api secret to fail server creation")
+	}
+	if !strings.Contains(err.Error(), "at least 16 characters") {
+		t.Fatalf("unexpected weak secret error: %v", err)
 	}
 }
 

@@ -496,6 +496,11 @@ func New(cfg Config) (*Server, error) {
 	if cfg.KafkaGroupID == "" {
 		cfg.KafkaGroupID = "edge-trades-v1"
 	}
+	for key, secret := range cfg.APISecrets {
+		if len(strings.TrimSpace(secret)) < 16 {
+			return nil, fmt.Errorf("api secret for key %q must be at least 16 characters", key)
+		}
+	}
 	if strings.TrimSpace(cfg.KafkaStartOffset) == "" {
 		cfg.KafkaStartOffset = "first"
 	}
