@@ -326,6 +326,7 @@ make safety-case-extended
 ```
 `scripts/safety_case.sh --run-extended-checks`는 다음 증거 파일을 번들에 포함합니다:
 - `build/load/load-smoke.json`
+- `build/load/load-all-latest.json` (있을 때 자동 포함)
 - `build/dr/dr-report.json`
 - `build/invariants/ledger-invariants.json`
 - `build/invariants/core-invariants.json`

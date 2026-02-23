@@ -130,6 +130,7 @@ declare -a REQUIRED_EVIDENCE=(
 )
 
 declare -a OPTIONAL_EXTENDED_EVIDENCE=(
+  "build/load/load-all-latest.json"
   "build/exactly-once/exactly-once-stress.json"
   "build/idempotency/prove-idempotency-latest.json"
   "build/latch/prove-latch-approval-latest.json"

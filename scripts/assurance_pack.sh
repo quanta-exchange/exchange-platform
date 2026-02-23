@@ -69,6 +69,7 @@ safety_case_sha = (
 
 evidence = [
     {"id": "load_smoke", "path": pathlib.Path("build/load/load-smoke.json"), "required": True},
+    {"id": "load_all", "path": pathlib.Path("build/load/load-all-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
     {"id": "invariants", "path": pathlib.Path("build/invariants/ledger-invariants.json"), "required": True},
     {"id": "invariants_summary", "path": pathlib.Path("build/invariants/invariants-summary.json"), "required": False},
@@ -131,6 +132,7 @@ pack = {
         {"id": "G12", "text": "Candle correctness proof confirms canonical rebuild and online aggregation converge under out-of-order and duplicate trades."},
         {"id": "G13", "text": "Snapshot verify drill validates checksum and snapshot+WAL restore rehearsal consistency."},
         {"id": "G14", "text": "Core invariants scan enforces sequence monotonicity and rejects illegal order lifecycle transitions in WAL events."},
+        {"id": "G15", "text": "Staged load bundle report captures smoke/10k/50k profile outcomes in one artifact for performance regression tracking."},
     ],
 }
 
