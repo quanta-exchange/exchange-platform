@@ -31,6 +31,16 @@ groups:
           summary: "WS send queue p99 sustained high"
           description: "ws_send_queue_p99 exceeded 128 for 5 minutes; fan-out congestion likely."
 
+      - alert: WSResumeGapSpike
+        expr: increase(ws_resume_gaps[10m]) >= 50
+        for: 0m
+        labels:
+          severity: warning
+          service: edge-gateway
+        annotations:
+          summary: "WS resume gap events increased"
+          description: "ws_resume_gaps increased by 50 or more in 10 minutes; clients are frequently resuming outside trade replay history."
+
       - alert: WSActiveConnectionsZero
         expr: ws_active_conns == 0
         for: 2m

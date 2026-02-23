@@ -227,6 +227,12 @@
       "title": "Crash recovery runbook-as-code exists",
       "enforced": false,
       "required_evidence": ["runbooks/crash_recovery.sh", "runbooks/crash_recovery.md"]
+    },
+    {
+      "id": "CTRL-039",
+      "title": "WS resume gap metric + alert coverage evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/ws/ws-resume-smoke.json", "scripts/ws_resume_smoke.sh", "infra/observability/ws-alert-rules.example.yml", "services/edge-gateway/internal/gateway/server.go"]
     }
   ]
 }

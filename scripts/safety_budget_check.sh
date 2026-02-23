@@ -141,6 +141,20 @@ for key, budget in budgets.items():
         if dropped < float(budget.get("droppedMsgsMin", 0)):
             entry["ok"] = False
             entry["details"].append(f"ws_dropped_msgs={dropped} < {budget['droppedMsgsMin']}")
+    elif key == "wsResume":
+        resume_gaps = float(payload.get("metrics", {}).get("ws_resume_gaps", 0.0))
+        gap_type = str(payload.get("gap_recovery", {}).get("result_type", ""))
+        if resume_gaps < float(budget.get("gapSignalsMin", 0)):
+            entry["ok"] = False
+            entry["details"].append(f"ws_resume_gaps={resume_gaps} < {budget['gapSignalsMin']}")
+        must_have_gap_type = bool(budget.get("mustHaveGapResultType", True))
+        if must_have_gap_type and not gap_type:
+            entry["ok"] = False
+            entry["details"].append("missing_gap_result_type")
+        allowed_types = budget.get("allowedGapResultTypes")
+        if allowed_types and gap_type and gap_type not in allowed_types:
+            entry["ok"] = False
+            entry["details"].append(f"unexpected_gap_result_type={gap_type}")
     elif key == "reconciliationSmoke":
         checks = payload.get("checks", {})
         if bool(budget.get("mustConfirmBreach", False)) and not bool(checks.get("breach_confirmed", False)):

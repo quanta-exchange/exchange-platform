@@ -53,6 +53,12 @@ extract_value() {
   grep -E "^${key}=" "${file}" | tail -n 1 | sed "s/^${key}=//"
 }
 
+metric_value() {
+  local metrics="$1"
+  local key="$2"
+  echo "${metrics}" | awk -v metric="${key}" '$1 == metric {print $2; exit}'
+}
+
 flood_trades() {
   local count="$1"
   local start="${TRADE_INDEX}"
@@ -181,6 +187,18 @@ if [[ "${GAP_FIRST_TYPE}" != "Snapshot" && "${GAP_FIRST_TYPE}" != "Missed" ]]; t
   exit 1
 fi
 
+METRICS="$(curl -fsS "${EDGE_URL}/metrics")"
+WS_RESUME_GAPS="$(metric_value "${METRICS}" "ws_resume_gaps")"
+if [[ -z "${WS_RESUME_GAPS}" ]]; then
+  echo "missing ws_resume_gaps from /metrics output" >&2
+  echo "${METRICS}" >&2
+  exit 1
+fi
+if (( ${WS_RESUME_GAPS%.*} < 1 )); then
+  echo "expected ws_resume_gaps >= 1, got ${WS_RESUME_GAPS}" >&2
+  exit 1
+fi
+
 REPORT_FILE="${REPORT_FILE}" \
 RUN_ID="${RUN_ID}" \
 EDGE_URL="${EDGE_URL}" \
@@ -201,6 +219,7 @@ GAP_LOG="${GAP_LOG}" \
 CAPTURE_EVENTS_FILE="${CAPTURE_EVENTS_FILE}" \
 REPLAY_EVENTS_FILE="${REPLAY_EVENTS_FILE}" \
 GAP_EVENTS_FILE="${GAP_EVENTS_FILE}" \
+WS_RESUME_GAPS="${WS_RESUME_GAPS}" \
 python3 - <<'PY'
 import json
 import os
@@ -227,6 +246,9 @@ report = {
         "result_type": os.environ["GAP_FIRST_TYPE"],
         "snapshot_seq": int(os.environ["GAP_SEQ"]),
     },
+    "metrics": {
+        "ws_resume_gaps": float(os.environ["WS_RESUME_GAPS"]),
+    },
     "logs": {
         "edge": os.environ["EDGE_LOG"],
         "capture": os.environ["CAPTURE_LOG"],
@@ -249,4 +271,5 @@ echo "ws_resume_smoke_success=true"
 echo "ws_resume_capture_last_seq=${CAPTURE_LAST_SEQ}"
 echo "ws_resume_replay_last_seq=${REPLAY_LAST_SEQ}"
 echo "ws_resume_gap_first_type=${GAP_FIRST_TYPE}"
+echo "ws_resume_gaps=${WS_RESUME_GAPS}"
 echo "ws_resume_smoke_report=${REPORT_FILE}"

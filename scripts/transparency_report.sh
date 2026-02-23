@@ -45,6 +45,7 @@ invariants = read_json("build/invariants/ledger-invariants.json")
 core_invariants = read_json("build/invariants/core-invariants.json")
 invariants_summary = read_json("build/invariants/invariants-summary.json")
 ws = read_json("build/ws/ws-smoke.json")
+ws_resume = read_json("build/ws/ws-resume-smoke.json")
 safety_budget = read_json("build/safety/safety-budget-latest.json")
 snapshot_verify = read_json("build/snapshot/snapshot-verify-latest.json")
 controls = read_json("build/controls/controls-check-latest.json")
@@ -57,6 +58,7 @@ sources = {
     "core_invariants": core_invariants,
     "invariants_summary": invariants_summary,
     "ws": ws,
+    "ws_resume": ws_resume,
     "safety_budget": safety_budget,
     "snapshot_verify": snapshot_verify,
     "controls": controls,
@@ -120,6 +122,8 @@ report = {
         "ws_proxy": {
             "ws_dropped_msgs": float(ws.get("metrics", {}).get("ws_dropped_msgs")) if ws else None,
             "ws_slow_closes": float(ws.get("metrics", {}).get("ws_slow_closes")) if ws else None,
+            "ws_resume_gaps": float(ws_resume.get("metrics", {}).get("ws_resume_gaps")) if ws_resume else None,
+            "ws_resume_gap_result_type": ws_resume.get("gap_recovery", {}).get("result_type") if ws_resume else None,
         },
         "governance_proxy": {
             "controls_ok": bool(controls.get("ok")) if controls else None,
@@ -137,6 +141,7 @@ report = {
         "core_invariants": "build/invariants/core-invariants.json",
         "invariants_summary": "build/invariants/invariants-summary.json",
         "ws": "build/ws/ws-smoke.json",
+        "ws_resume": "build/ws/ws-resume-smoke.json",
         "safety_budget": "build/safety/safety-budget-latest.json",
         "snapshot_verify": "build/snapshot/snapshot-verify-latest.json",
         "controls": "build/controls/controls-check-latest.json",

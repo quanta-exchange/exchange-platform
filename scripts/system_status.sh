@@ -187,6 +187,7 @@ edge_ws_metrics = (
             "ws_active_conns",
             "ws_send_queue_p99",
             "ws_dropped_msgs",
+            "ws_resume_gaps",
             "ws_slow_closes",
             "ws_policy_closes",
             "ws_command_rate_limit_closes",

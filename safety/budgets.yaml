@@ -28,6 +28,12 @@
       "slowClosesMin": 1,
       "droppedMsgsMin": 1
     },
+    "wsResume": {
+      "required": false,
+      "gapSignalsMin": 1,
+      "mustHaveGapResultType": true,
+      "allowedGapResultTypes": ["Snapshot", "Missed"]
+    },
     "reconciliationSmoke": {
       "required": false,
       "mustConfirmBreach": true,
@@ -42,6 +48,7 @@
     "invariantsSummary": "build/invariants/invariants-summary.json",
     "snapshotVerify": "build/snapshot/snapshot-verify-latest.json",
     "ws": "build/ws/ws-smoke.json",
+    "wsResume": "build/ws/ws-resume-smoke.json",
     "reconciliationSmoke": "build/reconciliation/smoke-reconciliation-safety.json"
   }
 }
