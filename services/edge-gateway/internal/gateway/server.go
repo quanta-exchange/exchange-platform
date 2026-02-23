@@ -84,6 +84,7 @@ type Config struct {
 	KafkaBrokers        string
 	KafkaTradeTopic     string
 	KafkaGroupID        string
+	KafkaStartOffset    string
 	OrderRetention      time.Duration
 	OrderMaxRecords     int
 	OrderGCInterval     time.Duration
@@ -477,6 +478,9 @@ func New(cfg Config) (*Server, error) {
 	}
 	if cfg.KafkaGroupID == "" {
 		cfg.KafkaGroupID = "edge-trades-v1"
+	}
+	if strings.TrimSpace(cfg.KafkaStartOffset) == "" {
+		cfg.KafkaStartOffset = "first"
 	}
 	if cfg.OrderRetention <= 0 {
 		cfg.OrderRetention = 24 * time.Hour
@@ -2051,7 +2055,7 @@ func (s *Server) startTradeConsumer() {
 		Brokers:     brokers,
 		GroupID:     s.cfg.KafkaGroupID,
 		Topic:       s.cfg.KafkaTradeTopic,
-		StartOffset: kafka.LastOffset,
+		StartOffset: kafkaStartOffset(s.cfg.KafkaStartOffset),
 		MinBytes:    1,
 		MaxBytes:    10e6,
 		MaxWait:     1 * time.Second,
@@ -3027,6 +3031,15 @@ func prometheusLabelEscape(value string) string {
 
 func conflatable(channel string) bool {
 	return channel == "book" || channel == "candles" || channel == "ticker"
+}
+
+func kafkaStartOffset(raw string) int64 {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "last", "latest":
+		return kafka.LastOffset
+	default:
+		return kafka.FirstOffset
+	}
 }
 
 func (s *Server) idempotencyGet(

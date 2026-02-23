@@ -18,6 +18,7 @@ import (
 	exchangev1 "github.com/quanta-exchange/exchange-platform/contracts/gen/go/exchange/v1"
 
 	"github.com/gorilla/websocket"
+	"github.com/segmentio/kafka-go"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
@@ -809,6 +810,21 @@ func TestOriginAllowed(t *testing.T) {
 	}
 	if originAllowed(allowed, "") {
 		t.Fatalf("expected empty origin to fail when allowlist is configured")
+	}
+}
+
+func TestKafkaStartOffsetParser(t *testing.T) {
+	if got := kafkaStartOffset("first"); got != kafka.FirstOffset {
+		t.Fatalf("expected first offset, got %d", got)
+	}
+	if got := kafkaStartOffset("latest"); got != kafka.LastOffset {
+		t.Fatalf("expected latest to map to last offset, got %d", got)
+	}
+	if got := kafkaStartOffset("last"); got != kafka.LastOffset {
+		t.Fatalf("expected last offset, got %d", got)
+	}
+	if got := kafkaStartOffset("unknown"); got != kafka.FirstOffset {
+		t.Fatalf("expected unknown to default to first offset, got %d", got)
 	}
 }
 
