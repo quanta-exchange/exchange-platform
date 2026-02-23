@@ -311,6 +311,18 @@
       "title": "System status snapshot includes compliance posture summary",
       "enforced": false,
       "required_evidence": ["scripts/system_status.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-053",
+      "title": "Anomaly detector script emits actionable alert evidence",
+      "enforced": false,
+      "required_evidence": ["scripts/anomaly_detector.sh", "build/anomaly/anomaly-detector-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-054",
+      "title": "Game-day anomaly runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/game_day_anomaly.sh", "runbooks/game_day_anomaly.md", "RUNBOOK.md", "README.md", "Makefile"]
     }
   ]
 }

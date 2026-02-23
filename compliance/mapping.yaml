@@ -209,6 +209,16 @@
       "controlId": "CTRL-052",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "System status snapshots include latest controls/audit-chain/PII-scan posture for unified operational visibility"
+    },
+    {
+      "controlId": "CTRL-053",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.16.1.2"],
+      "description": "Anomaly detector evaluates ledger/ws risk metrics, emits recommended safety action, and can dispatch webhook alerts"
+    },
+    {
+      "controlId": "CTRL-054",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Game-day anomaly runbook forces incident signal generation and captures before/after operational evidence"
     }
   ]
 }

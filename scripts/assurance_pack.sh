@@ -67,13 +67,16 @@ safety_case_sha = (
     else None
 )
 startup_guardrails_runbook = newest(root.glob("build/runbooks/startup-guardrails-*/startup-guardrails.log"))
+game_day_anomaly_runbook = newest(root.glob("build/runbooks/game-day-anomaly-*/game-day-anomaly.log"))
 
 evidence = [
     {"id": "load_smoke", "path": pathlib.Path("build/load/load-smoke.json"), "required": True},
     {"id": "load_all", "path": pathlib.Path("build/load/load-all-latest.json"), "required": False},
     {"id": "startup_guardrails_runbook", "path": pathlib.Path(rel(startup_guardrails_runbook)) if startup_guardrails_runbook else None, "required": False},
+    {"id": "game_day_anomaly_runbook", "path": pathlib.Path(rel(game_day_anomaly_runbook)) if game_day_anomaly_runbook else None, "required": False},
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "pii_log_scan", "path": pathlib.Path("build/security/pii-log-scan-latest.json"), "required": False},
+    {"id": "anomaly_detector", "path": pathlib.Path("build/anomaly/anomaly-detector-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
     {"id": "invariants", "path": pathlib.Path("build/invariants/ledger-invariants.json"), "required": True},
     {"id": "invariants_summary", "path": pathlib.Path("build/invariants/invariants-summary.json"), "required": False},
@@ -140,6 +143,7 @@ pack = {
         {"id": "G16", "text": "Startup guardrails drill continuously verifies fail-closed production bootstrap policy across edge/core/ledger services."},
         {"id": "G17", "text": "Audit-chain verification produces a deterministic head hash for tamper-evidence checks on admin emergency action logs."},
         {"id": "G18", "text": "PII log scan gate detects email/phone/SSN patterns in generated operational artifacts and fails verification when hits exist."},
+        {"id": "G19", "text": "Anomaly detector and game-day drill provide reproducible incident signal evidence with recommended safety-action classification."},
     ],
 }
 

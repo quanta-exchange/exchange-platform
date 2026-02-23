@@ -42,9 +42,10 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->pii-scan->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup-guardrails + safety->controls->audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
+  anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
@@ -78,6 +79,8 @@ runbooks/
   crash_recovery.md       # crash recovery drill notes
   lag_spike.sh            # reconciliation lag spike automated drill
   load_regression.sh      # load regression automated drill
+  game_day_anomaly.sh     # anomaly game-day automated drill
+  game_day_anomaly.md     # anomaly game-day drill notes
   startup_guardrails.sh   # startup guardrails verification drill
   startup_guardrails.md   # startup guardrails drill notes
   ws_drop_spike.sh        # ws drop spike automated drill
@@ -408,7 +411,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -437,6 +440,18 @@ Success output includes:
 - `system_status_ok=true|false`
 - report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.pii_log_scan` snapshots when latest artifacts exist
 
+### 17.1) Anomaly detector
+```bash
+make anomaly-detector
+# deterministic drill mode:
+./scripts/anomaly_detector.sh --force-anomaly --allow-anomaly
+```
+Success output includes:
+- `anomaly_report=build/anomaly/anomaly-detector-<timestamp>.json`
+- `anomaly_latest=build/anomaly/anomaly-detector-latest.json`
+- `anomaly_detected=true|false`
+- `anomaly_recommended_action=NONE|INVESTIGATE|CANCEL_ONLY|WITHDRAW_HALT`
+
 ### 18) Runbook-as-code drills
 ```bash
 make runbook-lag-spike
@@ -445,9 +460,10 @@ make runbook-ws-drop
 make runbook-ws-resume-gap
 make runbook-crash-recovery
 make runbook-startup-guardrails
+make runbook-game-day-anomaly
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 

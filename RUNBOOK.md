@@ -157,10 +157,12 @@ Gate G1 operational check:
 - Load regression drill: `./runbooks/load_regression.sh`
 - Crash recovery drill: `./runbooks/crash_recovery.sh`
 - Startup guardrails drill: `./runbooks/startup_guardrails.sh`
+- Game-day anomaly drill: `./runbooks/game_day_anomaly.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - PII log scan gate: `./scripts/pii_log_scan.sh`
+- Anomaly detector probe: `./scripts/anomaly_detector.sh`
 - Change workflow:
   - create proposal: `./scripts/change_proposal.sh ...`
   - record approval: `./scripts/change_approve.sh ...`
@@ -258,6 +260,22 @@ Success criteria:
   - `edge_guardrails_tests_ok=true`
   - `ledger_guardrails_tests_ok=true`
   - `core_guardrails_ok=true` (or explicit skip reason when `RUNBOOK_ALLOW_CORE_FAIL=true`)
+  - `status-before.json` / `status-after.json`
+
+### 4.5 Game-day anomaly drill
+Purpose:
+- anomaly detector 경보/권고 액션/증거 산출 흐름을 강제 주입으로 점검
+- webhook 알림 경로와 before/after 상태 스냅샷을 함께 확인
+
+Command:
+- `./runbooks/game_day_anomaly.sh`
+- webhook 포함: `WEBHOOK_URL=https://example.internal/webhook ./runbooks/game_day_anomaly.sh`
+
+Success criteria:
+- output includes `runbook_game_day_anomaly_ok=true`
+- runbook output contains:
+  - `anomaly-detector-*.json`
+  - `safety-budget-*.json`
   - `status-before.json` / `status-after.json`
 
 ---
