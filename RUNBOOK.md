@@ -154,6 +154,7 @@ Gate G1 operational check:
 - Reconciliation lag drill: `./runbooks/lag_spike.sh`
 - WS drop/slow-consumer drill: `./runbooks/ws_drop_spike.sh`
 - WS resume-gap drill: `./runbooks/ws_resume_gap_spike.sh`
+- Load regression drill: `./runbooks/load_regression.sh`
 - Crash recovery drill: `./runbooks/crash_recovery.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
 - Change workflow:
@@ -220,6 +221,22 @@ Success criteria:
 - runbook output contains:
   - `ws-resume-smoke.json` (`gap_recovery.result_type`, `metrics.ws_resume_gaps`)
   - `safety-budget-*.json` with `wsResume` check pass
+  - `status-before.json` / `status-after.json`
+
+### 4.3 Load regression drill
+Purpose:
+- validate staged load profiles (`load-smoke`, `load-10k`, `load-50k`) in one pass
+- capture consolidated pass/fail report and budget compliance evidence after change/deploy
+
+Command:
+- `./runbooks/load_regression.sh`
+- gateway-only dry-run: `RUNBOOK_ALLOW_BUDGET_FAIL=true ./runbooks/load_regression.sh`
+
+Success criteria:
+- output includes `runbook_load_regression_ok=true`
+- runbook output contains:
+  - `load-all-*.json` and `load-all-latest.json`
+  - `safety-budget-*.json`
   - `status-before.json` / `status-after.json`
 
 ---

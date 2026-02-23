@@ -251,6 +251,12 @@
       "title": "Load-all bundle runner exists",
       "enforced": false,
       "required_evidence": ["scripts/load_all.sh", "build/load/load-all-latest.json"]
+    },
+    {
+      "id": "CTRL-043",
+      "title": "Load regression runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/load_regression.sh", "runbooks/load_regression.md", "scripts/load_all.sh"]
     }
   ]
 }
