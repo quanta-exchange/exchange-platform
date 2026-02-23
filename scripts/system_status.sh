@@ -251,6 +251,9 @@ controls_latest = read_latest_json("build/controls/controls-check-latest.json")
 compliance_latest = read_latest_json("build/compliance/compliance-evidence-latest.json")
 controls_freshness_latest = read_latest_json("build/controls/prove-controls-freshness-latest.json")
 determinism_latest = read_latest_json("build/determinism/prove-determinism-latest.json")
+exactly_once_million_latest = read_latest_json(
+    "build/exactly-once/prove-exactly-once-million-latest.json"
+)
 audit_chain_latest = read_latest_json("build/audit/verify-audit-chain-latest.json")
 change_audit_chain_latest = read_latest_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
@@ -435,6 +438,19 @@ report = {
                     "executed_runs": (determinism_latest.get("payload") or {}).get("executed_runs"),
                     "distinct_hashes_count": len(((determinism_latest.get("payload") or {}).get("distinct_hashes", []) or [])),
                     "error": determinism_latest.get("error"),
+                },
+                "exactly_once_million": {
+                    "present": exactly_once_million_latest.get("present", False),
+                    "path": exactly_once_million_latest.get("path"),
+                    "ok": (exactly_once_million_latest.get("payload") or {}).get("ok"),
+                    "repeats": (exactly_once_million_latest.get("payload") or {}).get("repeats"),
+                    "concurrency": (exactly_once_million_latest.get("payload") or {}).get(
+                        "concurrency"
+                    ),
+                    "runner_exit_code": (exactly_once_million_latest.get("payload") or {}).get(
+                        "runner_exit_code"
+                    ),
+                    "error": exactly_once_million_latest.get("error"),
                 },
                 "controls_freshness": {
                     "present": controls_freshness_latest.get("present", False),

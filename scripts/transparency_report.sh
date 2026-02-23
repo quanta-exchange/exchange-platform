@@ -45,6 +45,7 @@ invariants = read_json("build/invariants/ledger-invariants.json")
 core_invariants = read_json("build/invariants/core-invariants.json")
 invariants_summary = read_json("build/invariants/invariants-summary.json")
 determinism = read_json("build/determinism/prove-determinism-latest.json")
+exactly_once_million = read_json("build/exactly-once/prove-exactly-once-million-latest.json")
 ws = read_json("build/ws/ws-smoke.json")
 ws_resume = read_json("build/ws/ws-resume-smoke.json")
 safety_budget = read_json("build/safety/safety-budget-latest.json")
@@ -71,6 +72,7 @@ sources = {
     "core_invariants": core_invariants,
     "invariants_summary": invariants_summary,
     "determinism": determinism,
+    "exactly_once_million": exactly_once_million,
     "ws": ws,
     "ws_resume": ws_resume,
     "safety_budget": safety_budget,
@@ -146,6 +148,9 @@ report = {
             "snapshot_verify_ok": bool(snapshot_verify.get("ok")) if snapshot_verify else None,
             "determinism_ok": bool(determinism.get("ok")) if determinism else None,
             "determinism_executed_runs": int(determinism.get("executed_runs")) if determinism and determinism.get("executed_runs") is not None else None,
+            "exactly_once_million_ok": bool(exactly_once_million.get("ok")) if exactly_once_million else None,
+            "exactly_once_million_repeats": int(exactly_once_million.get("repeats")) if exactly_once_million and exactly_once_million.get("repeats") is not None else None,
+            "exactly_once_million_concurrency": int(exactly_once_million.get("concurrency")) if exactly_once_million and exactly_once_million.get("concurrency") is not None else None,
         },
         "ws_proxy": {
             "ws_dropped_msgs": float(ws.get("metrics", {}).get("ws_dropped_msgs")) if ws else None,
@@ -240,6 +245,7 @@ report = {
         "core_invariants": "build/invariants/core-invariants.json",
         "invariants_summary": "build/invariants/invariants-summary.json",
         "determinism": "build/determinism/prove-determinism-latest.json",
+        "exactly_once_million": "build/exactly-once/prove-exactly-once-million-latest.json",
         "ws": "build/ws/ws-smoke.json",
         "ws_resume": "build/ws/ws-resume-smoke.json",
         "safety_budget": "build/safety/safety-budget-latest.json",
