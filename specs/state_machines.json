@@ -1,0 +1,202 @@
+{
+  "machines": {
+    "order_lifecycle": {
+      "initial": "NEW",
+      "states": [
+        "NEW",
+        "ACCEPTED",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "CANCELED",
+        "REJECTED"
+      ],
+      "terminal": [
+        "FILLED",
+        "CANCELED",
+        "REJECTED"
+      ],
+      "rank": {
+        "NEW": 0,
+        "ACCEPTED": 1,
+        "PARTIALLY_FILLED": 2,
+        "FILLED": 3,
+        "CANCELED": 3,
+        "REJECTED": 3
+      },
+      "transitions": {
+        "NEW": [
+          "ACCEPTED",
+          "REJECTED"
+        ],
+        "ACCEPTED": [
+          "PARTIALLY_FILLED",
+          "FILLED",
+          "CANCELED"
+        ],
+        "PARTIALLY_FILLED": [
+          "PARTIALLY_FILLED",
+          "FILLED",
+          "CANCELED"
+        ],
+        "FILLED": [],
+        "CANCELED": [],
+        "REJECTED": []
+      },
+      "valid_paths": [
+        [
+          "NEW",
+          "ACCEPTED",
+          "FILLED"
+        ],
+        [
+          "NEW",
+          "ACCEPTED",
+          "PARTIALLY_FILLED",
+          "FILLED"
+        ],
+        [
+          "NEW",
+          "ACCEPTED",
+          "PARTIALLY_FILLED",
+          "CANCELED"
+        ],
+        [
+          "NEW",
+          "REJECTED"
+        ]
+      ],
+      "invalid_paths": [
+        [
+          "NEW",
+          "FILLED"
+        ],
+        [
+          "FILLED",
+          "CANCELED"
+        ],
+        [
+          "NEW",
+          "ACCEPTED",
+          "REJECTED"
+        ]
+      ]
+    },
+    "trade_finality": {
+      "initial": "EXECUTED",
+      "states": [
+        "EXECUTED",
+        "SETTLED"
+      ],
+      "terminal": [
+        "SETTLED"
+      ],
+      "rank": {
+        "EXECUTED": 0,
+        "SETTLED": 1
+      },
+      "transitions": {
+        "EXECUTED": [
+          "SETTLED"
+        ],
+        "SETTLED": []
+      },
+      "valid_paths": [
+        [
+          "EXECUTED",
+          "SETTLED"
+        ]
+      ],
+      "invalid_paths": [
+        [
+          "EXECUTED",
+          "EXECUTED"
+        ],
+        [
+          "SETTLED",
+          "EXECUTED"
+        ]
+      ]
+    },
+    "withdrawal_lifecycle": {
+      "initial": "REQUESTED",
+      "states": [
+        "REQUESTED",
+        "APPROVED",
+        "SIGNING",
+        "BROADCASTED",
+        "CONFIRMED",
+        "SETTLED",
+        "FAILED"
+      ],
+      "terminal": [
+        "SETTLED",
+        "FAILED"
+      ],
+      "rank": {
+        "REQUESTED": 0,
+        "APPROVED": 1,
+        "SIGNING": 2,
+        "BROADCASTED": 3,
+        "CONFIRMED": 4,
+        "SETTLED": 5,
+        "FAILED": 5
+      },
+      "transitions": {
+        "REQUESTED": [
+          "APPROVED",
+          "FAILED"
+        ],
+        "APPROVED": [
+          "SIGNING",
+          "FAILED"
+        ],
+        "SIGNING": [
+          "BROADCASTED",
+          "FAILED"
+        ],
+        "BROADCASTED": [
+          "CONFIRMED",
+          "FAILED"
+        ],
+        "CONFIRMED": [
+          "SETTLED",
+          "FAILED"
+        ],
+        "SETTLED": [],
+        "FAILED": []
+      },
+      "valid_paths": [
+        [
+          "REQUESTED",
+          "APPROVED",
+          "SIGNING",
+          "BROADCASTED",
+          "CONFIRMED",
+          "SETTLED"
+        ],
+        [
+          "REQUESTED",
+          "APPROVED",
+          "FAILED"
+        ]
+      ],
+      "invalid_paths": [
+        [
+          "REQUESTED",
+          "SETTLED"
+        ],
+        [
+          "FAILED",
+          "APPROVED"
+        ],
+        [
+          "REQUESTED",
+          "APPROVED",
+          "SIGNING",
+          "CONFIRMED"
+        ]
+      ]
+    }
+  },
+  "version": 1
+}

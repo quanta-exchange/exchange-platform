@@ -63,6 +63,7 @@ jobs:
               - 'safety/**'
               - 'compliance/**'
               - 'policies/**'
+              - 'specs/**'
               - 'tools/**'
               - 'security/**'
               - 'Makefile'
@@ -359,6 +360,7 @@ jobs:
             build/release-gate/**
             build/archive/**
             build/access/**
+            build/model-check/**
 
   security-baseline:
     runs-on: ubuntu-latest

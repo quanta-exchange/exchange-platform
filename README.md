@@ -39,13 +39,14 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->model-check->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
+  model_check.sh          # G28 state-machine model checker
   archive_range.sh        # G21 legal archive capture
   verify_archive.sh       # G21 archive checksum verifier
   change_proposal.sh      # G10 change proposal creation
@@ -399,6 +400,15 @@ RUNS=5 make prove-determinism
 Outputs:
 - `prove_determinism_report=build/determinism/<timestamp>/prove-determinism.json`
 - `prove_determinism_ok=true|false`
+
+### 28) State-machine model check
+```bash
+make model-check
+```
+Outputs:
+- `model_check_report=build/model-check/model-check-<timestamp>.json`
+- `model_check_latest=build/model-check/model-check-latest.json`
+- `model_check_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening
