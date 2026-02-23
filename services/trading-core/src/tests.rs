@@ -77,6 +77,8 @@ fn core_config(tmp: &TempDir) -> CoreConfig {
         risk: RiskConfig {
             max_open_orders_per_user_symbol: 1_000,
             max_commands_per_sec: 10_000,
+            max_order_qty: 10_000_000,
+            max_order_notional: 10_000_000_000_000,
             price_band_bps: 1_000,
             dynamic_collar_bps: 1_500,
             volatility_violation_threshold: 3,

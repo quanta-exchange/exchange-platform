@@ -362,6 +362,7 @@ jobs:
             build/access/**
             build/model-check/**
             build/shadow/**
+            build/breakers/**
 
   security-baseline:
     runs-on: ubuntu-latest

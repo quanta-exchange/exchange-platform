@@ -56,6 +56,8 @@ pub struct RecentCommandRow {
 pub struct RiskConfig {
     pub max_open_orders_per_user_symbol: usize,
     pub max_commands_per_sec: usize,
+    pub max_order_qty: u64,
+    pub max_order_notional: u64,
     pub price_band_bps: u64,
     pub dynamic_collar_bps: u64,
     pub volatility_violation_threshold: u64,
@@ -66,6 +68,8 @@ impl Default for RiskConfig {
         Self {
             max_open_orders_per_user_symbol: 100,
             max_commands_per_sec: 200,
+            max_order_qty: 10_000_000,
+            max_order_notional: 10_000_000_000_000,
             price_band_bps: 1_000,
             dynamic_collar_bps: 1_500,
             volatility_violation_threshold: 3,
@@ -119,6 +123,7 @@ impl RiskManager {
         self.enforce_mode(order, symbol_mode)?;
         self.enforce_rate_limit(&order.user_id, symbol)?;
         self.enforce_open_order_limit(&order.user_id, symbol)?;
+        self.enforce_order_limits(order, ref_price)?;
         self.enforce_price_band(order, ref_price)?;
         self.reserve(order, ref_price)?;
         self.bump_open_order(&order.user_id, symbol, 1);
@@ -160,6 +165,25 @@ impl RiskManager {
         let open = self.open_orders.get(&key).copied().unwrap_or(0);
         if open >= self.cfg.max_open_orders_per_user_symbol {
             return Err(RejectCode::TooManyRequests);
+        }
+        Ok(())
+    }
+
+    fn enforce_order_limits(
+        &self,
+        order: &Order,
+        ref_price: Option<u64>,
+    ) -> Result<(), RejectCode> {
+        if order.remaining_qty > self.cfg.max_order_qty {
+            return Err(RejectCode::RiskLimit);
+        }
+        let px = match order.order_type {
+            OrderType::Limit => order.price.ok_or(RejectCode::Validation)?,
+            OrderType::Market => ref_price.ok_or(RejectCode::NoLiquidity)?,
+        };
+        let notional = px.saturating_mul(order.remaining_qty);
+        if notional > self.cfg.max_order_notional {
+            return Err(RejectCode::RiskLimit);
         }
         Ok(())
     }
@@ -450,5 +474,33 @@ mod tests {
         let _ = risk.validate_and_reserve(&order, Some(100), SymbolMode::Normal, "BTC-KRW");
         risk.release_reservation(&order);
         assert!(risk.invariant_holds());
+    }
+
+    #[test]
+    fn order_qty_limit_rejects_oversized_order() {
+        let mut risk = RiskManager::new(RiskConfig {
+            max_order_qty: 2,
+            ..RiskConfig::default()
+        });
+        risk.set_balance("u1", "KRW", 1_000_000, 0);
+        let order = buy_order(100, 3);
+        let err = risk
+            .validate_and_reserve(&order, Some(100), SymbolMode::Normal, "BTC-KRW")
+            .unwrap_err();
+        assert_eq!(err, RejectCode::RiskLimit);
+    }
+
+    #[test]
+    fn order_notional_limit_rejects_oversized_order() {
+        let mut risk = RiskManager::new(RiskConfig {
+            max_order_notional: 150,
+            ..RiskConfig::default()
+        });
+        risk.set_balance("u1", "KRW", 1_000_000, 0);
+        let order = buy_order(100, 2);
+        let err = risk
+            .validate_and_reserve(&order, Some(100), SymbolMode::Normal, "BTC-KRW")
+            .unwrap_err();
+        assert_eq!(err, RejectCode::RiskLimit);
     }
 }

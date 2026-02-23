@@ -149,6 +149,12 @@
       "title": "Shadow verification evidence exists",
       "enforced": false,
       "required_evidence": ["build/shadow/shadow-verify-latest.json", "scripts/shadow_verify.sh"]
+    },
+    {
+      "id": "CTRL-026",
+      "title": "Circuit-breaker proof evidence exists",
+      "enforced": false,
+      "required_evidence": ["build/breakers/prove-breakers-latest.json", "scripts/prove_breakers.sh"]
     }
   ]
 }

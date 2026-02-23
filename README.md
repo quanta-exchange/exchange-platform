@@ -46,6 +46,7 @@ scripts/
   transparency_report.sh  # G34 public transparency report generator
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
+  prove_breakers.sh       # G35 circuit-breaker proof runner
   model_check.sh          # G28 state-machine model checker
   shadow_verify.sh        # G33 production shadow verification
   archive_range.sh        # G21 legal archive capture
@@ -149,7 +150,7 @@ Rust protobuf build note (Trading Core):
 ./scripts/dr_rehearsal.sh
 ./scripts/invariants.sh
 make safety-case
-# optional full safety-case proof set (exactly-once + reconciliation + chaos + determinism 포함)
+# optional full safety-case proof set (exactly-once + reconciliation + chaos + determinism + breakers 포함)
 make safety-case-extended
 ```
 
@@ -256,6 +257,7 @@ make safety-case-extended
 - `build/chaos/chaos-replay.json`
 - `build/ws/ws-smoke.json`
 - `build/determinism/prove-determinism-latest.json`
+- `build/breakers/prove-breakers-latest.json`
 
 ### 12) Assurance pack (claims + evidence index)
 ```bash
@@ -412,6 +414,15 @@ RUNS=5 make prove-determinism
 Outputs:
 - `prove_determinism_report=build/determinism/<timestamp>/prove-determinism.json`
 - `prove_determinism_ok=true|false`
+
+### 27.1) Circuit-breaker proof
+```bash
+make prove-breakers
+```
+Outputs:
+- `prove_breakers_report=build/breakers/prove-breakers-<timestamp>.json`
+- `prove_breakers_latest=build/breakers/prove-breakers-latest.json`
+- `prove_breakers_ok=true|false`
 
 ### 28) State-machine model check
 ```bash
