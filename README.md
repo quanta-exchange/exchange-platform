@@ -319,6 +319,7 @@ Configure auth in env:
 - `EDGE_SEED_MARKET_DATA=true` (default: server boot 시 샘플 마켓 데이터 자동 주입)
 - `EDGE_ENABLE_SMOKE_ROUTES=false` (default; test scripts only set `true`)
 - `EDGE_SESSION_TTL_HOURS=24`
+- `EDGE_SESSION_MAX_PER_USER=8` (oldest session tokens are evicted when cap is exceeded)
 - `EDGE_KAFKA_BROKERS=localhost:29092` (core trade event consume)
 - `EDGE_KAFKA_TRADE_TOPIC=core.trade-events.v1`
 - `EDGE_KAFKA_GROUP_ID=edge-trades-v1`

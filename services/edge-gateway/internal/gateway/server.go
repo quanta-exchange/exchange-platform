@@ -60,6 +60,7 @@ type Config struct {
 	EnableSmokeRoutes        bool
 	AllowInsecureNoAuth      bool
 	SessionTTL               time.Duration
+	SessionMaxPerUser        int
 	WSQueueSize              int
 	WSWriteDelay             time.Duration
 	WSMaxSubscriptions       int
@@ -231,6 +232,7 @@ type sessionRecord struct {
 	Token       string `json:"token"`
 	UserID      string `json:"userId"`
 	ExpiresAtMs int64  `json:"expiresAt"`
+	IssuedAtMs  int64  `json:"issuedAt,omitempty"`
 }
 
 type walletBalance struct {
@@ -259,6 +261,7 @@ type state struct {
 	usersByEmail    map[string]userRecord
 	usersByID       map[string]userRecord
 	sessionsMemory  map[string]sessionRecord
+	sessionsByUser  map[string][]string
 	wallets         map[string]map[string]walletBalance
 	appliedTrades   map[string]int64
 
@@ -274,6 +277,7 @@ type state struct {
 	wsConnRejects       uint64
 	wsConnsByIP         map[string]int
 	settlementAnomalies uint64
+	sessionEvictions    uint64
 }
 
 type wsSubscription struct {
@@ -485,6 +489,9 @@ func New(cfg Config) (*Server, error) {
 	if cfg.SessionTTL <= 0 {
 		cfg.SessionTTL = 24 * time.Hour
 	}
+	if cfg.SessionMaxPerUser <= 0 {
+		cfg.SessionMaxPerUser = 8
+	}
 	if cfg.CoreAddr == "" {
 		cfg.CoreAddr = "localhost:50051"
 	}
@@ -586,6 +593,7 @@ func New(cfg Config) (*Server, error) {
 			usersByEmail:       map[string]userRecord{},
 			usersByID:          map[string]userRecord{},
 			sessionsMemory:     map[string]sessionRecord{},
+			sessionsByUser:     map[string][]string{},
 			wallets:            map[string]map[string]walletBalance{},
 			appliedTrades:      map[string]int64{},
 		},
@@ -774,6 +782,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	replayDetected := s.state.replayDetected
 	publicRateLimited := s.state.publicRateLimited
 	settlementAnomalies := s.state.settlementAnomalies
+	sessionEvictions := s.state.sessionEvictions
 	queueLens := make([]int, 0, len(s.state.clients))
 	for c := range s.state.clients {
 		queueLens = append(queueLens, c.queueLen())
@@ -804,6 +813,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_ws_connection_reject_total " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_public_rate_limited_total " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_settlement_anomaly_total " + strconv.FormatUint(settlementAnomalies, 10) + "\n"))
+	_, _ = w.Write([]byte("edge_session_eviction_total " + strconv.FormatUint(sessionEvictions, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
 	for _, reason := range reasons {
 		line := fmt.Sprintf(
@@ -823,6 +833,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ws_connection_rejects " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
 	_, _ = w.Write([]byte("public_rate_limited " + strconv.FormatUint(publicRateLimited, 10) + "\n"))
 	_, _ = w.Write([]byte("settlement_anomalies " + strconv.FormatUint(settlementAnomalies, 10) + "\n"))
+	_, _ = w.Write([]byte("session_evictions " + strconv.FormatUint(sessionEvictions, 10) + "\n"))
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -1278,11 +1289,13 @@ func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bo
 }
 
 func (s *Server) createSession(ctx context.Context, user userRecord) (sessionRecord, error) {
+	nowMs := time.Now().UnixMilli()
 	token := uuid.NewString() + uuid.NewString()
 	session := sessionRecord{
 		Token:       token,
 		UserID:      user.UserID,
-		ExpiresAtMs: time.Now().Add(s.cfg.SessionTTL).UnixMilli(),
+		ExpiresAtMs: nowMs + s.cfg.SessionTTL.Milliseconds(),
+		IssuedAtMs:  nowMs,
 	}
 
 	if s.redis != nil {
@@ -1295,9 +1308,27 @@ func (s *Server) createSession(ctx context.Context, user userRecord) (sessionRec
 		}
 	}
 
+	evicted := make([]string, 0)
 	s.state.mu.Lock()
 	s.state.sessionsMemory[token] = session
+	userSessions := append(s.state.sessionsByUser[user.UserID], token)
+	if s.cfg.SessionMaxPerUser > 0 && len(userSessions) > s.cfg.SessionMaxPerUser {
+		overflow := len(userSessions) - s.cfg.SessionMaxPerUser
+		evicted = append(evicted, userSessions[:overflow]...)
+		userSessions = append([]string(nil), userSessions[overflow:]...)
+		for _, oldToken := range evicted {
+			delete(s.state.sessionsMemory, oldToken)
+			s.state.sessionEvictions++
+		}
+	}
+	s.state.sessionsByUser[user.UserID] = userSessions
 	s.state.mu.Unlock()
+
+	if s.redis != nil {
+		for _, oldToken := range evicted {
+			_ = s.redis.Del(ctx, sessionKey(oldToken)).Err()
+		}
+	}
 	return session, nil
 }
 
@@ -1322,18 +1353,48 @@ func (s *Server) getSession(ctx context.Context, token string) (sessionRecord, b
 	}
 	if session.ExpiresAtMs <= now {
 		delete(s.state.sessionsMemory, token)
+		s.removeUserSessionTokenLocked(session.UserID, token)
 		return sessionRecord{}, false
 	}
 	return session, true
 }
 
 func (s *Server) deleteSession(ctx context.Context, token string) {
+	userID := ""
+	s.state.mu.Lock()
+	if session, ok := s.state.sessionsMemory[token]; ok {
+		userID = session.UserID
+	}
+	delete(s.state.sessionsMemory, token)
+	if userID != "" {
+		s.removeUserSessionTokenLocked(userID, token)
+	}
+	s.state.mu.Unlock()
+
 	if s.redis != nil {
 		_ = s.redis.Del(ctx, sessionKey(token)).Err()
 	}
-	s.state.mu.Lock()
-	delete(s.state.sessionsMemory, token)
-	s.state.mu.Unlock()
+}
+
+func (s *Server) removeUserSessionTokenLocked(userID, token string) {
+	if strings.TrimSpace(userID) == "" {
+		return
+	}
+	sessions := s.state.sessionsByUser[userID]
+	if len(sessions) == 0 {
+		return
+	}
+	filtered := sessions[:0]
+	for _, existing := range sessions {
+		if existing != token {
+			filtered = append(filtered, existing)
+		}
+	}
+	if len(filtered) == 0 {
+		delete(s.state.sessionsByUser, userID)
+		return
+	}
+	s.state.sessionsByUser[userID] = append([]string(nil), filtered...)
 }
 
 func (s *Server) snapshotWallet(userID string) map[string]walletBalance {

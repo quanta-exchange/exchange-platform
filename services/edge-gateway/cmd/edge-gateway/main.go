@@ -32,6 +32,7 @@ func main() {
 		EnableSmokeRoutes:   getenv("EDGE_ENABLE_SMOKE_ROUTES", "false") == "true",
 		AllowInsecureNoAuth: getenv("EDGE_ALLOW_INSECURE_NO_AUTH", "false") == "true",
 		SessionTTL:          time.Duration(getenvInt("EDGE_SESSION_TTL_HOURS", 24)) * time.Hour,
+		SessionMaxPerUser:   getenvInt("EDGE_SESSION_MAX_PER_USER", 8),
 		APISecrets:          parseSecrets(getenv("EDGE_API_SECRETS", "")),
 		TimestampSkew: time.Duration(getenvInt("EDGE_AUTH_SKEW_SEC", 30)) *
 			time.Second,

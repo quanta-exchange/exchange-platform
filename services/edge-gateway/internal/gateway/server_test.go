@@ -724,6 +724,83 @@ func TestSessionOrderRejectsInsufficientBalance(t *testing.T) {
 	}
 }
 
+func TestSessionMaxPerUserEvictsOldestSession(t *testing.T) {
+	coreAddr, shutdownCore := startTestCore(t)
+	defer shutdownCore()
+
+	s, err := New(Config{
+		DisableDB:         true,
+		WSQueueSize:       8,
+		SeedMarketData:    true,
+		SessionTTL:        2 * time.Hour,
+		SessionMaxPerUser: 2,
+		CoreAddr:          coreAddr,
+		CoreTimeout:       2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer func() { _ = s.Close() }()
+
+	signupBody := []byte(`{"email":"cap@example.com","password":"password1234"}`)
+	signupReq := httptest.NewRequest(http.MethodPost, "/v1/auth/signup", bytes.NewReader(signupBody))
+	signupW := httptest.NewRecorder()
+	s.Router().ServeHTTP(signupW, signupReq)
+	if signupW.Code != http.StatusOK {
+		t.Fatalf("signup failed: %d body=%s", signupW.Code, signupW.Body.String())
+	}
+	var signupResp AuthSessionResponse
+	if err := json.Unmarshal(signupW.Body.Bytes(), &signupResp); err != nil {
+		t.Fatalf("decode signup response: %v", err)
+	}
+
+	loginBody := []byte(`{"email":"cap@example.com","password":"password1234"}`)
+	loginReq1 := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(loginBody))
+	loginW1 := httptest.NewRecorder()
+	s.Router().ServeHTTP(loginW1, loginReq1)
+	if loginW1.Code != http.StatusOK {
+		t.Fatalf("first login failed: %d body=%s", loginW1.Code, loginW1.Body.String())
+	}
+	var loginResp1 AuthSessionResponse
+	if err := json.Unmarshal(loginW1.Body.Bytes(), &loginResp1); err != nil {
+		t.Fatalf("decode first login response: %v", err)
+	}
+
+	loginReq2 := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(loginBody))
+	loginW2 := httptest.NewRecorder()
+	s.Router().ServeHTTP(loginW2, loginReq2)
+	if loginW2.Code != http.StatusOK {
+		t.Fatalf("second login failed: %d body=%s", loginW2.Code, loginW2.Body.String())
+	}
+	var loginResp2 AuthSessionResponse
+	if err := json.Unmarshal(loginW2.Body.Bytes(), &loginResp2); err != nil {
+		t.Fatalf("decode second login response: %v", err)
+	}
+
+	meOldReq := httptest.NewRequest(http.MethodGet, "/v1/auth/me", nil)
+	meOldReq.Header.Set("Authorization", "Bearer "+signupResp.SessionToken)
+	meOldW := httptest.NewRecorder()
+	s.Router().ServeHTTP(meOldW, meOldReq)
+	if meOldW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected oldest session token to be evicted, got %d", meOldW.Code)
+	}
+
+	meNewReq := httptest.NewRequest(http.MethodGet, "/v1/auth/me", nil)
+	meNewReq.Header.Set("Authorization", "Bearer "+loginResp2.SessionToken)
+	meNewW := httptest.NewRecorder()
+	s.Router().ServeHTTP(meNewW, meNewReq)
+	if meNewW.Code != http.StatusOK {
+		t.Fatalf("expected latest session token to remain valid, got %d body=%s", meNewW.Code, meNewW.Body.String())
+	}
+
+	if loginResp1.SessionToken == "" || loginResp2.SessionToken == "" {
+		t.Fatalf("expected non-empty login session tokens")
+	}
+	if got := s.state.sessionEvictions; got != 1 {
+		t.Fatalf("expected one session eviction, got %d", got)
+	}
+}
+
 func TestHealthzIncludesTraceHeader(t *testing.T) {
 	prevProvider := otel.GetTracerProvider()
 	tp := sdktrace.NewTracerProvider()
@@ -1238,6 +1315,7 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 			wsDroppedMsgs:       7,
 			publicRateLimited:   6,
 			settlementAnomalies: 8,
+			sessionEvictions:    9,
 			authFailReason: map[string]uint64{
 				"unknown_key":   3,
 				"bad_signature": 2,
@@ -1267,12 +1345,14 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("ws_connection_rejects", "5")
 	assertMetric("public_rate_limited", "6")
 	assertMetric("settlement_anomalies", "8")
+	assertMetric("session_evictions", "9")
 	assertMetric("edge_auth_fail_total", "5")
 	assertMetric("edge_ws_close_policy_total", "4")
 	assertMetric("edge_ws_close_ratelimit_total", "3")
 	assertMetric("edge_ws_connection_reject_total", "5")
 	assertMetric("edge_public_rate_limited_total", "6")
 	assertMetric("edge_settlement_anomaly_total", "8")
+	assertMetric("edge_session_eviction_total", "9")
 	assertMetric("edge_auth_fail_reason_total{reason=\"bad_signature\"}", "2")
 	assertMetric("edge_auth_fail_reason_total{reason=\"unknown_key\"}", "3")
 }
