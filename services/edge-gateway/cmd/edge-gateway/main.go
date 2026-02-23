@@ -24,6 +24,8 @@ func main() {
 		WSPongTimeout:       time.Duration(getenvInt("EDGE_WS_PONG_TIMEOUT_SEC", 60)) * time.Second,
 		WSReadLimitBytes:    int64(getenvInt("EDGE_WS_READ_LIMIT_BYTES", 1048576)),
 		WSAllowedOrigins:    parseCSV(getenv("EDGE_WS_ALLOWED_ORIGINS", "")),
+		WSMaxConns:          getenvInt("EDGE_WS_MAX_CONNS", 20000),
+		WSMaxConnsPerIP:     getenvInt("EDGE_WS_MAX_CONNS_PER_IP", 500),
 		DisableDB:           getenv("EDGE_DISABLE_DB", "false") == "true",
 		DisableCore:         getenv("EDGE_DISABLE_CORE", "false") == "true",
 		SeedMarketData:      getenv("EDGE_SEED_MARKET_DATA", "true") == "true",

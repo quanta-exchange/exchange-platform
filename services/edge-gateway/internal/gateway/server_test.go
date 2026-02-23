@@ -828,6 +828,52 @@ func TestKafkaStartOffsetParser(t *testing.T) {
 	}
 }
 
+func TestWSClientIPParsing(t *testing.T) {
+	if got := wsClientIP("127.0.0.1:8080"); got != "127.0.0.1" {
+		t.Fatalf("unexpected parsed client ip: %s", got)
+	}
+	if got := wsClientIP("10.0.0.5"); got != "10.0.0.5" {
+		t.Fatalf("unexpected fallback client ip: %s", got)
+	}
+	if got := wsClientIP(""); got != "unknown" {
+		t.Fatalf("expected unknown for empty remote addr, got %s", got)
+	}
+}
+
+func TestWSConnectionAdmissionLimits(t *testing.T) {
+	s := &Server{
+		cfg: Config{
+			WSMaxConns:      2,
+			WSMaxConnsPerIP: 1,
+		},
+		state: &state{
+			clients:     map[*client]struct{}{},
+			wsConnsByIP: map[string]int{},
+		},
+	}
+
+	if !s.reserveWSConnection("10.0.0.1") {
+		t.Fatalf("expected first connection to be admitted")
+	}
+	if s.reserveWSConnection("10.0.0.1") {
+		t.Fatalf("expected per-ip cap to reject second connection from same ip")
+	}
+	if !s.reserveWSConnection("10.0.0.2") {
+		t.Fatalf("expected second ip to be admitted within global cap")
+	}
+	if s.reserveWSConnection("10.0.0.3") {
+		t.Fatalf("expected global cap to reject third concurrent connection")
+	}
+	if s.state.wsConnRejects != 2 {
+		t.Fatalf("expected two rejected connections, got %d", s.state.wsConnRejects)
+	}
+
+	s.releaseWSConnection("10.0.0.1")
+	if !s.reserveWSConnection("10.0.0.3") {
+		t.Fatalf("expected admission after releasing one connection")
+	}
+}
+
 func TestPruneOrdersLockedDropsExpiredTerminalOrders(t *testing.T) {
 	now := time.Now().UnixMilli()
 	s := &Server{
@@ -1064,6 +1110,7 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 			slowConsumerCloses: 2,
 			wsPolicyCloses:     4,
 			wsRateLimitCloses:  3,
+			wsConnRejects:      5,
 			wsDroppedMsgs:      7,
 			authFailReason: map[string]uint64{
 				"unknown_key":   3,
@@ -1091,9 +1138,11 @@ func TestMetricsExposeWsBackpressureSeries(t *testing.T) {
 	assertMetric("ws_slow_closes", "2")
 	assertMetric("ws_policy_closes", "4")
 	assertMetric("ws_command_rate_limit_closes", "3")
+	assertMetric("ws_connection_rejects", "5")
 	assertMetric("edge_auth_fail_total", "5")
 	assertMetric("edge_ws_close_policy_total", "4")
 	assertMetric("edge_ws_close_ratelimit_total", "3")
+	assertMetric("edge_ws_connection_reject_total", "5")
 	assertMetric("edge_auth_fail_reason_total{reason=\"bad_signature\"}", "2")
 	assertMetric("edge_auth_fail_reason_total{reason=\"unknown_key\"}", "3")
 }

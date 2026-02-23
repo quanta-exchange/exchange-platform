@@ -331,6 +331,8 @@ Configure auth in env:
 - `EDGE_WS_PING_INTERVAL_SEC=20`
 - `EDGE_WS_PONG_TIMEOUT_SEC=60`
 - `EDGE_WS_READ_LIMIT_BYTES=1048576`
+- `EDGE_WS_MAX_CONNS=20000` (global admission cap)
+- `EDGE_WS_MAX_CONNS_PER_IP=500` (per-IP admission cap)
 - `EDGE_WS_ALLOWED_ORIGINS=https://app.exchange.example,https://admin.exchange.example` (optional allowlist)
 
 `EDGE_DISABLE_CORE=true`에서는 주문 API가 `core_unavailable`로 거절됩니다.

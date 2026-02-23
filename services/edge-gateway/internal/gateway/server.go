@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"sort"
 	"strconv"
@@ -68,6 +69,8 @@ type Config struct {
 	WSPongTimeout       time.Duration
 	WSReadLimitBytes    int64
 	WSAllowedOrigins    []string
+	WSMaxConns          int
+	WSMaxConnsPerIP     int
 	APISecrets          map[string]string
 	TimestampSkew       time.Duration
 	ReplayTTL           time.Duration
@@ -265,6 +268,8 @@ type state struct {
 	wsPolicyCloses     uint64
 	wsRateLimitCloses  uint64
 	nextOrderGcAtMs    int64
+	wsConnRejects      uint64
+	wsConnsByIP        map[string]int
 }
 
 type wsSubscription struct {
@@ -449,6 +454,12 @@ func New(cfg Config) (*Server, error) {
 	if cfg.WSReadLimitBytes <= 0 {
 		cfg.WSReadLimitBytes = 1 << 20
 	}
+	if cfg.WSMaxConns <= 0 {
+		cfg.WSMaxConns = 20_000
+	}
+	if cfg.WSMaxConnsPerIP <= 0 {
+		cfg.WSMaxConnsPerIP = 500
+	}
 	if cfg.TimestampSkew <= 0 {
 		cfg.TimestampSkew = 30 * time.Second
 	}
@@ -555,6 +566,7 @@ func New(cfg Config) (*Server, error) {
 			rateWindow:         map[string][]int64{},
 			authFailReason:     map[string]uint64{},
 			clients:            map[*client]struct{}{},
+			wsConnsByIP:        map[string]int{},
 			historyBySymbol:    map[string][]WSMessage{},
 			tradeTape:          map[string][]tradePoint{},
 			cacheMemory:        map[string][]byte{},
@@ -741,6 +753,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	slowClose := s.state.slowConsumerCloses
 	policyClose := s.state.wsPolicyCloses
 	wsRateLimitCloses := s.state.wsRateLimitCloses
+	wsConnRejects := s.state.wsConnRejects
 	droppedMsgs := s.state.wsDroppedMsgs
 	replayDetected := s.state.replayDetected
 	queueLens := make([]int, 0, len(s.state.clients))
@@ -770,6 +783,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("edge_ws_close_slow_consumer_total " + strconv.FormatUint(slowClose, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_close_policy_total " + strconv.FormatUint(policyClose, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_ws_close_ratelimit_total " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
+	_, _ = w.Write([]byte("edge_ws_connection_reject_total " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
 	_, _ = w.Write([]byte("edge_auth_fail_total " + strconv.FormatUint(authFail, 10) + "\n"))
 	for _, reason := range reasons {
 		line := fmt.Sprintf(
@@ -786,6 +800,7 @@ func (s *Server) handleMetrics(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ws_slow_closes " + strconv.FormatUint(slowClose, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_policy_closes " + strconv.FormatUint(policyClose, 10) + "\n"))
 	_, _ = w.Write([]byte("ws_command_rate_limit_closes " + strconv.FormatUint(wsRateLimitCloses, 10) + "\n"))
+	_, _ = w.Write([]byte("ws_connection_rejects " + strconv.FormatUint(wsConnRejects, 10) + "\n"))
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -2396,9 +2411,60 @@ func (s *Server) pruneOrdersLocked(nowMs int64) {
 	s.state.nextOrderGcAtMs = nowMs + s.cfg.OrderGCInterval.Milliseconds()
 }
 
+func wsClientIP(remoteAddr string) string {
+	remoteAddr = strings.TrimSpace(remoteAddr)
+	if remoteAddr == "" {
+		return "unknown"
+	}
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return remoteAddr
+	}
+	if strings.TrimSpace(host) == "" {
+		return "unknown"
+	}
+	return host
+}
+
+func (s *Server) reserveWSConnection(ip string) bool {
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	total := 0
+	for _, count := range s.state.wsConnsByIP {
+		total += count
+	}
+	if total >= s.cfg.WSMaxConns {
+		s.state.wsConnRejects++
+		return false
+	}
+	if s.state.wsConnsByIP[ip] >= s.cfg.WSMaxConnsPerIP {
+		s.state.wsConnRejects++
+		return false
+	}
+	s.state.wsConnsByIP[ip]++
+	return true
+}
+
+func (s *Server) releaseWSConnection(ip string) {
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	count := s.state.wsConnsByIP[ip]
+	if count <= 1 {
+		delete(s.state.wsConnsByIP, ip)
+		return
+	}
+	s.state.wsConnsByIP[ip] = count - 1
+}
+
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+	clientIP := wsClientIP(r.RemoteAddr)
+	if !s.reserveWSConnection(clientIP) {
+		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "ws_connection_limit"})
+		return
+	}
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
+		s.releaseWSConnection(clientIP)
 		return
 	}
 	conn.SetReadLimit(s.cfg.WSReadLimitBytes)
@@ -2417,15 +2483,16 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	s.state.clients[client] = struct{}{}
 	s.state.mu.Unlock()
 
-	go s.wsWriter(client)
+	go s.wsWriter(client, clientIP)
 	s.wsReader(client)
 }
 
-func (s *Server) wsWriter(c *client) {
+func (s *Server) wsWriter(c *client, clientIP string) {
 	defer func() {
 		s.state.mu.Lock()
 		delete(s.state.clients, c)
 		s.state.mu.Unlock()
+		s.releaseWSConnection(clientIP)
 		c.closeSend()
 		_ = c.conn.Close()
 	}()
