@@ -978,9 +978,14 @@ func TestSessionAuthAndPortfolioFlow(t *testing.T) {
 	if signupResp.SessionToken == "" {
 		t.Fatalf("missing session token")
 	}
+	sessionLookup := sessionLookupToken(signupResp.SessionToken)
 	s.state.mu.Lock()
-	session, ok := s.state.sessionsMemory[signupResp.SessionToken]
+	_, leakedRawToken := s.state.sessionsMemory[signupResp.SessionToken]
+	session, ok := s.state.sessionsMemory[sessionLookup]
 	s.state.mu.Unlock()
+	if leakedRawToken {
+		t.Fatalf("raw session token should not be used as in-memory key")
+	}
 	if !ok {
 		t.Fatalf("expected session to be stored in memory")
 	}
@@ -990,6 +995,9 @@ func TestSessionAuthAndPortfolioFlow(t *testing.T) {
 	}
 	if bytes.Contains(sessionRaw, []byte(`"email"`)) {
 		t.Fatalf("session payload should not store email, got %s", sessionRaw)
+	}
+	if bytes.Contains(sessionRaw, []byte(signupResp.SessionToken)) {
+		t.Fatalf("session payload should not store raw token, got %s", sessionRaw)
 	}
 
 	meReq := httptest.NewRequest(http.MethodGet, "/v1/auth/me", nil)
@@ -1422,6 +1430,20 @@ func TestWithDBTimeoutAddsDeadlineWhenMissing(t *testing.T) {
 	remaining := time.Until(deadline)
 	if remaining <= 0 || remaining > time.Second {
 		t.Fatalf("unexpected db timeout deadline remaining=%s", remaining)
+	}
+}
+
+func TestSessionLookupTokenHashesRawToken(t *testing.T) {
+	raw := "plain-session-token"
+	hashed := sessionLookupToken(raw)
+	if hashed == "" {
+		t.Fatalf("expected hashed lookup token")
+	}
+	if hashed == raw {
+		t.Fatalf("expected lookup token to differ from raw token")
+	}
+	if hashed != sessionLookupToken(raw) {
+		t.Fatalf("expected stable hash for same raw token")
 	}
 }
 

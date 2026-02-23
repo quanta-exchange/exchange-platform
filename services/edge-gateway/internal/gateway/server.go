@@ -247,6 +247,11 @@ type sessionRecord struct {
 	IssuedAtMs  int64  `json:"issuedAt,omitempty"`
 }
 
+func (s sessionRecord) copyWithToken(token string) sessionRecord {
+	s.Token = token
+	return s
+}
+
 type walletBalance struct {
 	Available float64 `json:"available"`
 	Hold      float64 `json:"hold"`
@@ -1426,33 +1431,35 @@ func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bo
 func (s *Server) createSession(ctx context.Context, user userRecord) (sessionRecord, error) {
 	nowMs := time.Now().UnixMilli()
 	token := uuid.NewString() + uuid.NewString()
-	session := sessionRecord{
-		Token:       token,
+	tokenLookup := sessionLookupToken(token)
+	storedSession := sessionRecord{
+		Token:       "",
 		UserID:      user.UserID,
 		ExpiresAtMs: nowMs + s.cfg.SessionTTL.Milliseconds(),
 		IssuedAtMs:  nowMs,
 	}
+	responseSession := storedSession.copyWithToken(token)
 
 	if s.redis != nil {
-		raw, err := json.Marshal(session)
+		raw, err := json.Marshal(storedSession)
 		if err != nil {
 			return sessionRecord{}, fmt.Errorf("marshal session: %w", err)
 		}
-		if err := s.redis.Set(ctx, sessionKey(token), raw, s.cfg.SessionTTL).Err(); err != nil {
+		if err := s.redis.Set(ctx, sessionKey(tokenLookup), raw, s.cfg.SessionTTL).Err(); err != nil {
 			return sessionRecord{}, fmt.Errorf("persist session: %w", err)
 		}
 	}
 
 	evicted := make([]string, 0)
 	s.state.mu.Lock()
-	s.state.sessionsMemory[token] = session
-	userSessions := append(s.state.sessionsByUser[user.UserID], token)
+	s.state.sessionsMemory[tokenLookup] = storedSession
+	userSessions := append(s.state.sessionsByUser[user.UserID], tokenLookup)
 	if s.cfg.SessionMaxPerUser > 0 && len(userSessions) > s.cfg.SessionMaxPerUser {
 		overflow := len(userSessions) - s.cfg.SessionMaxPerUser
 		evicted = append(evicted, userSessions[:overflow]...)
 		userSessions = append([]string(nil), userSessions[overflow:]...)
-		for _, oldToken := range evicted {
-			delete(s.state.sessionsMemory, oldToken)
+		for _, oldTokenLookup := range evicted {
+			delete(s.state.sessionsMemory, oldTokenLookup)
 			s.state.sessionEvictions++
 		}
 	}
@@ -1460,54 +1467,56 @@ func (s *Server) createSession(ctx context.Context, user userRecord) (sessionRec
 	s.state.mu.Unlock()
 
 	if s.redis != nil {
-		for _, oldToken := range evicted {
-			_ = s.redis.Del(ctx, sessionKey(oldToken)).Err()
+		for _, oldTokenLookup := range evicted {
+			_ = s.redis.Del(ctx, sessionKey(oldTokenLookup)).Err()
 		}
 	}
-	return session, nil
+	return responseSession, nil
 }
 
 func (s *Server) getSession(ctx context.Context, token string) (sessionRecord, bool) {
 	now := time.Now().UnixMilli()
+	tokenLookup := sessionLookupToken(token)
 	if s.redis != nil {
-		raw, err := s.redis.Get(ctx, sessionKey(token)).Bytes()
+		raw, err := s.redis.Get(ctx, sessionKey(tokenLookup)).Bytes()
 		if err == nil {
 			var session sessionRecord
 			if err := json.Unmarshal(raw, &session); err == nil && session.ExpiresAtMs > now {
 				return session, true
 			}
-			_ = s.redis.Del(ctx, sessionKey(token)).Err()
+			_ = s.redis.Del(ctx, sessionKey(tokenLookup)).Err()
 		}
 	}
 
 	s.state.mu.Lock()
 	defer s.state.mu.Unlock()
-	session, ok := s.state.sessionsMemory[token]
+	session, ok := s.state.sessionsMemory[tokenLookup]
 	if !ok {
 		return sessionRecord{}, false
 	}
 	if session.ExpiresAtMs <= now {
-		delete(s.state.sessionsMemory, token)
-		s.removeUserSessionTokenLocked(session.UserID, token)
+		delete(s.state.sessionsMemory, tokenLookup)
+		s.removeUserSessionTokenLocked(session.UserID, tokenLookup)
 		return sessionRecord{}, false
 	}
 	return session, true
 }
 
 func (s *Server) deleteSession(ctx context.Context, token string) {
+	tokenLookup := sessionLookupToken(token)
 	userID := ""
 	s.state.mu.Lock()
-	if session, ok := s.state.sessionsMemory[token]; ok {
+	if session, ok := s.state.sessionsMemory[tokenLookup]; ok {
 		userID = session.UserID
 	}
-	delete(s.state.sessionsMemory, token)
+	delete(s.state.sessionsMemory, tokenLookup)
 	if userID != "" {
-		s.removeUserSessionTokenLocked(userID, token)
+		s.removeUserSessionTokenLocked(userID, tokenLookup)
 	}
 	s.state.mu.Unlock()
 
 	if s.redis != nil {
-		_ = s.redis.Del(ctx, sessionKey(token)).Err()
+		_ = s.redis.Del(ctx, sessionKey(tokenLookup)).Err()
 	}
 }
 
@@ -1816,6 +1825,11 @@ func bearerToken(r *http.Request) (string, bool) {
 
 func sessionKey(token string) string {
 	return "session:" + token
+}
+
+func sessionLookupToken(rawToken string) string {
+	sum := sha256.Sum256([]byte(strings.TrimSpace(rawToken)))
+	return hex.EncodeToString(sum[:])
 }
 
 func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
