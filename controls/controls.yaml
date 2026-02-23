@@ -607,6 +607,12 @@
       "title": "Runbook-as-code exists for exactly-once million proof failures",
       "enforced": false,
       "required_evidence": ["runbooks/exactly_once_million_failure.sh", "runbooks/exactly_once_million_failure.md", "Makefile", "README.md", "RUNBOOK.md"]
+    },
+    {
+      "id": "CTRL-100",
+      "title": "Verification and release gates can include exactly-once million runbook evidence",
+      "enforced": false,
+      "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "runbooks/exactly_once_million_failure.sh", "README.md"]
     }
   ]
 }

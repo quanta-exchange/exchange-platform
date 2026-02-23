@@ -13,6 +13,7 @@ RUN_POLICY_SIGNATURE=false
 RUN_POLICY_TAMPER=false
 RUN_NETWORK_PARTITION=false
 RUN_REDPANDA_BOUNCE=false
+RUN_EXACTLY_ONCE_RUNBOOK=false
 RUN_DETERMINISM=false
 RUN_EXACTLY_ONCE_MILLION=false
 STRICT_CONTROLS=false
@@ -61,6 +62,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-redpanda-bounce)
       RUN_REDPANDA_BOUNCE=true
+      shift
+      ;;
+    --run-exactly-once-runbook)
+      RUN_EXACTLY_ONCE_RUNBOOK=true
       shift
       ;;
     --run-determinism)
@@ -118,6 +123,9 @@ fi
 if [[ "$RUN_REDPANDA_BOUNCE" == "true" ]]; then
   VERIFY_CMD+=("--run-redpanda-bounce")
 fi
+if [[ "$RUN_EXACTLY_ONCE_RUNBOOK" == "true" ]]; then
+  VERIFY_CMD+=("--run-exactly-once-runbook")
+fi
 if [[ "$RUN_DETERMINISM" == "true" ]]; then
   VERIFY_CMD+=("--run-determinism")
 fi
@@ -148,7 +156,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" <<'PY'
 import json
 import pathlib
 import sys
@@ -170,9 +178,10 @@ run_policy_signature = sys.argv[13].lower() == "true"
 run_policy_tamper = sys.argv[14].lower() == "true"
 run_network_partition = sys.argv[15].lower() == "true"
 run_redpanda_bounce = sys.argv[16].lower() == "true"
-run_determinism = sys.argv[17].lower() == "true"
-run_exactly_once_million = sys.argv[18].lower() == "true"
-strict_controls = sys.argv[19].lower() == "true"
+run_exactly_once_runbook = sys.argv[17].lower() == "true"
+run_determinism = sys.argv[18].lower() == "true"
+run_exactly_once_million = sys.argv[19].lower() == "true"
+strict_controls = sys.argv[20].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -207,6 +216,9 @@ determinism_distinct_hash_count = None
 exactly_once_million_ok = None
 exactly_once_million_repeats = None
 exactly_once_million_concurrency = None
+exactly_once_runbook_proof_ok = None
+exactly_once_runbook_proof_repeats = None
+exactly_once_runbook_recommended_action = None
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -327,6 +339,18 @@ if exactly_once_million_report_path:
         exactly_once_million_ok = bool(exactly_once_payload.get("ok", False))
         exactly_once_million_repeats = exactly_once_payload.get("repeats")
         exactly_once_million_concurrency = exactly_once_payload.get("concurrency")
+exactly_once_runbook_dir = summary.get("artifacts", {}).get("exactly_once_runbook_dir")
+if exactly_once_runbook_dir:
+    candidate_dir = pathlib.Path(exactly_once_runbook_dir)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "exactly-once-million-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            runbook_payload = json.load(f)
+        exactly_once_runbook_proof_ok = bool(runbook_payload.get("proof_ok", False))
+        exactly_once_runbook_proof_repeats = runbook_payload.get("proof_repeats")
+        exactly_once_runbook_recommended_action = runbook_payload.get("recommended_action")
 
 controls_gate_ok = True
 if strict_controls:
@@ -348,6 +372,7 @@ payload = {
     "run_policy_tamper": run_policy_tamper,
     "run_network_partition": run_network_partition,
     "run_redpanda_bounce": run_redpanda_bounce,
+    "run_exactly_once_runbook": run_exactly_once_runbook,
     "run_determinism": run_determinism,
     "run_exactly_once_million": run_exactly_once_million,
     "strict_controls": strict_controls,
@@ -379,6 +404,9 @@ payload = {
     "exactly_once_million_ok": exactly_once_million_ok,
     "exactly_once_million_repeats": exactly_once_million_repeats,
     "exactly_once_million_concurrency": exactly_once_million_concurrency,
+    "exactly_once_runbook_proof_ok": exactly_once_runbook_proof_ok,
+    "exactly_once_runbook_proof_repeats": exactly_once_runbook_proof_repeats,
+    "exactly_once_runbook_recommended_action": exactly_once_runbook_recommended_action,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),
@@ -388,6 +416,9 @@ payload = {
     "verification_run_policy_tamper": bool(summary.get("run_policy_tamper", False)),
     "verification_run_network_partition": bool(summary.get("run_network_partition", False)),
     "verification_run_redpanda_bounce": bool(summary.get("run_redpanda_bounce", False)),
+    "verification_run_exactly_once_runbook": bool(
+        summary.get("run_exactly_once_runbook", False)
+    ),
     "verification_run_determinism": bool(summary.get("run_determinism", False)),
     "verification_run_exactly_once_million": bool(
         summary.get("run_exactly_once_million", False)

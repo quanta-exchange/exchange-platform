@@ -494,6 +494,11 @@
       "controlId": "CTRL-099",
       "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
       "description": "Runbook-as-code exists for exactly-once million failure scenarios so operators can capture deterministic diagnostics and recommended remediation during duplicate-settlement incident drills"
+    },
+    {
+      "controlId": "CTRL-100",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification and release gates can explicitly execute exactly-once million runbook drills and surface their evidence context in promotion decisions"
     }
   ]
 }

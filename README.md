@@ -466,6 +466,8 @@ make verification-factory
 ./scripts/verification_factory.sh --run-network-partition
 # include adversarial reliability runbook in same gate:
 ./scripts/verification_factory.sh --run-adversarial
+# include exactly-once million failure runbook in same gate:
+./scripts/verification_factory.sh --run-exactly-once-runbook
 # include million-duplicate exactly-once proof in same gate:
 ./scripts/verification_factory.sh --run-exactly-once-million
 # enforce (default) or relax compliance mapping coverage:
@@ -477,7 +479,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_exactly_once_million_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_exactly_once_runbook=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `exactly_once_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_exactly_once_million_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -785,6 +787,8 @@ make release-gate
 ./scripts/release_gate.sh --run-redpanda-bounce
 # include deterministic replay proof in gate:
 ./scripts/release_gate.sh --run-determinism
+# include exactly-once million failure runbook in gate:
+./scripts/release_gate.sh --run-exactly-once-runbook
 # include million-duplicate exactly-once proof in gate:
 ./scripts/release_gate.sh --run-exactly-once-million
 # include adversarial reliability runbook in gate:
@@ -805,6 +809,7 @@ Outputs:
 - report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
 - report includes determinism context: `determinism_ok`, `determinism_executed_runs`, `determinism_distinct_hash_count`
 - report includes exactly-once-million context: `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency`
+- report includes exactly-once runbook context: `exactly_once_runbook_proof_ok`, `exactly_once_runbook_proof_repeats`, `exactly_once_runbook_recommended_action`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 
 ### 26) Legal archive capture + verify
