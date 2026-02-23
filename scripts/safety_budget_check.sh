@@ -331,6 +331,7 @@ for key, budget in budgets.items():
         compliance_ok = bool(payload.get("ok", False))
         require_full_mapping = bool(payload.get("require_full_mapping", False))
         mapping_coverage_ratio = float(payload.get("mapping_coverage_ratio", 0.0) or 0.0)
+        duplicate_mapping_ids_count = int(payload.get("duplicate_mapping_ids_count", 0) or 0)
         unmapped_controls_count = int(payload.get("unmapped_controls_count", 0) or 0)
         unmapped_enforced_controls_count = int(
             payload.get("unmapped_enforced_controls_count", 0) or 0
@@ -346,6 +347,13 @@ for key, budget in budgets.items():
             entry["ok"] = False
             entry["details"].append(
                 f"compliance_mapping_coverage_ratio={mapping_coverage_ratio} < {min_coverage_ratio}"
+            )
+        max_duplicate_mapping_ids = int(budget.get("maxDuplicateMappingIds", 0))
+        if duplicate_mapping_ids_count > max_duplicate_mapping_ids:
+            entry["ok"] = False
+            entry["details"].append(
+                "compliance_duplicate_mapping_ids_count="
+                f"{duplicate_mapping_ids_count} > {max_duplicate_mapping_ids}"
             )
         max_unmapped_controls = int(
             budget.get("maxUnmappedControls", 0)

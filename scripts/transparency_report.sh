@@ -166,6 +166,7 @@ report = {
             "controls_advisory_stale_count": int(controls.get("advisory_stale_count")) if controls and controls.get("advisory_stale_count") is not None else None,
             "compliance_ok": bool(compliance.get("ok")) if compliance else None,
             "compliance_missing_controls_count": int(compliance.get("missing_controls_count")) if compliance and compliance.get("missing_controls_count") is not None else None,
+            "compliance_duplicate_mapping_ids_count": int(compliance.get("duplicate_mapping_ids_count")) if compliance and compliance.get("duplicate_mapping_ids_count") is not None else None,
             "compliance_unmapped_controls_count": int(compliance.get("unmapped_controls_count")) if compliance and compliance.get("unmapped_controls_count") is not None else None,
             "compliance_unmapped_enforced_controls_count": int(compliance.get("unmapped_enforced_controls_count")) if compliance and compliance.get("unmapped_enforced_controls_count") is not None else None,
             "compliance_mapping_coverage_ratio": float(compliance.get("mapping_coverage_ratio")) if compliance and compliance.get("mapping_coverage_ratio") is not None else None,

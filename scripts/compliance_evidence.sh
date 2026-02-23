@@ -54,6 +54,7 @@ python3 - "$MAPPING_FILE" "$CONTROLS_REPORT" "$REPORT_FILE" "$REQUIRE_FULL_MAPPI
 import json
 import pathlib
 import sys
+from collections import Counter
 from datetime import datetime, timezone
 
 mapping_file = pathlib.Path(sys.argv[1]).resolve()
@@ -69,7 +70,11 @@ with open(controls_file, "r", encoding="utf-8") as f:
 
 controls_by_id = {r.get("id"): r for r in controls_payload.get("results", [])}
 control_ids = {cid for cid in controls_by_id.keys() if cid}
-mapping_ids = {item.get("controlId") for item in mappings if item.get("controlId")}
+mapping_id_list = [item.get("controlId") for item in mappings if item.get("controlId")]
+mapping_ids = set(mapping_id_list)
+duplicate_mapping_ids = sorted(
+    [cid for cid, count in Counter(mapping_id_list).items() if count > 1]
+)
 
 rows = []
 missing_controls = []
@@ -132,6 +137,7 @@ payload = {
     "ok": (
         len(missing_controls) == 0
         and len(failed_controls) == 0
+        and len(duplicate_mapping_ids) == 0
         and (
             len(unmapped_controls) == 0
             if require_full_mapping
@@ -145,6 +151,8 @@ payload = {
     "mapping_coverage_ratio": mapping_coverage_ratio,
     "missing_controls": missing_controls,
     "missing_controls_count": len(missing_controls),
+    "duplicate_mapping_ids": duplicate_mapping_ids,
+    "duplicate_mapping_ids_count": len(duplicate_mapping_ids),
     "unmapped_controls": unmapped_controls,
     "unmapped_controls_count": len(unmapped_controls),
     "unmapped_enforced_controls": unmapped_enforced_controls,

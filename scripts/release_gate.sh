@@ -201,6 +201,7 @@ policy_tamper_detected = None
 compliance_require_full_mapping = summary.get("compliance_require_full_mapping")
 compliance_ok = None
 compliance_missing_controls_count = None
+compliance_duplicate_mapping_ids_count = None
 compliance_unmapped_controls_count = None
 compliance_unmapped_enforced_controls_count = None
 compliance_mapping_coverage_ratio = None
@@ -286,6 +287,9 @@ if compliance_report_path:
             "require_full_mapping", compliance_require_full_mapping
         )
         compliance_missing_controls_count = compliance_payload.get("missing_controls_count")
+        compliance_duplicate_mapping_ids_count = compliance_payload.get(
+            "duplicate_mapping_ids_count"
+        )
         compliance_unmapped_controls_count = compliance_payload.get("unmapped_controls_count")
         compliance_unmapped_enforced_controls_count = compliance_payload.get("unmapped_enforced_controls_count")
         compliance_mapping_coverage_ratio = compliance_payload.get("mapping_coverage_ratio")
@@ -389,6 +393,7 @@ payload = {
     "compliance_require_full_mapping": compliance_require_full_mapping,
     "compliance_ok": compliance_ok,
     "compliance_missing_controls_count": compliance_missing_controls_count,
+    "compliance_duplicate_mapping_ids_count": compliance_duplicate_mapping_ids_count,
     "compliance_unmapped_controls_count": compliance_unmapped_controls_count,
     "compliance_unmapped_enforced_controls_count": compliance_unmapped_enforced_controls_count,
     "compliance_mapping_coverage_ratio": compliance_mapping_coverage_ratio,

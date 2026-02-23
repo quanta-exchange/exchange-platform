@@ -104,6 +104,7 @@
       "mustBeOk": true,
       "mustRequireFullMapping": true,
       "minCoverageRatio": 1.0,
+      "maxDuplicateMappingIds": 0,
       "maxUnmappedControls": 0,
       "maxUnmappedEnforcedControls": 0
     },

@@ -619,6 +619,12 @@
       "title": "Operational status and transparency reports expose exactly-once runbook summary",
       "enforced": false,
       "required_evidence": ["runbooks/exactly_once_million_failure.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-102",
+      "title": "Compliance evidence and safety budget reject duplicate control mappings",
+      "enforced": false,
+      "required_evidence": ["scripts/compliance_evidence.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/release_gate.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
     }
   ]
 }

@@ -607,7 +607,7 @@ Success output includes:
 - `compliance_evidence_latest=build/compliance/compliance-evidence-latest.json`
 - `compliance_evidence_ok=true|false`
 - report includes `require_full_mapping=true|false`
-- report includes mapping integrity fields: `missing_controls_count`, `unmapped_controls_count`, `unmapped_enforced_controls_count`, `mapping_coverage_ratio`
+- report includes mapping integrity fields: `missing_controls_count`, `duplicate_mapping_ids_count`, `unmapped_controls_count`, `unmapped_enforced_controls_count`, `mapping_coverage_ratio`
 - report includes stale-evidence summaries: `failed_enforced_stale_count`, `advisory_stale_count`
 
 ### 20) Transparency report
@@ -619,7 +619,7 @@ Success output includes:
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
 - integrity summary includes `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `compliance_duplicate_mappings`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20) External replay demo
 ```bash
@@ -806,7 +806,7 @@ Outputs:
 - report includes safety budget context: `safety_budget_ok`, `safety_budget_violations`
 - report includes policy-signature context: `policy_smoke_ok`
 - report includes policy-tamper context: `policy_tamper_ok`, `policy_tamper_detected`
-- report includes compliance mapping context: `compliance_require_full_mapping`, `compliance_ok`, `compliance_missing_controls_count`, `compliance_unmapped_controls_count`, `compliance_unmapped_enforced_controls_count`, `compliance_mapping_coverage_ratio`
+- report includes compliance mapping context: `compliance_require_full_mapping`, `compliance_ok`, `compliance_missing_controls_count`, `compliance_duplicate_mapping_ids_count`, `compliance_unmapped_controls_count`, `compliance_unmapped_enforced_controls_count`, `compliance_mapping_coverage_ratio`
 - report includes network-partition context: `network_partition_ok`, `network_partition_during_reachable`, `network_partition_recovered`
 - report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
 - report includes determinism context: `determinism_ok`, `determinism_executed_runs`, `determinism_distinct_hash_count`

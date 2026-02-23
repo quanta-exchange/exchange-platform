@@ -302,6 +302,9 @@ report = {
                 "missing_controls_count": (compliance_latest.get("payload") or {}).get(
                     "missing_controls_count"
                 ),
+                "duplicate_mapping_ids_count": (compliance_latest.get("payload") or {}).get(
+                    "duplicate_mapping_ids_count"
+                ),
                 "unmapped_controls_count": (compliance_latest.get("payload") or {}).get(
                     "unmapped_controls_count"
                 ),
