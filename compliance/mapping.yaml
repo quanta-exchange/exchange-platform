@@ -404,6 +404,21 @@
       "controlId": "CTRL-091",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.14.2.8"],
       "description": "Settlement trade processing reserves idempotency keys in a dedicated table before ledger append, providing deterministic duplicate suppression evidence"
+    },
+    {
+      "controlId": "CTRL-092",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Redpanda broker-bounce chaos drill proves broker stop creates temporary unavailability and restart recovery restores post-recovery consume continuity"
+    },
+    {
+      "controlId": "CTRL-093",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for Redpanda broker-bounce drills and emits deterministic diagnostics with recommended action output"
+    },
+    {
+      "controlId": "CTRL-094",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification and release gates can explicitly include Redpanda broker-bounce drill evidence in promotion decisions"
     }
   ]
 }

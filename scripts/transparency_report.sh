@@ -60,6 +60,7 @@ budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
 policy_smoke = read_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
 network_partition = read_json("build/chaos/network-partition-latest.json")
+redpanda_bounce = read_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 
 sources = {
@@ -84,6 +85,7 @@ sources = {
     "policy_smoke": policy_smoke,
     "policy_tamper": policy_tamper,
     "network_partition": network_partition,
+    "redpanda_bounce": redpanda_bounce,
     "adversarial": adversarial,
 }
 
@@ -181,6 +183,22 @@ report = {
                 if network_partition
                 else None
             ),
+            "chaos_redpanda_bounce_ok": bool(redpanda_bounce.get("ok")) if redpanda_bounce else None,
+            "chaos_redpanda_bounce_during_reachable": (
+                (redpanda_bounce.get("connectivity", {}) or {}).get("during_stop_broker_reachable")
+                if redpanda_bounce
+                else None
+            ),
+            "chaos_redpanda_bounce_after_recovery_reachable": (
+                (redpanda_bounce.get("connectivity", {}) or {}).get("after_restart_broker_reachable")
+                if redpanda_bounce
+                else None
+            ),
+            "chaos_redpanda_bounce_post_recovery_consume_ok": (
+                (redpanda_bounce.get("connectivity", {}) or {}).get("post_restart_consume_ok")
+                if redpanda_bounce
+                else None
+            ),
             "adversarial_ok": bool(adversarial.get("ok")) if adversarial else None,
             "adversarial_failed_step_count": (
                 len([s for s in (adversarial.get("steps", []) or []) if isinstance(s, dict) and s.get("status") == "fail"])
@@ -229,6 +247,7 @@ report = {
         "policy_smoke": "build/policy-smoke/policy-smoke-latest.json",
         "policy_tamper": "build/policy/prove-policy-tamper-latest.json",
         "network_partition": "build/chaos/network-partition-latest.json",
+        "redpanda_bounce": "build/chaos/redpanda-broker-bounce-latest.json",
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
     },
 }

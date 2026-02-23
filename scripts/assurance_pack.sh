@@ -73,6 +73,7 @@ change_workflow_runbook = newest(root.glob("build/runbooks/change-workflow-*/cha
 budget_failure_runbook = newest(root.glob("build/runbooks/budget-failure-*/budget-failure.log"))
 policy_signature_runbook = newest(root.glob("build/runbooks/policy-signature-*/policy-signature.log"))
 network_partition_runbook = newest(root.glob("build/runbooks/network-partition-*/network-partition.log"))
+redpanda_bounce_runbook = newest(root.glob("build/runbooks/redpanda-broker-bounce-*/redpanda-broker-bounce.log"))
 adversarial_reliability_runbook = newest(root.glob("build/runbooks/adversarial-reliability-*/adversarial-reliability.log"))
 
 evidence = [
@@ -85,6 +86,7 @@ evidence = [
     {"id": "budget_failure_runbook", "path": pathlib.Path(rel(budget_failure_runbook)) if budget_failure_runbook else None, "required": False},
     {"id": "policy_signature_runbook", "path": pathlib.Path(rel(policy_signature_runbook)) if policy_signature_runbook else None, "required": False},
     {"id": "network_partition_runbook", "path": pathlib.Path(rel(network_partition_runbook)) if network_partition_runbook else None, "required": False},
+    {"id": "redpanda_bounce_runbook", "path": pathlib.Path(rel(redpanda_bounce_runbook)) if redpanda_bounce_runbook else None, "required": False},
     {"id": "adversarial_reliability_runbook", "path": pathlib.Path(rel(adversarial_reliability_runbook)) if adversarial_reliability_runbook else None, "required": False},
     {"id": "verify_audit_chain", "path": pathlib.Path("build/audit/verify-audit-chain-latest.json"), "required": False},
     {"id": "verify_change_audit_chain", "path": pathlib.Path("build/change-audit/verify-change-audit-chain-latest.json"), "required": False},
@@ -103,7 +105,7 @@ evidence = [
     {"id": "exactly_once_million", "path": pathlib.Path("build/exactly-once/prove-exactly-once-million-latest.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},
-    {"id": "redpanda_bounce", "path": pathlib.Path("build/chaos/redpanda-broker-bounce.json"), "required": False},
+    {"id": "redpanda_bounce", "path": pathlib.Path("build/chaos/redpanda-broker-bounce-latest.json"), "required": False},
     {"id": "network_partition", "path": pathlib.Path("build/chaos/network-partition-latest.json"), "required": False},
     {"id": "determinism", "path": pathlib.Path("build/determinism/prove-determinism-latest.json"), "required": False},
     {"id": "idempotency_scope", "path": pathlib.Path("build/idempotency/prove-idempotency-latest.json"), "required": False},
@@ -179,6 +181,7 @@ pack = {
         {"id": "G30", "text": "Policy smoke evidence confirms policy-as-code signing and signature verification pipeline stays executable and auditable."},
         {"id": "G31", "text": "Policy tamper proof confirms modified policy payloads are rejected by signature verification, demonstrating tamper detection."},
         {"id": "G32", "text": "Kafka network-partition drill confirms broker connectivity is lost during isolation and restored with successful post-recovery produce/consume validation."},
+        {"id": "G33", "text": "Redpanda broker-bounce drill confirms broker stop/restart creates temporary unavailability and recovers with post-restart consume success."},
     ],
 }
 

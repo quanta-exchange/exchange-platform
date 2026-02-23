@@ -91,6 +91,14 @@
       "mustLoseConnectivity": true,
       "mustRecoverConnectivity": true
     },
+    "chaosRedpandaBounce": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustLoseConnectivity": true,
+      "mustRecoverConnectivity": true,
+      "mustConsumeAfterRecovery": true
+    },
     "adversarial": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -115,6 +123,7 @@
     "policySmoke": "build/policy-smoke/policy-smoke-latest.json",
     "policyTamper": "build/policy/prove-policy-tamper-latest.json",
     "chaosNetworkPartition": "build/chaos/network-partition-latest.json",
+    "chaosRedpandaBounce": "build/chaos/redpanda-broker-bounce-latest.json",
     "adversarial": "build/adversarial/adversarial-tests-latest.json"
   }
 }

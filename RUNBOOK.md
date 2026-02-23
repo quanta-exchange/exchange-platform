@@ -164,6 +164,7 @@ Gate G1 operational check:
 - Policy signature drill: `./runbooks/policy_signature.sh`
 - Policy tamper drill: `./runbooks/policy_tamper.sh`
 - Kafka network partition drill: `./runbooks/network_partition.sh`
+- Redpanda broker bounce drill: `./runbooks/redpanda_broker_bounce.sh`
 - Adversarial reliability drill: `./runbooks/adversarial_reliability.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
@@ -171,6 +172,7 @@ Gate G1 operational check:
   - with policy signature drill: `./scripts/verification_factory.sh --run-policy-signature`
   - with policy tamper drill: `./scripts/verification_factory.sh --run-policy-tamper`
   - with network partition drill: `./scripts/verification_factory.sh --run-network-partition`
+  - with redpanda bounce drill: `./scripts/verification_factory.sh --run-redpanda-bounce`
   - with adversarial drill: `./scripts/verification_factory.sh --run-adversarial`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - Change audit-chain verify: `./scripts/verify_change_audit_chain.sh --require-events`
@@ -401,6 +403,22 @@ Success criteria:
 - runbook output contains:
   - `network-partition-summary.json` (`network_partition_ok`, `during_partition_broker_reachable`, `recommended_action`)
   - `chaos/network-partition-latest.json`
+  - `status-before.json` / `status-after.json`
+
+### 4.13 Redpanda broker bounce drill
+Purpose:
+- broker stop/restart 시점의 일시 비가용성과 복구 후 consume 연속성을 점검
+- 복구 경로를 runbook evidence로 남기고 safety budget 반영 상태를 함께 확인
+
+Command:
+- `./runbooks/redpanda_broker_bounce.sh`
+- 실패 허용 진단 모드: `RUNBOOK_ALLOW_REDPANDA_BOUNCE_FAIL=true ./runbooks/redpanda_broker_bounce.sh`
+
+Success criteria:
+- output includes `runbook_redpanda_broker_bounce_ok=true`
+- runbook output contains:
+  - `redpanda-broker-bounce-summary.json` (`redpanda_broker_bounce_ok`, `during_stop_broker_reachable`, `recommended_action`)
+  - `chaos/redpanda-broker-bounce-latest.json`
   - `status-before.json` / `status-after.json`
 
 ---

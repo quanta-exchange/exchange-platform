@@ -257,6 +257,7 @@ budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-
 policy_smoke_latest = read_latest_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest.json")
 network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
+redpanda_bounce_latest = read_latest_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
@@ -360,6 +361,21 @@ report = {
                     (network_partition_latest.get("payload") or {}).get("connectivity", {}) or {}
                 ).get("after_recovery_broker_reachable"),
                 "error": network_partition_latest.get("error"),
+            },
+            "chaos_redpanda_bounce": {
+                "present": redpanda_bounce_latest.get("present", False),
+                "path": redpanda_bounce_latest.get("path"),
+                "ok": (redpanda_bounce_latest.get("payload") or {}).get("ok"),
+                "during_stop_broker_reachable": (
+                    (redpanda_bounce_latest.get("payload") or {}).get("connectivity", {}) or {}
+                ).get("during_stop_broker_reachable"),
+                "after_restart_broker_reachable": (
+                    (redpanda_bounce_latest.get("payload") or {}).get("connectivity", {}) or {}
+                ).get("after_restart_broker_reachable"),
+                "post_restart_consume_ok": (
+                    (redpanda_bounce_latest.get("payload") or {}).get("connectivity", {}) or {}
+                ).get("post_restart_consume_ok"),
+                "error": redpanda_bounce_latest.get("error"),
             },
             "safety_budget": {
                 "present": safety_budget_latest.get("present", False),

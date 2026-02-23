@@ -558,6 +558,25 @@
       "title": "Settlement idempotency table is wired into trade append path",
       "enforced": false,
       "required_evidence": ["services/ledger-service/src/main/resources/db/migration/V1__ledger_schema.sql", "services/ledger-service/src/main/kotlin/com/quanta/exchange/ledger/repo/LedgerRepository.kt", "services/ledger-service/src/test/kotlin/com/quanta/exchange/ledger/LedgerServiceIntegrationTest.kt", "README.md"]
+    },
+    {
+      "id": "CTRL-092",
+      "title": "Redpanda broker-bounce chaos proof evidence is generated and freshness-tracked",
+      "enforced": false,
+      "max_evidence_age_seconds": 2592000,
+      "required_evidence": ["scripts/chaos/redpanda_broker_bounce.sh", "build/chaos/redpanda-broker-bounce-latest.json", "safety/budgets.yaml", "scripts/safety_budget_check.sh", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-093",
+      "title": "Redpanda broker-bounce runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/redpanda_broker_bounce.sh", "runbooks/redpanda_broker_bounce.md", "README.md", "RUNBOOK.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-094",
+      "title": "Verification and release gates can include Redpanda broker-bounce drill",
+      "enforced": false,
+      "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "README.md"]
     }
   ]
 }

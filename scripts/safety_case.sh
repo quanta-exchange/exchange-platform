@@ -140,6 +140,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/reconciliation/smoke-reconciliation-safety.json"
   "build/chaos/chaos-replay.json"
   "build/chaos/redpanda-broker-bounce.json"
+  "build/chaos/redpanda-broker-bounce-latest.json"
   "build/chaos/network-partition-latest.json"
   "build/ws/ws-smoke.json"
   "build/ws/ws-resume-smoke.json"

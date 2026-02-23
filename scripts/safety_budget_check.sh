@@ -305,6 +305,29 @@ for key, budget in budgets.items():
         if bool(budget.get("mustRecoverConnectivity", True)) and not after_reachable:
             entry["ok"] = False
             entry["details"].append("chaos_network_partition_did_not_recover_connectivity")
+    elif key == "chaosRedpandaBounce":
+        must_ok = bool(budget.get("mustBeOk", True))
+        bounce_ok = bool(payload.get("ok", False))
+        connectivity = payload.get("connectivity", {}) if isinstance(payload, dict) else {}
+        before_reachable = bool(connectivity.get("before_stop_broker_reachable", False))
+        during_reachable = bool(connectivity.get("during_stop_broker_reachable", True))
+        after_reachable = bool(connectivity.get("after_restart_broker_reachable", False))
+        post_consume_ok = bool(connectivity.get("post_restart_consume_ok", False))
+        if must_ok and not bounce_ok:
+            entry["ok"] = False
+            entry["details"].append("chaos_redpanda_bounce_not_ok")
+        if not before_reachable:
+            entry["ok"] = False
+            entry["details"].append("chaos_redpanda_bounce_before_not_reachable")
+        if bool(budget.get("mustLoseConnectivity", True)) and during_reachable:
+            entry["ok"] = False
+            entry["details"].append("chaos_redpanda_bounce_did_not_lose_connectivity")
+        if bool(budget.get("mustRecoverConnectivity", True)) and not after_reachable:
+            entry["ok"] = False
+            entry["details"].append("chaos_redpanda_bounce_did_not_recover_connectivity")
+        if bool(budget.get("mustConsumeAfterRecovery", True)) and not post_consume_ok:
+            entry["ok"] = False
+            entry["details"].append("chaos_redpanda_bounce_no_post_recovery_consume")
     elif key == "adversarial":
         must_ok = bool(budget.get("mustBeOk", True))
         adversarial_ok = bool(payload.get("ok", False))

@@ -3,9 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="${ROOT_DIR}/infra/compose/docker-compose.yml"
-TOPIC="${TOPIC:-chaos.redpanda.bounce.v1}"
+RUN_ID="${RUN_ID:-$(date -u +"%s")-$RANDOM}"
+TOPIC="${TOPIC:-chaos.redpanda.bounce.${RUN_ID}.v1}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/chaos}"
 REPORT_FILE="${REPORT_FILE:-${OUT_DIR}/redpanda-broker-bounce.json}"
+LATEST_FILE="${LATEST_FILE:-${OUT_DIR}/redpanda-broker-bounce-latest.json}"
 LEDGER_BASE_URL="${LEDGER_BASE_URL:-http://localhost:8082}"
 LEDGER_ADMIN_TOKEN="${LEDGER_ADMIN_TOKEN:-}"
 CHAOS_REDPANDA_CHECK_INVARIANTS="${CHAOS_REDPANDA_CHECK_INVARIANTS:-auto}" # off|auto|require
@@ -17,6 +19,14 @@ ADMIN_HEADERS=()
 if [[ -n "${LEDGER_ADMIN_TOKEN}" ]]; then
   ADMIN_HEADERS=(-H "X-Admin-Token: ${LEDGER_ADMIN_TOKEN}")
 fi
+
+curl_with_admin_headers() {
+  if [[ "${#ADMIN_HEADERS[@]}" -gt 0 ]]; then
+    curl -fsS "${ADMIN_HEADERS[@]}" "$@"
+    return
+  fi
+  curl -fsS "$@"
+}
 
 require_cmd() {
   local cmd="$1"
@@ -41,10 +51,14 @@ for _ in {1..90}; do
   sleep 1
 done
 docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk cluster info >/dev/null
+BROKER_REACHABLE_BEFORE_STOP="true"
+BROKER_UNAVAILABLE_DURING_STOP="false"
+BROKER_REACHABLE_AFTER_RESTART="false"
+POST_RESTART_CONSUME_OK="false"
 
 echo "[chaos:redpanda] create topic and publish baseline"
-docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk topic create "${TOPIC}" -p 3 -r 1 >/dev/null 2>&1 || true
-printf '{"msg":"before-bounce"}\n' | docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk topic produce "${TOPIC}" >/dev/null
+docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk topic create "${TOPIC}" -p 1 -r 1 >/dev/null 2>&1 || true
+printf '{"msg":"before-bounce","run_id":"%s"}\n' "${RUN_ID}" | docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk topic produce "${TOPIC}" >/dev/null
 
 echo "[chaos:redpanda] stop broker"
 docker compose -f "${COMPOSE_FILE}" stop redpanda >/dev/null
@@ -54,6 +68,7 @@ if docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk cluster info >/dev/n
   echo "expected broker to be unavailable after stop" >&2
   exit 1
 fi
+BROKER_UNAVAILABLE_DURING_STOP="true"
 
 echo "[chaos:redpanda] restart broker"
 docker compose -f "${COMPOSE_FILE}" start redpanda >/dev/null
@@ -65,16 +80,18 @@ for _ in {1..90}; do
   sleep 1
 done
 docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk cluster info >/dev/null
+BROKER_REACHABLE_AFTER_RESTART="true"
 
 echo "[chaos:redpanda] publish and consume after restart"
-printf '{"msg":"after-bounce"}\n' | docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk topic produce "${TOPIC}" >/dev/null
+AFTER_PAYLOAD="{\"msg\":\"after-bounce\",\"run_id\":\"${RUN_ID}\"}"
+printf '%s\n' "${AFTER_PAYLOAD}" | docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk topic produce "${TOPIC}" >/dev/null
 CONSUMED="$(docker compose -f "${COMPOSE_FILE}" exec -T redpanda rpk topic consume "${TOPIC}" -n 1 -o -1 -f '%v\n' || true)"
-
-if ! grep -q '"after-bounce"' <<<"${CONSUMED}"; then
+if ! grep -q "\"run_id\":\"${RUN_ID}\"" <<<"${CONSUMED}"; then
   echo "did not observe post-bounce message on consume output" >&2
   echo "${CONSUMED}" >&2
   exit 1
 fi
+POST_RESTART_CONSUME_OK="true"
 
 INVARIANTS_STATUS="skipped"
 INVARIANTS_OK="true"
@@ -84,7 +101,7 @@ case "${CHAOS_REDPANDA_CHECK_INVARIANTS}" in
     INVARIANTS_STATUS="skipped"
     ;;
   auto|AUTO|require|REQUIRE)
-    if INVARIANTS_PAYLOAD="$(curl -fsS "${ADMIN_HEADERS[@]}" -X POST "${LEDGER_BASE_URL}/v1/admin/invariants/check" 2>/tmp/redpanda-bounce-invariants.err)"; then
+    if INVARIANTS_PAYLOAD="$(curl_with_admin_headers -X POST "${LEDGER_BASE_URL}/v1/admin/invariants/check" 2>/tmp/redpanda-bounce-invariants.err)"; then
       INVARIANTS_STATUS="checked"
       INVARIANTS_OK="$("${PYTHON_BIN}" - "${INVARIANTS_PAYLOAD}" <<'PY'
 import json
@@ -117,11 +134,17 @@ esac
 rm -f /tmp/redpanda-bounce-invariants.err
 
 REPORT_FILE="${REPORT_FILE}" \
+LATEST_FILE="${LATEST_FILE}" \
 TOPIC="${TOPIC}" \
+RUN_ID="${RUN_ID}" \
 LEDGER_BASE_URL="${LEDGER_BASE_URL}" \
 INVARIANTS_STATUS="${INVARIANTS_STATUS}" \
 INVARIANTS_OK="${INVARIANTS_OK}" \
 INVARIANTS_PAYLOAD="${INVARIANTS_PAYLOAD}" \
+BROKER_REACHABLE_BEFORE_STOP="${BROKER_REACHABLE_BEFORE_STOP}" \
+BROKER_UNAVAILABLE_DURING_STOP="${BROKER_UNAVAILABLE_DURING_STOP}" \
+BROKER_REACHABLE_AFTER_RESTART="${BROKER_REACHABLE_AFTER_RESTART}" \
+POST_RESTART_CONSUME_OK="${POST_RESTART_CONSUME_OK}" \
 "${PYTHON_BIN}" - <<'PY'
 import json
 import os
@@ -138,8 +161,15 @@ report = {
     "ok": True,
     "scenario": {
         "topic": os.environ["TOPIC"],
+        "run_id": os.environ["RUN_ID"],
         "ledger_base_url": os.environ["LEDGER_BASE_URL"],
         "check_invariants": os.environ["INVARIANTS_STATUS"],
+    },
+    "connectivity": {
+        "before_stop_broker_reachable": os.environ["BROKER_REACHABLE_BEFORE_STOP"].lower() == "true",
+        "during_stop_broker_reachable": os.environ["BROKER_UNAVAILABLE_DURING_STOP"].lower() != "true",
+        "after_restart_broker_reachable": os.environ["BROKER_REACHABLE_AFTER_RESTART"].lower() == "true",
+        "post_restart_consume_ok": os.environ["POST_RESTART_CONSUME_OK"].lower() == "true",
     },
     "invariants": {
         "ok": os.environ["INVARIANTS_OK"].lower() == "true",
@@ -151,8 +181,15 @@ report = {
 with open(os.environ["REPORT_FILE"], "w", encoding="utf-8") as f:
     json.dump(report, f, indent=2, sort_keys=True)
     f.write("\n")
+
+with open(os.environ["LATEST_FILE"], "w", encoding="utf-8") as f:
+    json.dump(report, f, indent=2, sort_keys=True)
+    f.write("\n")
 PY
 
 echo "redpanda_broker_bounce_success=true"
 echo "redpanda_broker_bounce_report=${REPORT_FILE}"
+echo "redpanda_broker_bounce_latest=${LATEST_FILE}"
+echo "redpanda_broker_bounce_during_reachable=$([[ "${BROKER_UNAVAILABLE_DURING_STOP}" == "true" ]] && echo "false" || echo "true")"
+echo "redpanda_broker_bounce_recovered=${BROKER_REACHABLE_AFTER_RESTART}"
 echo "invariants_ok=${INVARIANTS_OK}"

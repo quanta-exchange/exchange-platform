@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -101,6 +101,8 @@ runbooks/
   policy_tamper.md        # policy tamper drill notes
   network_partition.sh    # kafka network partition automated drill
   network_partition.md    # kafka network partition drill notes
+  redpanda_broker_bounce.sh # redpanda broker bounce automated drill
+  redpanda_broker_bounce.md # redpanda broker bounce drill notes
   adversarial_reliability.sh # adversarial reliability automated drill
   adversarial_reliability.md # adversarial reliability drill notes
   startup_guardrails.sh   # startup guardrails verification drill
@@ -349,6 +351,9 @@ make chaos-network-partition # broker network isolation drill
 `chaos-redpanda` success output includes:
 - `redpanda_broker_bounce_success=true`
 - `redpanda_broker_bounce_report=build/chaos/redpanda-broker-bounce.json`
+- `redpanda_broker_bounce_latest=build/chaos/redpanda-broker-bounce-latest.json`
+- `redpanda_broker_bounce_during_reachable=false`
+- `redpanda_broker_bounce_recovered=true`
 - `invariants_ok=true|false` (controlled by `CHAOS_REDPANDA_CHECK_INVARIANTS=off|auto|require`, default `auto`)
 
 `chaos-network-partition` success output includes:
@@ -467,7 +472,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -525,7 +530,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist
+- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist
 
 ### 17.1) Anomaly detector
 ```bash
@@ -557,10 +562,11 @@ make runbook-budget-failure
 make runbook-policy-signature
 make runbook-policy-tamper
 make runbook-network-partition
+make runbook-redpanda-bounce
 make runbook-adversarial-reliability
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_policy_signature_ok=true` or `runbook_policy_tamper_ok=true` or `runbook_network_partition_ok=true` or `runbook_adversarial_reliability_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_policy_signature_ok=true` or `runbook_policy_tamper_ok=true` or `runbook_network_partition_ok=true` or `runbook_redpanda_broker_bounce_ok=true` or `runbook_adversarial_reliability_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 
@@ -582,7 +588,7 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `rbac_sod`, `anomaly_detector`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20) External replay demo
 ```bash
@@ -639,6 +645,19 @@ Outputs:
 - `runbook_network_partition_ok=true|false`
 - `network_partition_recommended_action=...`
 - `runbook_output_dir=build/runbooks/network-partition-<timestamp>`
+
+Runbook shortcut:
+```bash
+make runbook-redpanda-bounce
+# allow drill to continue even if broker bounce check fails:
+RUNBOOK_ALLOW_REDPANDA_BOUNCE_FAIL=true make runbook-redpanda-bounce
+# allow budget fail while only diagnosing broker bounce path:
+RUNBOOK_ALLOW_BUDGET_FAIL=true make runbook-redpanda-bounce
+```
+Outputs:
+- `runbook_redpanda_broker_bounce_ok=true|false`
+- `redpanda_broker_bounce_recommended_action=...`
+- `runbook_output_dir=build/runbooks/redpanda-broker-bounce-<timestamp>`
 
 Runbook shortcut:
 ```bash
@@ -719,6 +738,8 @@ make release-gate
 ./scripts/release_gate.sh --run-policy-tamper
 # include kafka network-partition runbook in gate:
 ./scripts/release_gate.sh --run-network-partition
+# include redpanda broker-bounce runbook in gate:
+./scripts/release_gate.sh --run-redpanda-bounce
 # include adversarial reliability runbook in gate:
 ./scripts/release_gate.sh --run-adversarial
 # fail gate on advisory control gaps too:
@@ -733,6 +754,7 @@ Outputs:
 - report includes policy-signature context: `policy_smoke_ok`
 - report includes policy-tamper context: `policy_tamper_ok`, `policy_tamper_detected`
 - report includes network-partition context: `network_partition_ok`, `network_partition_during_reachable`, `network_partition_recovered`
+- report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 
 ### 26) Legal archive capture + verify
@@ -788,6 +810,7 @@ Outputs:
 `--run-policy-signature`를 주면 policy signature runbook 단계가 추가 실행됩니다.
 `--run-policy-tamper`를 주면 policy tamper runbook 단계가 추가 실행됩니다.
 `--run-network-partition`를 주면 kafka network-partition runbook 단계가 추가 실행됩니다.
+`--run-redpanda-bounce`를 주면 redpanda broker-bounce runbook 단계가 추가 실행됩니다.
 `--run-adversarial`를 주면 adversarial reliability runbook 단계가 추가 실행됩니다.
 
 ### 27) Determinism proof
