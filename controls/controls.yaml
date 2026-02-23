@@ -275,6 +275,12 @@
       "title": "Trading-core production fail-closed startup guardrails exist",
       "enforced": false,
       "required_evidence": ["services/trading-core/src/bin/trading-core.rs", "README.md"]
+    },
+    {
+      "id": "CTRL-047",
+      "title": "Ledger-service production fail-closed startup guardrails exist",
+      "enforced": false,
+      "required_evidence": ["services/ledger-service/src/main/kotlin/com/quanta/exchange/ledger/core/StartupGuardrails.kt", "services/ledger-service/src/test/kotlin/com/quanta/exchange/ledger/StartupGuardrailsTest.kt", "services/ledger-service/src/main/resources/application.yml", "README.md"]
     }
   ]
 }

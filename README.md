@@ -151,6 +151,14 @@ npm run dev
   - `CORE_OUTBOX_DIR` points to `/tmp`
   - `CORE_KAFKA_BROKERS` contains `localhost:*` or `127.0.0.1:*`
 
+### Production startup guardrails (Ledger Service)
+- Enable guardrails with `LEDGER_ENV=prod` (accepted aliases: `production`, `live`).
+- In production mode, ledger startup fails if any of these are true:
+  - `LEDGER_ADMIN_TOKEN` is empty
+  - `LEDGER_KAFKA_ENABLED=false`
+  - `LEDGER_KAFKA_BOOTSTRAP` contains `localhost`, `127.0.0.1`, or `::1`
+  - `LEDGER_RECONCILIATION_CORE_GRPC_ADDR` contains `localhost`, `127.0.0.1`, or `::1`
+
 ### 1) Contracts
 If `buf` is installed locally:
 ```bash

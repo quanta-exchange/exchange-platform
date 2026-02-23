@@ -36,6 +36,8 @@ management:
       endpoint: ${LEDGER_OTEL_ENDPOINT:http://localhost:24318/v1/traces}
 
 ledger:
+  runtime:
+    env: ${LEDGER_ENV:local}
   admin:
     token: ${LEDGER_ADMIN_TOKEN:}
   readiness:

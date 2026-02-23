@@ -179,6 +179,11 @@
       "controlId": "CTRL-046",
       "frameworks": ["SOC2:CC6.1", "ISO27001:A.8.9"],
       "description": "Trading-core startup enforces production fail-closed guardrails for stub mode, tmp durability paths, and localhost Kafka brokers"
+    },
+    {
+      "controlId": "CTRL-047",
+      "frameworks": ["SOC2:CC6.1", "ISO27001:A.8.9"],
+      "description": "Ledger startup enforces production fail-closed guardrails for admin token, kafka enablement, and non-loopback broker/core endpoints"
     }
   ]
 }
