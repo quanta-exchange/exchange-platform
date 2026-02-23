@@ -114,6 +114,7 @@ Latest rolling 24h ticker snapshot
 ```json
 { "op": "SUB", "channel": "trades", "symbol": "BTC-KRW" }
 ```
+- `symbol` must match `^[A-Z0-9]{2,16}-[A-Z0-9]{2,16}$`
 
 ### Channels
 - `trades:{symbol}`

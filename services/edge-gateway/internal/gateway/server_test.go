@@ -1104,6 +1104,14 @@ func TestParseWSSubscriptionIncludesChannelDimensions(t *testing.T) {
 	if got, want := candleSub.key(), "candles:BTC-KRW:interval=5m"; got != want {
 		t.Fatalf("unexpected candle key: got=%s want=%s", got, want)
 	}
+
+	if _, err := parseWSSubscription(WSCommand{
+		Op:      "SUB",
+		Channel: "trades",
+		Symbol:  "BTC/KRW",
+	}); err == nil {
+		t.Fatalf("expected invalid symbol to be rejected")
+	}
 }
 
 func TestClientSubscriptionLimit(t *testing.T) {

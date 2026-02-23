@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,6 +48,8 @@ const (
 	defaultCandleInterval = "1m"
 	consumerErrorGraceMs  = int64(10_000)
 )
+
+var wsSymbolPattern = regexp.MustCompile("^[A-Z0-9]{2,16}-[A-Z0-9]{2,16}$")
 
 type contextKey string
 
@@ -3010,6 +3013,9 @@ func parseWSSubscription(cmd WSCommand) (wsSubscription, error) {
 	symbol := strings.ToUpper(strings.TrimSpace(cmd.Symbol))
 	if channel == "" || symbol == "" {
 		return wsSubscription{}, fmt.Errorf("channel/symbol required")
+	}
+	if !wsSymbolPattern.MatchString(symbol) {
+		return wsSubscription{}, fmt.Errorf("invalid symbol")
 	}
 	if !supportedWSChannel(channel) {
 		return wsSubscription{}, fmt.Errorf("unsupported channel")
