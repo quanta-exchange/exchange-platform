@@ -384,6 +384,21 @@
       "controlId": "CTRL-087",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Verification and release gates can explicitly include policy tamper drill evidence in promotion decisions"
+    },
+    {
+      "controlId": "CTRL-088",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Kafka network-partition chaos drill proves broker connectivity loss is detectable during isolation and recovery succeeds with post-recovery produce/consume validation"
+    },
+    {
+      "controlId": "CTRL-089",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for Kafka network-partition drills and emits deterministic diagnostics with recommended action output"
+    },
+    {
+      "controlId": "CTRL-090",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification and release gates can explicitly include Kafka network-partition drill evidence in promotion decisions"
     }
   ]
 }

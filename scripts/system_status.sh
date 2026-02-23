@@ -256,6 +256,7 @@ safety_budget_latest = read_latest_json("build/safety/safety-budget-latest.json"
 budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-latest.json")
 policy_smoke_latest = read_latest_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest.json")
+network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
@@ -344,6 +345,21 @@ report = {
                 "ok": (policy_tamper_latest.get("payload") or {}).get("ok"),
                 "tamper_detected": (policy_tamper_latest.get("payload") or {}).get("tamper_detected"),
                 "error": policy_tamper_latest.get("error"),
+            },
+            "chaos_network_partition": {
+                "present": network_partition_latest.get("present", False),
+                "path": network_partition_latest.get("path"),
+                "ok": (network_partition_latest.get("payload") or {}).get("ok"),
+                "applied_isolation_method": (
+                    (network_partition_latest.get("payload") or {}).get("scenario", {}) or {}
+                ).get("applied_isolation_method"),
+                "during_partition_broker_reachable": (
+                    (network_partition_latest.get("payload") or {}).get("connectivity", {}) or {}
+                ).get("during_partition_broker_reachable"),
+                "after_recovery_broker_reachable": (
+                    (network_partition_latest.get("payload") or {}).get("connectivity", {}) or {}
+                ).get("after_recovery_broker_reachable"),
+                "error": network_partition_latest.get("error"),
             },
             "safety_budget": {
                 "present": safety_budget_latest.get("present", False),

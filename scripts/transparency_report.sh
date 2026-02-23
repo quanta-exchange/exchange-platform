@@ -59,6 +59,7 @@ anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
 budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
 policy_smoke = read_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
+network_partition = read_json("build/chaos/network-partition-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 
 sources = {
@@ -82,6 +83,7 @@ sources = {
     "budget_freshness": budget_freshness,
     "policy_smoke": policy_smoke,
     "policy_tamper": policy_tamper,
+    "network_partition": network_partition,
     "adversarial": adversarial,
 }
 
@@ -163,6 +165,22 @@ report = {
             "policy_signature_file": policy_smoke.get("signature_file") if policy_smoke else None,
             "policy_tamper_ok": bool(policy_tamper.get("ok")) if policy_tamper else None,
             "policy_tamper_detected": bool(policy_tamper.get("tamper_detected")) if policy_tamper else None,
+            "chaos_network_partition_ok": bool(network_partition.get("ok")) if network_partition else None,
+            "chaos_network_partition_method": (
+                (network_partition.get("scenario", {}) or {}).get("applied_isolation_method")
+                if network_partition
+                else None
+            ),
+            "chaos_network_partition_during_reachable": (
+                (network_partition.get("connectivity", {}) or {}).get("during_partition_broker_reachable")
+                if network_partition
+                else None
+            ),
+            "chaos_network_partition_after_recovery_reachable": (
+                (network_partition.get("connectivity", {}) or {}).get("after_recovery_broker_reachable")
+                if network_partition
+                else None
+            ),
             "adversarial_ok": bool(adversarial.get("ok")) if adversarial else None,
             "adversarial_failed_step_count": (
                 len([s for s in (adversarial.get("steps", []) or []) if isinstance(s, dict) and s.get("status") == "fail"])
@@ -210,6 +228,7 @@ report = {
         "budget_freshness": "build/safety/prove-budget-freshness-latest.json",
         "policy_smoke": "build/policy-smoke/policy-smoke-latest.json",
         "policy_tamper": "build/policy/prove-policy-tamper-latest.json",
+        "network_partition": "build/chaos/network-partition-latest.json",
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
     },
 }

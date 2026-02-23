@@ -11,6 +11,7 @@ RUN_CHANGE_WORKFLOW=false
 RUN_ADVERSARIAL=false
 RUN_POLICY_SIGNATURE=false
 RUN_POLICY_TAMPER=false
+RUN_NETWORK_PARTITION=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -48,6 +49,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-policy-tamper)
       RUN_POLICY_TAMPER=true
+      shift
+      ;;
+    --run-network-partition)
+      RUN_NETWORK_PARTITION=true
       shift
       ;;
     *)
@@ -233,6 +238,11 @@ if [[ "$RUN_POLICY_TAMPER" == "true" ]]; then
     HAS_FAILURE=true
   fi
 fi
+if [[ "$RUN_NETWORK_PARTITION" == "true" ]]; then
+  if ! run_step "runbook-network-partition" env RUNBOOK_ALLOW_BUDGET_FAIL=true "$ROOT_DIR/runbooks/network_partition.sh"; then
+    HAS_FAILURE=true
+  fi
+fi
 if [[ "$RUN_ADVERSARIAL" == "true" ]]; then
   if ! run_step "runbook-adversarial-reliability" env RUNBOOK_ALLOW_BUDGET_FAIL=true "$ROOT_DIR/runbooks/adversarial_reliability.sh"; then
     HAS_FAILURE=true
@@ -277,6 +287,7 @@ SAFETY_BUDGET_LOG="$LOG_DIR/safety-budget.log"
 BUDGET_FAILURE_RUNBOOK_LOG="$LOG_DIR/runbook-budget-failure.log"
 POLICY_SIGNATURE_RUNBOOK_LOG="$LOG_DIR/runbook-policy-signature.log"
 POLICY_TAMPER_RUNBOOK_LOG="$LOG_DIR/runbook-policy-tamper.log"
+NETWORK_PARTITION_RUNBOOK_LOG="$LOG_DIR/runbook-network-partition.log"
 ADVERSARIAL_RUNBOOK_LOG="$LOG_DIR/runbook-adversarial-reliability.log"
 ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
@@ -316,10 +327,11 @@ SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG
 BUDGET_FAILURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$BUDGET_FAILURE_RUNBOOK_LOG")"
 POLICY_SIGNATURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$POLICY_SIGNATURE_RUNBOOK_LOG")"
 POLICY_TAMPER_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$POLICY_TAMPER_RUNBOOK_LOG")"
+NETWORK_PARTITION_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$NETWORK_PARTITION_RUNBOOK_LOG")"
 ADVERSARIAL_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$ADVERSARIAL_RUNBOOK_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_NETWORK_PARTITION" "$NETWORK_PARTITION_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -364,14 +376,16 @@ run_policy_signature = sys.argv[38].lower() == "true"
 policy_signature_runbook_dir = sys.argv[39]
 run_policy_tamper = sys.argv[40].lower() == "true"
 policy_tamper_runbook_dir = sys.argv[41]
-run_adversarial = sys.argv[42].lower() == "true"
-adversarial_runbook_dir = sys.argv[43]
-verify_audit_chain_report = sys.argv[44]
-verify_change_audit_chain_report = sys.argv[45]
-pii_log_scan_report = sys.argv[46]
-anomaly_detector_report = sys.argv[47]
-anomaly_smoke_report = sys.argv[48]
-rbac_sod_report = sys.argv[49]
+run_network_partition = sys.argv[42].lower() == "true"
+network_partition_runbook_dir = sys.argv[43]
+run_adversarial = sys.argv[44].lower() == "true"
+adversarial_runbook_dir = sys.argv[45]
+verify_audit_chain_report = sys.argv[46]
+verify_change_audit_chain_report = sys.argv[47]
+pii_log_scan_report = sys.argv[48]
+anomaly_detector_report = sys.argv[49]
+anomaly_smoke_report = sys.argv[50]
+rbac_sod_report = sys.argv[51]
 
 steps = []
 ok = True
@@ -401,6 +415,7 @@ summary = {
     "run_change_workflow": run_change_workflow,
     "run_policy_signature": run_policy_signature,
     "run_policy_tamper": run_policy_tamper,
+    "run_network_partition": run_network_partition,
     "run_adversarial": run_adversarial,
     "steps": steps,
     "artifacts": {
@@ -412,6 +427,7 @@ summary = {
         "budget_failure_runbook_dir": budget_failure_runbook_dir or None,
         "policy_signature_runbook_dir": policy_signature_runbook_dir or None,
         "policy_tamper_runbook_dir": policy_tamper_runbook_dir or None,
+        "network_partition_runbook_dir": network_partition_runbook_dir or None,
         "adversarial_runbook_dir": adversarial_runbook_dir or None,
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,

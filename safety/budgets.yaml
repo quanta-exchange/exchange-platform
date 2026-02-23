@@ -84,6 +84,13 @@
       "mustBeOk": true,
       "mustDetectTamper": true
     },
+    "chaosNetworkPartition": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustLoseConnectivity": true,
+      "mustRecoverConnectivity": true
+    },
     "adversarial": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -107,6 +114,7 @@
     "anomaly": "build/anomaly/anomaly-detector-latest.json",
     "policySmoke": "build/policy-smoke/policy-smoke-latest.json",
     "policyTamper": "build/policy/prove-policy-tamper-latest.json",
+    "chaosNetworkPartition": "build/chaos/network-partition-latest.json",
     "adversarial": "build/adversarial/adversarial-tests-latest.json"
   }
 }

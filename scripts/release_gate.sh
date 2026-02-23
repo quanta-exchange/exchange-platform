@@ -11,6 +11,7 @@ RUN_CHANGE_WORKFLOW=false
 RUN_ADVERSARIAL=false
 RUN_POLICY_SIGNATURE=false
 RUN_POLICY_TAMPER=false
+RUN_NETWORK_PARTITION=false
 STRICT_CONTROLS=false
 
 while [[ $# -gt 0 ]]; do
@@ -49,6 +50,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-policy-tamper)
       RUN_POLICY_TAMPER=true
+      shift
+      ;;
+    --run-network-partition)
+      RUN_NETWORK_PARTITION=true
       shift
       ;;
     --strict-controls)
@@ -92,6 +97,9 @@ fi
 if [[ "$RUN_POLICY_TAMPER" == "true" ]]; then
   VERIFY_CMD+=("--run-policy-tamper")
 fi
+if [[ "$RUN_NETWORK_PARTITION" == "true" ]]; then
+  VERIFY_CMD+=("--run-network-partition")
+fi
 
 set +e
 VERIFY_OUTPUT="$("${VERIFY_CMD[@]}" 2>&1)"
@@ -116,7 +124,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$STRICT_CONTROLS" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$STRICT_CONTROLS" <<'PY'
 import json
 import pathlib
 import sys
@@ -136,7 +144,8 @@ run_change_workflow = sys.argv[11].lower() == "true"
 run_adversarial = sys.argv[12].lower() == "true"
 run_policy_signature = sys.argv[13].lower() == "true"
 run_policy_tamper = sys.argv[14].lower() == "true"
-strict_controls = sys.argv[15].lower() == "true"
+run_network_partition = sys.argv[15].lower() == "true"
+strict_controls = sys.argv[16].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -153,6 +162,9 @@ adversarial_failed_steps = []
 policy_smoke_ok = None
 policy_tamper_ok = None
 policy_tamper_detected = None
+network_partition_ok = None
+network_partition_during_reachable = None
+network_partition_recovered = None
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -207,6 +219,19 @@ if policy_tamper_report_path:
             tamper_payload = json.load(f)
         policy_tamper_ok = bool(tamper_payload.get("ok", False))
         policy_tamper_detected = bool(tamper_payload.get("tamper_detected", False))
+network_partition_report_path = summary.get("artifacts", {}).get("network_partition_runbook_dir")
+if network_partition_report_path:
+    candidate_dir = pathlib.Path(network_partition_report_path)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "chaos/network-partition-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            network_payload = json.load(f)
+        connectivity = network_payload.get("connectivity", {}) if isinstance(network_payload, dict) else {}
+        network_partition_ok = bool(network_payload.get("ok", False))
+        network_partition_during_reachable = connectivity.get("during_partition_broker_reachable")
+        network_partition_recovered = connectivity.get("after_recovery_broker_reachable")
 
 controls_gate_ok = True
 if strict_controls:
@@ -226,6 +251,7 @@ payload = {
     "run_adversarial": run_adversarial,
     "run_policy_signature": run_policy_signature,
     "run_policy_tamper": run_policy_tamper,
+    "run_network_partition": run_network_partition,
     "strict_controls": strict_controls,
     "controls_advisory_missing_count": controls_advisory_missing,
     "controls_advisory_stale_count": controls_advisory_stale,
@@ -237,6 +263,9 @@ payload = {
     "policy_smoke_ok": policy_smoke_ok,
     "policy_tamper_ok": policy_tamper_ok,
     "policy_tamper_detected": policy_tamper_detected,
+    "network_partition_ok": network_partition_ok,
+    "network_partition_during_reachable": network_partition_during_reachable,
+    "network_partition_recovered": network_partition_recovered,
     "controls_gate_ok": controls_gate_ok,
     "verification_run_load_profiles": bool(summary.get("run_load_profiles", False)),
     "verification_run_startup_guardrails": bool(summary.get("run_startup_guardrails", False)),
@@ -244,6 +273,7 @@ payload = {
     "verification_run_adversarial": bool(summary.get("run_adversarial", False)),
     "verification_run_policy_signature": bool(summary.get("run_policy_signature", False)),
     "verification_run_policy_tamper": bool(summary.get("run_policy_tamper", False)),
+    "verification_run_network_partition": bool(summary.get("run_network_partition", False)),
     "verification_summary": str(verification_summary),
     "verification_step_count": len(summary.get("steps", [])),
     "failed_steps": [s.get("name") for s in summary.get("steps", []) if s.get("status") != "pass"],

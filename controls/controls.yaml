@@ -533,6 +533,25 @@
       "title": "Verification and release gates can include policy tamper drill",
       "enforced": false,
       "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-088",
+      "title": "Kafka network-partition chaos proof evidence is generated and freshness-tracked",
+      "enforced": false,
+      "max_evidence_age_seconds": 2592000,
+      "required_evidence": ["scripts/chaos/network_partition.sh", "build/chaos/network-partition-latest.json", "safety/budgets.yaml", "scripts/safety_budget_check.sh", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-089",
+      "title": "Kafka network-partition runbook-as-code exists",
+      "enforced": false,
+      "required_evidence": ["runbooks/network_partition.sh", "runbooks/network_partition.md", "README.md", "RUNBOOK.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-090",
+      "title": "Verification and release gates can include Kafka network-partition drill",
+      "enforced": false,
+      "required_evidence": ["scripts/verification_factory.sh", "scripts/release_gate.sh", "README.md"]
     }
   ]
 }

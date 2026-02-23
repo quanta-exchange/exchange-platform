@@ -163,12 +163,14 @@ Gate G1 operational check:
 - Budget failure drill: `./runbooks/budget_failure.sh`
 - Policy signature drill: `./runbooks/policy_signature.sh`
 - Policy tamper drill: `./runbooks/policy_tamper.sh`
+- Kafka network partition drill: `./runbooks/network_partition.sh`
 - Adversarial reliability drill: `./runbooks/adversarial_reliability.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
   - with change workflow drill: `./scripts/verification_factory.sh --run-change-workflow`
   - with policy signature drill: `./scripts/verification_factory.sh --run-policy-signature`
   - with policy tamper drill: `./scripts/verification_factory.sh --run-policy-tamper`
+  - with network partition drill: `./scripts/verification_factory.sh --run-network-partition`
   - with adversarial drill: `./scripts/verification_factory.sh --run-adversarial`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - Change audit-chain verify: `./scripts/verify_change_audit_chain.sh --require-events`
@@ -198,6 +200,7 @@ Command:
 - Core only: `./scripts/chaos/core_kill_recover.sh`
 - Ledger only: `./scripts/chaos/ledger_kill_recover.sh`
 - Redpanda bounce: `./scripts/chaos/redpanda_broker_bounce.sh`
+- Redpanda network partition: `./scripts/chaos/network_partition.sh`
 
 Drill flow:
 1) Start local stack (Postgres + Redpanda + Core + Edge + Ledger)
@@ -382,6 +385,22 @@ Success criteria:
 - runbook output contains:
   - `policy-tamper-summary.json` (`policy_tamper_ok`, `tamper_detected`, `recommended_action`)
   - `policy/prove-policy-tamper-latest.json`
+  - `status-before.json` / `status-after.json`
+
+### 4.12 Kafka network partition drill
+Purpose:
+- broker 경로 단절(네트워크 분리/일시 정지) 시 연결 손실 감지와 복구 후 재전송 경로를 점검
+- 분리 중 endpoint 비가용성과 복구 후 produce/consume 정상화를 증거로 남김
+
+Command:
+- `./runbooks/network_partition.sh`
+- 실패 허용 진단 모드: `RUNBOOK_ALLOW_NETWORK_PARTITION_FAIL=true ./runbooks/network_partition.sh`
+
+Success criteria:
+- output includes `runbook_network_partition_ok=true`
+- runbook output contains:
+  - `network-partition-summary.json` (`network_partition_ok`, `during_partition_broker_reachable`, `recommended_action`)
+  - `chaos/network-partition-latest.json`
   - `status-before.json` / `status-after.json`
 
 ---

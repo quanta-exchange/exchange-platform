@@ -286,6 +286,25 @@ for key, budget in budgets.items():
         if bool(budget.get("mustDetectTamper", True)) and not tamper_detected:
             entry["ok"] = False
             entry["details"].append("policy_tamper_not_detected")
+    elif key == "chaosNetworkPartition":
+        must_ok = bool(budget.get("mustBeOk", True))
+        partition_ok = bool(payload.get("ok", False))
+        connectivity = payload.get("connectivity", {}) if isinstance(payload, dict) else {}
+        before_reachable = bool(connectivity.get("before_partition_broker_reachable", False))
+        during_reachable = bool(connectivity.get("during_partition_broker_reachable", True))
+        after_reachable = bool(connectivity.get("after_recovery_broker_reachable", False))
+        if must_ok and not partition_ok:
+            entry["ok"] = False
+            entry["details"].append("chaos_network_partition_not_ok")
+        if not before_reachable:
+            entry["ok"] = False
+            entry["details"].append("chaos_network_partition_before_not_reachable")
+        if bool(budget.get("mustLoseConnectivity", True)) and during_reachable:
+            entry["ok"] = False
+            entry["details"].append("chaos_network_partition_did_not_lose_connectivity")
+        if bool(budget.get("mustRecoverConnectivity", True)) and not after_reachable:
+            entry["ok"] = False
+            entry["details"].append("chaos_network_partition_did_not_recover_connectivity")
     elif key == "adversarial":
         must_ok = bool(budget.get("mustBeOk", True))
         adversarial_ok = bool(payload.get("ok", False))
