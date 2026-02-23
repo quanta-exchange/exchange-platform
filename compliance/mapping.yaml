@@ -264,6 +264,11 @@
       "controlId": "CTRL-063",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Verification/release gates can explicitly include change workflow drill evidence in promotion decisions"
+    },
+    {
+      "controlId": "CTRL-064",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.7.5.3"],
+      "description": "Safety-case artifact manifest can capture audit-chain and change-audit-chain verification evidence for release traceability"
     }
   ]
 }

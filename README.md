@@ -374,6 +374,8 @@ make safety-case-extended
 - `build/invariants/ledger-invariants.json`
 - `build/invariants/core-invariants.json`
 - `build/invariants/invariants-summary.json`
+- `build/audit/verify-audit-chain-latest.json` (있을 때 자동 포함)
+- `build/change-audit/verify-change-audit-chain-latest.json` (있을 때 자동 포함)
 - `build/exactly-once/exactly-once-stress.json`
 - `build/idempotency/prove-idempotency-latest.json`
 - `build/latch/prove-latch-approval-latest.json`
