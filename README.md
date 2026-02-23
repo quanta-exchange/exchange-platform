@@ -39,8 +39,9 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (safety->controls->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (safety->controls->compliance->budget->assurance)
   safety_budget_check.sh  # G31 safety budget checker
+  compliance_evidence.sh  # G36 controls-to-framework evidence pack
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
@@ -52,6 +53,8 @@ policies/
   trading-policy.v1.json  # baseline policy-as-code document
 safety/
   budgets.yaml            # safety budget thresholds
+compliance/
+  mapping.yaml            # controls-to-framework mapping
 web-user/
   src/                    # web-user frontend (Vite + React)
 ```
@@ -284,6 +287,15 @@ make runbook-ws-drop
 Success output includes:
 - `runbook_lag_spike_ok=true` or `runbook_ws_drop_spike_ok=true`
 - `runbook_output_dir=build/runbooks/...`
+
+### 18) Compliance evidence pack
+```bash
+make compliance-evidence
+```
+Success output includes:
+- `compliance_evidence_report=build/compliance/compliance-evidence-<timestamp>.json`
+- `compliance_evidence_latest=build/compliance/compliance-evidence-latest.json`
+- `compliance_evidence_ok=true|false`
 
 `smoke_match.sh` verifies these checkpoints:
 - (a) trading-core gRPC port is listening

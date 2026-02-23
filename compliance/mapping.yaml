@@ -1,0 +1,54 @@
+{
+  "mappings": [
+    {
+      "controlId": "CTRL-001",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.1"],
+      "description": "Load smoke evidence for baseline service behavior"
+    },
+    {
+      "controlId": "CTRL-002",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "DR rehearsal evidence for recoverability"
+    },
+    {
+      "controlId": "CTRL-003",
+      "frameworks": ["SOC2:CC6.1", "ISO27001:A.14.2.8"],
+      "description": "Invariant evidence for data integrity"
+    },
+    {
+      "controlId": "CTRL-004",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.12.4.1"],
+      "description": "Safety-case bundle artifact retention"
+    },
+    {
+      "controlId": "CTRL-005",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.7.5.3"],
+      "description": "Safety-case manifest auditability"
+    },
+    {
+      "controlId": "CTRL-006",
+      "frameworks": ["SOC2:CC1.2", "ISO27001:A.5.1"],
+      "description": "GSN safety case governance documentation"
+    },
+    {
+      "controlId": "CTRL-009",
+      "frameworks": ["SOC2:CC7.1", "ISO27001:A.17.2.1"],
+      "description": "Chaos replay reliability drill"
+    },
+    {
+      "controlId": "CTRL-013",
+      "frameworks": ["SOC2:CC6.7", "ISO27001:A.8.2.2"],
+      "description": "Secret rotation drill evidence"
+    },
+    {
+      "controlId": "CTRL-018",
+      "frameworks": ["SOC2:CC3.2", "ISO27001:A.9.2.5"],
+      "description": "Assurance pack generation capability"
+    },
+    {
+      "controlId": "CTRL-020",
+      "frameworks": ["SOC2:CC2.3", "ISO27001:A.5.37"],
+      "description": "Architecture documentation baseline"
+    }
+  ]
+}
