@@ -14,6 +14,10 @@
       "required": true,
       "mustBeOk": true
     },
+    "invariantsSummary": {
+      "required": false,
+      "mustClickhouseBeOkWhenChecked": true
+    },
     "ws": {
       "required": false,
       "slowClosesMin": 1,
@@ -30,6 +34,7 @@
     "load": "build/load/load-smoke.json",
     "dr": "build/dr/dr-report.json",
     "invariants": "build/invariants/ledger-invariants.json",
+    "invariantsSummary": "build/invariants/invariants-summary.json",
     "ws": "build/ws/ws-smoke.json",
     "reconciliationSmoke": "build/reconciliation/smoke-reconciliation-safety.json"
   }
