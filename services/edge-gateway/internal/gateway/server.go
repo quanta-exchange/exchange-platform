@@ -932,7 +932,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, ok := s.getUserByEmail(r.Context(), email)
+	user, ok, err := s.getUserByEmail(r.Context(), email)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "auth_store_unavailable"})
+		return
+	}
 	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
 		return
@@ -964,7 +968,11 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
-	user, ok := s.getUserByID(r.Context(), userID)
+	user, ok, err := s.getUserByID(r.Context(), userID)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "profile_unavailable"})
+		return
+	}
 	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "user_not_found"})
 		return
@@ -1051,7 +1059,9 @@ func (s *Server) handleGetPortfolio(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createUser(ctx context.Context, email, passwordHash string) (userRecord, error) {
-	if existing, ok := s.getUserByEmail(ctx, email); ok {
+	if existing, ok, err := s.getUserByEmail(ctx, email); err != nil {
+		return userRecord{}, fmt.Errorf("lookup user: %w", err)
+	} else if ok {
 		return existing, fmt.Errorf("already_exists")
 	}
 
@@ -1123,16 +1133,16 @@ func (s *Server) createUser(ctx context.Context, email, passwordHash string) (us
 	return user, nil
 }
 
-func (s *Server) getUserByEmail(ctx context.Context, email string) (userRecord, bool) {
+func (s *Server) getUserByEmail(ctx context.Context, email string) (userRecord, bool, error) {
 	s.state.mu.Lock()
 	if user, ok := s.state.usersByEmail[email]; ok {
 		s.state.mu.Unlock()
-		return user, true
+		return user, true, nil
 	}
 	s.state.mu.Unlock()
 
 	if s.db == nil {
-		return userRecord{}, false
+		return userRecord{}, false, nil
 	}
 
 	var user userRecord
@@ -1143,7 +1153,10 @@ func (s *Server) getUserByEmail(ctx context.Context, email string) (userRecord, 
 		email,
 	).Scan(&user.UserID, &user.Email, &user.PasswordHash, &createdAt)
 	if err != nil {
-		return userRecord{}, false
+		if errors.Is(err, sql.ErrNoRows) {
+			return userRecord{}, false, nil
+		}
+		return userRecord{}, false, fmt.Errorf("query user by email: %w", err)
 	}
 	user.CreatedAtMs = createdAt.UnixMilli()
 
@@ -1156,19 +1169,19 @@ func (s *Server) getUserByEmail(ctx context.Context, email string) (userRecord, 
 		s.state.wallets[user.UserID] = wallet
 	}
 	s.state.mu.Unlock()
-	return user, true
+	return user, true, nil
 }
 
-func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bool) {
+func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bool, error) {
 	s.state.mu.Lock()
 	if user, ok := s.state.usersByID[userID]; ok {
 		s.state.mu.Unlock()
-		return user, true
+		return user, true, nil
 	}
 	s.state.mu.Unlock()
 
 	if s.db == nil {
-		return userRecord{}, false
+		return userRecord{}, false, nil
 	}
 
 	var user userRecord
@@ -1179,7 +1192,10 @@ func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bo
 		userID,
 	).Scan(&user.UserID, &user.Email, &user.PasswordHash, &createdAt)
 	if err != nil {
-		return userRecord{}, false
+		if errors.Is(err, sql.ErrNoRows) {
+			return userRecord{}, false, nil
+		}
+		return userRecord{}, false, fmt.Errorf("query user by id: %w", err)
 	}
 	user.CreatedAtMs = createdAt.UnixMilli()
 
@@ -1192,7 +1208,7 @@ func (s *Server) getUserByID(ctx context.Context, userID string) (userRecord, bo
 		s.state.wallets[user.UserID] = wallet
 	}
 	s.state.mu.Unlock()
-	return user, true
+	return user, true, nil
 }
 
 func (s *Server) createSession(ctx context.Context, user userRecord) (sessionRecord, error) {

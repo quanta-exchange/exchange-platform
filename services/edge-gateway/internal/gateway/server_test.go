@@ -3,6 +3,7 @@ package gateway
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net"
@@ -228,6 +229,30 @@ func TestRejectsInvalidSignature(t *testing.T) {
 	s.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401 got %d", w.Code)
+	}
+}
+
+func TestLoginReturns503WhenAuthStoreUnavailable(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	db, err := sql.Open("postgres", "postgres://localhost:1/invalid?sslmode=disable")
+	if err != nil {
+		t.Fatalf("open db handle: %v", err)
+	}
+	_ = db.Close()
+	s.db = db
+
+	body := []byte(`{"email":"alice@example.com","password":"password1234"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	s.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 for auth store failure, got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "auth_store_unavailable") {
+		t.Fatalf("unexpected error body: %s", w.Body.String())
 	}
 }
 
