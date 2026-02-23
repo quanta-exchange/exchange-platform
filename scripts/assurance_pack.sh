@@ -90,6 +90,7 @@ evidence = [
     {"id": "anomaly_detector", "path": pathlib.Path("build/anomaly/anomaly-detector-latest.json"), "required": False},
     {"id": "anomaly_smoke", "path": pathlib.Path("build/anomaly/anomaly-smoke-latest.json"), "required": False},
     {"id": "policy_smoke", "path": pathlib.Path("build/policy-smoke/policy-smoke-latest.json"), "required": False},
+    {"id": "policy_tamper", "path": pathlib.Path("build/policy/prove-policy-tamper-latest.json"), "required": False},
     {"id": "controls_freshness", "path": pathlib.Path("build/controls/prove-controls-freshness-latest.json"), "required": False},
     {"id": "rbac_sod_check", "path": pathlib.Path("build/security/rbac-sod-check-latest.json"), "required": False},
     {"id": "dr_rehearsal", "path": pathlib.Path("build/dr/dr-report.json"), "required": True},
@@ -173,6 +174,7 @@ pack = {
         {"id": "G28", "text": "Exactly-once million-duplicate proof demonstrates idempotent settlement behavior at extreme duplicate-injection volume."},
         {"id": "G29", "text": "Adversarial reliability bundle validates policy/ws/candle/snapshot/exactly-once defenses under hostile input patterns and records deterministic runbook evidence."},
         {"id": "G30", "text": "Policy smoke evidence confirms policy-as-code signing and signature verification pipeline stays executable and auditable."},
+        {"id": "G31", "text": "Policy tamper proof confirms modified policy payloads are rejected by signature verification, demonstrating tamper detection."},
     ],
 }
 

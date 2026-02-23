@@ -156,6 +156,7 @@ declare -a OPTIONAL_BASE_EVIDENCE=(
   "build/audit/verify-audit-chain-latest.json"
   "build/change-audit/verify-change-audit-chain-latest.json"
   "build/policy-smoke/policy-smoke-latest.json"
+  "build/policy/prove-policy-tamper-latest.json"
   "build/controls/prove-controls-freshness-latest.json"
 )
 

@@ -162,11 +162,13 @@ Gate G1 operational check:
 - Change workflow drill: `./runbooks/change_workflow.sh`
 - Budget failure drill: `./runbooks/budget_failure.sh`
 - Policy signature drill: `./runbooks/policy_signature.sh`
+- Policy tamper drill: `./runbooks/policy_tamper.sh`
 - Adversarial reliability drill: `./runbooks/adversarial_reliability.sh`
 - Shared verification bundle: `./scripts/verification_factory.sh`
   - with startup drill: `./scripts/verification_factory.sh --run-startup-guardrails`
   - with change workflow drill: `./scripts/verification_factory.sh --run-change-workflow`
   - with policy signature drill: `./scripts/verification_factory.sh --run-policy-signature`
+  - with policy tamper drill: `./scripts/verification_factory.sh --run-policy-tamper`
   - with adversarial drill: `./scripts/verification_factory.sh --run-adversarial`
 - Audit tamper-evidence verify: `./scripts/verify_audit_chain.sh --require-events`
 - Change audit-chain verify: `./scripts/verify_change_audit_chain.sh --require-events`
@@ -364,6 +366,22 @@ Success criteria:
 - runbook output contains:
   - `policy-signature-summary.json` (`policy_ok`, `budget_ok`, `recommended_action`)
   - `policy-smoke/policy-smoke-latest.json`
+  - `status-before.json` / `status-after.json`
+
+### 4.11 Policy tamper drill
+Purpose:
+- 정책 파일 변조가 서명 검증에서 실제로 차단되는지 정기 점검
+- tamper detection 증거와 safety budget 상태를 함께 확인
+
+Command:
+- `./runbooks/policy_tamper.sh`
+- 실패 허용 진단 모드: `RUNBOOK_ALLOW_POLICY_TAMPER_FAIL=true ./runbooks/policy_tamper.sh`
+
+Success criteria:
+- output includes `runbook_policy_tamper_ok=true`
+- runbook output contains:
+  - `policy-tamper-summary.json` (`policy_tamper_ok`, `tamper_detected`, `recommended_action`)
+  - `policy/prove-policy-tamper-latest.json`
   - `status-before.json` / `status-after.json`
 
 ---

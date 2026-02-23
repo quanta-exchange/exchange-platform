@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/adversarial-runbook + safety->policy-smoke->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -77,6 +77,7 @@ scripts/
   policy_sign.sh          # G29 policy signing
   policy_verify.sh        # G29 policy signature verification
   policy_smoke.sh         # G29 sign+verify smoke
+  prove_policy_tamper.sh  # G29 policy tamper detection proof
   ws_smoke.sh             # WS slow-consumer backpressure smoke
   ws_resume_smoke.sh      # WS resume/gap recovery smoke
   ws_resume_client.go     # WS resume helper (SUB/RESUME assertion client)
@@ -95,6 +96,8 @@ runbooks/
   budget_failure.md       # safety budget failure drill notes
   policy_signature.sh     # policy signature automated drill
   policy_signature.md     # policy signature drill notes
+  policy_tamper.sh        # policy tamper detection automated drill
+  policy_tamper.md        # policy tamper drill notes
   adversarial_reliability.sh # adversarial reliability automated drill
   adversarial_reliability.md # adversarial reliability drill notes
   startup_guardrails.sh   # startup guardrails verification drill
@@ -441,6 +444,8 @@ make verification-factory
 ./scripts/verification_factory.sh --run-change-workflow
 # include policy-signature runbook in same gate:
 ./scripts/verification_factory.sh --run-policy-signature
+# include policy-tamper runbook in same gate:
+./scripts/verification_factory.sh --run-policy-tamper
 # include adversarial reliability runbook in same gate:
 ./scripts/verification_factory.sh --run-adversarial
 # local fallback for core cargo environment:
@@ -449,7 +454,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_smoke_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_adversarial=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -460,6 +465,15 @@ Success output includes:
 - `policy_smoke_signature=build/policy-smoke/trading-policy.v1.sig`
 - `policy_smoke_report=build/policy-smoke/policy-smoke-<timestamp>.json`
 - `policy_smoke_latest=build/policy-smoke/policy-smoke-latest.json`
+
+### 15.1) Policy tamper proof
+```bash
+make prove-policy-tamper
+```
+Success output includes:
+- `prove_policy_tamper_report=build/policy/prove-policy-tamper-<timestamp>.json`
+- `prove_policy_tamper_latest=build/policy/prove-policy-tamper-latest.json`
+- `prove_policy_tamper_ok=true|false`
 
 ### 16) Safety budget check
 ```bash
@@ -498,7 +512,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist
+- report includes `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.safety_budget`, `checks.compliance.proofs` snapshots when latest artifacts exist
 
 ### 17.1) Anomaly detector
 ```bash
@@ -528,10 +542,11 @@ make runbook-audit-tamper
 make runbook-change-workflow
 make runbook-budget-failure
 make runbook-policy-signature
+make runbook-policy-tamper
 make runbook-adversarial-reliability
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_policy_signature_ok=true` or `runbook_adversarial_reliability_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_policy_signature_ok=true` or `runbook_policy_tamper_ok=true` or `runbook_adversarial_reliability_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 
@@ -553,7 +568,7 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `rbac_sod`, `anomaly_detector`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `rbac_sod`, `anomaly_detector`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20) External replay demo
 ```bash
@@ -584,6 +599,19 @@ Outputs:
 - `runbook_policy_signature_ok=true|false`
 - `policy_recommended_action=...`
 - `runbook_output_dir=build/runbooks/policy-signature-<timestamp>`
+
+Runbook shortcut:
+```bash
+make runbook-policy-tamper
+# allow drill to continue even if tamper proof fails:
+RUNBOOK_ALLOW_POLICY_TAMPER_FAIL=true make runbook-policy-tamper
+# allow budget fail while only diagnosing tamper path:
+RUNBOOK_ALLOW_BUDGET_FAIL=true make runbook-policy-tamper
+```
+Outputs:
+- `runbook_policy_tamper_ok=true|false`
+- `policy_tamper_recommended_action=...`
+- `runbook_output_dir=build/runbooks/policy-tamper-<timestamp>`
 
 Runbook shortcut:
 ```bash
@@ -660,6 +688,8 @@ make release-gate
 ./scripts/release_gate.sh --run-change-workflow
 # include policy-signature runbook in gate:
 ./scripts/release_gate.sh --run-policy-signature
+# include policy-tamper runbook in gate:
+./scripts/release_gate.sh --run-policy-tamper
 # include adversarial reliability runbook in gate:
 ./scripts/release_gate.sh --run-adversarial
 # fail gate on advisory control gaps too:
@@ -672,6 +702,7 @@ Outputs:
 - report includes control health counters: `controls_advisory_missing_count`, `controls_advisory_stale_count`, `controls_failed_enforced_stale_count`
 - report includes safety budget context: `safety_budget_ok`, `safety_budget_violations`
 - report includes policy-signature context: `policy_smoke_ok`
+- report includes policy-tamper context: `policy_tamper_ok`, `policy_tamper_detected`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 
 ### 26) Legal archive capture + verify
@@ -725,6 +756,7 @@ Outputs:
 `--run-load-profiles`를 주면 `load-all` 단계가 추가 실행됩니다.  
 `--run-startup-guardrails`를 주면 startup guardrails runbook 단계가 추가 실행됩니다.
 `--run-policy-signature`를 주면 policy signature runbook 단계가 추가 실행됩니다.
+`--run-policy-tamper`를 주면 policy tamper runbook 단계가 추가 실행됩니다.
 `--run-adversarial`를 주면 adversarial reliability runbook 단계가 추가 실행됩니다.
 
 ### 27) Determinism proof

@@ -255,6 +255,7 @@ pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
 safety_budget_latest = read_latest_json("build/safety/safety-budget-latest.json")
 budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-latest.json")
 policy_smoke_latest = read_latest_json("build/policy-smoke/policy-smoke-latest.json")
+policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest.json")
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
@@ -336,6 +337,13 @@ report = {
                 "policy_file": (policy_smoke_latest.get("payload") or {}).get("policy_file"),
                 "signature_file": (policy_smoke_latest.get("payload") or {}).get("signature_file"),
                 "error": policy_smoke_latest.get("error"),
+            },
+            "policy_tamper": {
+                "present": policy_tamper_latest.get("present", False),
+                "path": policy_tamper_latest.get("path"),
+                "ok": (policy_tamper_latest.get("payload") or {}).get("ok"),
+                "tamper_detected": (policy_tamper_latest.get("payload") or {}).get("tamper_detected"),
+                "error": policy_tamper_latest.get("error"),
             },
             "safety_budget": {
                 "present": safety_budget_latest.get("present", False),

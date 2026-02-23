@@ -58,6 +58,7 @@ rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
 anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
 budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
 policy_smoke = read_json("build/policy-smoke/policy-smoke-latest.json")
+policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 
 sources = {
@@ -80,6 +81,7 @@ sources = {
     "anomaly": anomaly,
     "budget_freshness": budget_freshness,
     "policy_smoke": policy_smoke,
+    "policy_tamper": policy_tamper,
     "adversarial": adversarial,
 }
 
@@ -159,6 +161,8 @@ report = {
             "anomaly_detected": bool(anomaly.get("anomaly_detected")) if anomaly else None,
             "policy_smoke_ok": bool(policy_smoke.get("ok")) if policy_smoke else None,
             "policy_signature_file": policy_smoke.get("signature_file") if policy_smoke else None,
+            "policy_tamper_ok": bool(policy_tamper.get("ok")) if policy_tamper else None,
+            "policy_tamper_detected": bool(policy_tamper.get("tamper_detected")) if policy_tamper else None,
             "adversarial_ok": bool(adversarial.get("ok")) if adversarial else None,
             "adversarial_failed_step_count": (
                 len([s for s in (adversarial.get("steps", []) or []) if isinstance(s, dict) and s.get("status") == "fail"])
@@ -205,6 +209,7 @@ report = {
         "anomaly": "build/anomaly/anomaly-detector-latest.json",
         "budget_freshness": "build/safety/prove-budget-freshness-latest.json",
         "policy_smoke": "build/policy-smoke/policy-smoke-latest.json",
+        "policy_tamper": "build/policy/prove-policy-tamper-latest.json",
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
     },
 }

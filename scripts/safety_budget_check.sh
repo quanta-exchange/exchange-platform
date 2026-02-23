@@ -276,6 +276,16 @@ for key, budget in budgets.items():
         if must_ok and not policy_ok:
             entry["ok"] = False
             entry["details"].append("policy_smoke_not_ok")
+    elif key == "policyTamper":
+        must_ok = bool(budget.get("mustBeOk", True))
+        tamper_ok = bool(payload.get("ok", False))
+        tamper_detected = bool(payload.get("tamper_detected", False))
+        if must_ok and not tamper_ok:
+            entry["ok"] = False
+            entry["details"].append("policy_tamper_proof_not_ok")
+        if bool(budget.get("mustDetectTamper", True)) and not tamper_detected:
+            entry["ok"] = False
+            entry["details"].append("policy_tamper_not_detected")
     elif key == "adversarial":
         must_ok = bool(budget.get("mustBeOk", True))
         adversarial_ok = bool(payload.get("ok", False))

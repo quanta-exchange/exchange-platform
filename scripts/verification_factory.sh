@@ -10,6 +10,7 @@ RUN_STARTUP_GUARDRAILS=false
 RUN_CHANGE_WORKFLOW=false
 RUN_ADVERSARIAL=false
 RUN_POLICY_SIGNATURE=false
+RUN_POLICY_TAMPER=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -43,6 +44,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-policy-signature)
       RUN_POLICY_SIGNATURE=true
+      shift
+      ;;
+    --run-policy-tamper)
+      RUN_POLICY_TAMPER=true
       shift
       ;;
     *)
@@ -143,6 +148,9 @@ fi
 if ! run_step "policy-smoke" "$ROOT_DIR/scripts/policy_smoke.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "prove-policy-tamper" "$ROOT_DIR/scripts/prove_policy_tamper.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "prove-controls-freshness" "$ROOT_DIR/scripts/prove_controls_freshness.sh"; then
   HAS_FAILURE=true
 fi
@@ -220,6 +228,11 @@ if [[ "$RUN_POLICY_SIGNATURE" == "true" ]]; then
     HAS_FAILURE=true
   fi
 fi
+if [[ "$RUN_POLICY_TAMPER" == "true" ]]; then
+  if ! run_step "runbook-policy-tamper" env RUNBOOK_ALLOW_BUDGET_FAIL=true "$ROOT_DIR/runbooks/policy_tamper.sh"; then
+    HAS_FAILURE=true
+  fi
+fi
 if [[ "$RUN_ADVERSARIAL" == "true" ]]; then
   if ! run_step "runbook-adversarial-reliability" env RUNBOOK_ALLOW_BUDGET_FAIL=true "$ROOT_DIR/runbooks/adversarial_reliability.sh"; then
     HAS_FAILURE=true
@@ -237,6 +250,7 @@ ARCHIVE_LOG="$LOG_DIR/archive-range.log"
 VERIFY_ARCHIVE_LOG="$LOG_DIR/verify-archive.log"
 EXTERNAL_REPLAY_LOG="$LOG_DIR/external-replay-demo.log"
 POLICY_SMOKE_LOG="$LOG_DIR/policy-smoke.log"
+PROVE_POLICY_TAMPER_LOG="$LOG_DIR/prove-policy-tamper.log"
 CONTROLS_LOG="$LOG_DIR/controls-check.log"
 PROVE_CONTROLS_FRESHNESS_LOG="$LOG_DIR/prove-controls-freshness.log"
 RBAC_SOD_LOG="$LOG_DIR/rbac-sod-check.log"
@@ -262,6 +276,7 @@ ACCESS_REVIEW_LOG="$LOG_DIR/access-review.log"
 SAFETY_BUDGET_LOG="$LOG_DIR/safety-budget.log"
 BUDGET_FAILURE_RUNBOOK_LOG="$LOG_DIR/runbook-budget-failure.log"
 POLICY_SIGNATURE_RUNBOOK_LOG="$LOG_DIR/runbook-policy-signature.log"
+POLICY_TAMPER_RUNBOOK_LOG="$LOG_DIR/runbook-policy-tamper.log"
 ADVERSARIAL_RUNBOOK_LOG="$LOG_DIR/runbook-adversarial-reliability.log"
 ASSURANCE_LOG="$LOG_DIR/assurance-pack.log"
 
@@ -274,6 +289,7 @@ ARCHIVE_RANGE_MANIFEST="$(extract_value "archive_manifest" "$ARCHIVE_LOG")"
 VERIFY_ARCHIVE_SHA="$(extract_value "verify_archive_sha256" "$VERIFY_ARCHIVE_LOG")"
 EXTERNAL_REPLAY_REPORT="$(extract_value "external_replay_demo_report" "$EXTERNAL_REPLAY_LOG")"
 POLICY_SMOKE_REPORT="$(extract_value "policy_smoke_latest" "$POLICY_SMOKE_LOG")"
+PROVE_POLICY_TAMPER_REPORT="$(extract_value "prove_policy_tamper_latest" "$PROVE_POLICY_TAMPER_LOG")"
 CONTROLS_REPORT="$(extract_value "controls_check_report" "$CONTROLS_LOG")"
 PROVE_CONTROLS_FRESHNESS_REPORT="$(extract_value "prove_controls_freshness_report" "$PROVE_CONTROLS_FRESHNESS_LOG")"
 RBAC_SOD_REPORT="$(extract_value "rbac_sod_check_report" "$RBAC_SOD_LOG")"
@@ -299,10 +315,11 @@ ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
 BUDGET_FAILURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$BUDGET_FAILURE_RUNBOOK_LOG")"
 POLICY_SIGNATURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$POLICY_SIGNATURE_RUNBOOK_LOG")"
+POLICY_TAMPER_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$POLICY_TAMPER_RUNBOOK_LOG")"
 ADVERSARIAL_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$ADVERSARIAL_RUNBOOK_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" <<'PY'
 import json
 import sys
 
@@ -319,39 +336,42 @@ archive_manifest = sys.argv[10]
 archive_sha = sys.argv[11]
 external_replay_report = sys.argv[12]
 policy_smoke_report = sys.argv[13]
-controls_report = sys.argv[14]
-prove_controls_freshness_report = sys.argv[15]
-prove_idempotency_report = sys.argv[16]
-prove_latch_approval_report = sys.argv[17]
-prove_budget_freshness_report = sys.argv[18]
-model_check_report = sys.argv[19]
-prove_breakers_report = sys.argv[20]
-prove_candles_report = sys.argv[21]
-snapshot_verify_report = sys.argv[22]
-verify_service_modes_report = sys.argv[23]
-ws_resume_smoke_report = sys.argv[24]
-adversarial_tests_report = sys.argv[25]
-shadow_verify_report = sys.argv[26]
-compliance_report = sys.argv[27]
-transparency_report = sys.argv[28]
-access_review_report = sys.argv[29]
-safety_budget_report = sys.argv[30]
-assurance_json = sys.argv[31]
-run_startup_guardrails = sys.argv[32].lower() == "true"
-startup_guardrails_runbook_dir = sys.argv[33]
-run_change_workflow = sys.argv[34].lower() == "true"
-change_workflow_runbook_dir = sys.argv[35]
-budget_failure_runbook_dir = sys.argv[36]
-run_policy_signature = sys.argv[37].lower() == "true"
-policy_signature_runbook_dir = sys.argv[38]
-run_adversarial = sys.argv[39].lower() == "true"
-adversarial_runbook_dir = sys.argv[40]
-verify_audit_chain_report = sys.argv[41]
-verify_change_audit_chain_report = sys.argv[42]
-pii_log_scan_report = sys.argv[43]
-anomaly_detector_report = sys.argv[44]
-anomaly_smoke_report = sys.argv[45]
-rbac_sod_report = sys.argv[46]
+prove_policy_tamper_report = sys.argv[14]
+controls_report = sys.argv[15]
+prove_controls_freshness_report = sys.argv[16]
+prove_idempotency_report = sys.argv[17]
+prove_latch_approval_report = sys.argv[18]
+prove_budget_freshness_report = sys.argv[19]
+model_check_report = sys.argv[20]
+prove_breakers_report = sys.argv[21]
+prove_candles_report = sys.argv[22]
+snapshot_verify_report = sys.argv[23]
+verify_service_modes_report = sys.argv[24]
+ws_resume_smoke_report = sys.argv[25]
+adversarial_tests_report = sys.argv[26]
+shadow_verify_report = sys.argv[27]
+compliance_report = sys.argv[28]
+transparency_report = sys.argv[29]
+access_review_report = sys.argv[30]
+safety_budget_report = sys.argv[31]
+assurance_json = sys.argv[32]
+run_startup_guardrails = sys.argv[33].lower() == "true"
+startup_guardrails_runbook_dir = sys.argv[34]
+run_change_workflow = sys.argv[35].lower() == "true"
+change_workflow_runbook_dir = sys.argv[36]
+budget_failure_runbook_dir = sys.argv[37]
+run_policy_signature = sys.argv[38].lower() == "true"
+policy_signature_runbook_dir = sys.argv[39]
+run_policy_tamper = sys.argv[40].lower() == "true"
+policy_tamper_runbook_dir = sys.argv[41]
+run_adversarial = sys.argv[42].lower() == "true"
+adversarial_runbook_dir = sys.argv[43]
+verify_audit_chain_report = sys.argv[44]
+verify_change_audit_chain_report = sys.argv[45]
+pii_log_scan_report = sys.argv[46]
+anomaly_detector_report = sys.argv[47]
+anomaly_smoke_report = sys.argv[48]
+rbac_sod_report = sys.argv[49]
 
 steps = []
 ok = True
@@ -380,6 +400,7 @@ summary = {
     "run_startup_guardrails": run_startup_guardrails,
     "run_change_workflow": run_change_workflow,
     "run_policy_signature": run_policy_signature,
+    "run_policy_tamper": run_policy_tamper,
     "run_adversarial": run_adversarial,
     "steps": steps,
     "artifacts": {
@@ -390,11 +411,13 @@ summary = {
         "change_workflow_runbook_dir": change_workflow_runbook_dir or None,
         "budget_failure_runbook_dir": budget_failure_runbook_dir or None,
         "policy_signature_runbook_dir": policy_signature_runbook_dir or None,
+        "policy_tamper_runbook_dir": policy_tamper_runbook_dir or None,
         "adversarial_runbook_dir": adversarial_runbook_dir or None,
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,
         "external_replay_report": external_replay_report or None,
         "policy_smoke_report": policy_smoke_report or None,
+        "prove_policy_tamper_report": prove_policy_tamper_report or None,
         "controls_check_report": controls_report or None,
         "prove_controls_freshness_report": prove_controls_freshness_report or None,
         "verify_audit_chain_report": verify_audit_chain_report or None,

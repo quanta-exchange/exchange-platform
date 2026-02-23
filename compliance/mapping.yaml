@@ -358,7 +358,7 @@
     {
       "controlId": "CTRL-082",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
-      "description": "Safety budget and operational status/transparency summaries include policy-signature posture for continuous governance visibility"
+      "description": "Safety budget and operational status/transparency summaries include policy-signature and tamper-proof posture for continuous governance visibility"
     },
     {
       "controlId": "CTRL-083",
@@ -369,6 +369,21 @@
       "controlId": "CTRL-084",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Verification and release gates can explicitly include policy signature drill evidence in promotion decisions"
+    },
+    {
+      "controlId": "CTRL-085",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Policy tamper proof artifact demonstrates signed policy verification fails on modified payloads and is tracked with evidence freshness"
+    },
+    {
+      "controlId": "CTRL-086",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for policy tamper drills with deterministic detection evidence and operational recommendation output"
+    },
+    {
+      "controlId": "CTRL-087",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Verification and release gates can explicitly include policy tamper drill evidence in promotion decisions"
     }
   ]
 }

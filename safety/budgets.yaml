@@ -78,6 +78,12 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "policyTamper": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustDetectTamper": true
+    },
     "adversarial": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -100,6 +106,7 @@
     "piiLogScan": "build/security/pii-log-scan-latest.json",
     "anomaly": "build/anomaly/anomaly-detector-latest.json",
     "policySmoke": "build/policy-smoke/policy-smoke-latest.json",
+    "policyTamper": "build/policy/prove-policy-tamper-latest.json",
     "adversarial": "build/adversarial/adversarial-tests-latest.json"
   }
 }
