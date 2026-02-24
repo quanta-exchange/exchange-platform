@@ -527,6 +527,66 @@ for key, budget in budgets.items():
                 "compliance_unmapped_enforced_controls_count="
                 f"{unmapped_enforced_controls_count} > {max_unmapped_enforced_controls}"
             )
+    elif key == "releaseGateContext":
+        must_context_ok = bool(budget.get("mustContextOk", True))
+        must_fallback_ok = bool(budget.get("mustFallbackSmokeOk", True))
+        require_runbook_context = budget.get("requireRunbookContext")
+
+        release_gate_payload = payload.get("release_gate", {}) if isinstance(payload, dict) else {}
+        fallback_payload = (
+            payload.get("release_gate_fallback_smoke", {})
+            if isinstance(payload, dict)
+            else {}
+        )
+
+        release_gate_present = bool(release_gate_payload.get("present", False))
+        fallback_present = bool(fallback_payload.get("present", False))
+        release_gate_context_ok = payload.get("release_gate_context_ok")
+        fallback_ok = payload.get("release_gate_fallback_smoke_ok")
+        missing_context_fields = int(
+            release_gate_payload.get("runbook_context_missing_count", 0) or 0
+        )
+        fallback_missing_fields = int(
+            fallback_payload.get("missing_fields_count", 0) or 0
+        )
+
+        if bool(budget.get("mustPresent", True)) and not release_gate_present:
+            entry["ok"] = False
+            entry["details"].append("release_gate_context_missing")
+        if bool(budget.get("mustFallbackPresent", True)) and not fallback_present:
+            entry["ok"] = False
+            entry["details"].append("release_gate_fallback_smoke_missing")
+        if must_context_ok and release_gate_context_ok is not True:
+            entry["ok"] = False
+            entry["details"].append("release_gate_context_not_ok")
+        if must_fallback_ok and fallback_ok is not True:
+            entry["ok"] = False
+            entry["details"].append("release_gate_fallback_smoke_not_ok")
+
+        if require_runbook_context is not None:
+            observed_require_context = release_gate_payload.get("require_runbook_context")
+            if bool(observed_require_context) != bool(require_runbook_context):
+                entry["ok"] = False
+                entry["details"].append(
+                    "release_gate_require_runbook_context="
+                    f"{bool(observed_require_context)} != {bool(require_runbook_context)}"
+                )
+
+        max_missing_context_fields = int(budget.get("maxMissingContextFields", 0))
+        if missing_context_fields > max_missing_context_fields:
+            entry["ok"] = False
+            entry["details"].append(
+                "release_gate_context_missing_fields="
+                f"{missing_context_fields} > {max_missing_context_fields}"
+            )
+
+        max_fallback_missing_fields = int(budget.get("maxFallbackMissingFields", 0))
+        if fallback_missing_fields > max_fallback_missing_fields:
+            entry["ok"] = False
+            entry["details"].append(
+                "release_gate_fallback_missing_fields="
+                f"{fallback_missing_fields} > {max_fallback_missing_fields}"
+            )
     elif key == "mappingIntegrity":
         must_ok = bool(budget.get("mustBeOk", True))
         mapping_integrity_ok = bool(payload.get("ok", False))

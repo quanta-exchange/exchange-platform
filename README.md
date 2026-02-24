@@ -537,7 +537,7 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
-- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `idempotencyKeyFormat`, `latchApproval`, `idempotencyLatchRunbook`, `idempotencyKeyFormatRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
+- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `releaseGateContext`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `idempotencyKeyFormat`, `latchApproval`, `idempotencyLatchRunbook`, `idempotencyKeyFormatRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
 - supports report freshness policy via `safety/budgets.yaml`:
   - top-level `freshness.defaultMaxAgeSeconds`
   - per-check override `budgets.<check>.maxAgeSeconds`
@@ -553,6 +553,10 @@ Success output includes:
   - `mustRunbookOk` (default `true`)
   - `maxMissingTestsCount` (default `0`)
   - `maxFailedTestsCount` (default `0`)
+- `releaseGateContext` check supports policy fields:
+  - `mustContextOk` / `mustFallbackSmokeOk`
+  - `maxMissingContextFields` / `maxFallbackMissingFields`
+  - `requireRunbookContext` (expected release-gate setting)
 
 ### 16.1) Safety budget failure runbook
 ```bash

@@ -159,6 +159,17 @@
       "maxUnmappedControls": 0,
       "maxUnmappedEnforcedControls": 0
     },
+    "releaseGateContext": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustPresent": true,
+      "mustFallbackPresent": true,
+      "mustContextOk": true,
+      "mustFallbackSmokeOk": true,
+      "requireRunbookContext": true,
+      "maxMissingContextFields": 0,
+      "maxFallbackMissingFields": 0
+    },
     "mappingIntegrity": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -279,6 +290,7 @@
     "policySignatureRunbook": "build/runbooks/policy-signature-latest.json",
     "policyTamperRunbook": "build/runbooks/policy-tamper-latest.json",
     "complianceEvidence": "build/compliance/compliance-evidence-latest.json",
+    "releaseGateContext": "build/compliance/compliance-evidence-latest.json",
     "mappingIntegrity": "build/compliance/prove-mapping-integrity-latest.json",
     "mappingCoverage": "build/compliance/prove-mapping-coverage-latest.json",
     "mappingIntegrityRunbook": "build/runbooks/mapping-integrity-latest.json",
