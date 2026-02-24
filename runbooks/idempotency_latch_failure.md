@@ -17,6 +17,7 @@ make runbook-idempotency-latch
 
 ## Outputs
 - `runbook_idempotency_latch_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `idempotency_scope_proof_ok=true|false`
 - `idempotency_scope_proof_passed=<n>`
 - `idempotency_scope_proof_failed=<n>`

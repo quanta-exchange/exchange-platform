@@ -603,6 +603,7 @@ RUNBOOK_ALLOW_PROOF_FAIL=true make runbook-idempotency-latch
 ```
 Outputs:
 - `runbook_idempotency_latch_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `idempotency_scope_proof_ok=true|false`
 - `idempotency_scope_proof_passed=<n>`
 - `idempotency_scope_proof_failed=<n>`
@@ -748,7 +749,7 @@ Success output includes:
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
 - integrity summary includes `idempotency_scope_ok`, `idempotency_key_format_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `mapping_coverage_runbook`, `idempotency_latch_runbook`, `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `proof_health_runbook`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `mapping_coverage_runbook`, `idempotency_latch_runbook_ok`, `idempotency_latch_runbook_budget_ok`, `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `proof_health_runbook_ok`, `proof_health_runbook_budget_ok`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20.1) Proof health metrics exporter
 ```bash
@@ -899,6 +900,7 @@ RUNBOOK_ALLOW_PROOF_FAIL=true make runbook-idempotency-latch
 ```
 Outputs:
 - `runbook_idempotency_latch_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `idempotency_scope_proof_ok=true|false`
 - `latch_approval_proof_ok=true|false`
 - `idempotency_latch_recommended_action=...`
@@ -914,6 +916,7 @@ RUNBOOK_ALLOW_PROOF_FAIL=true make runbook-proof-health
 ```
 Outputs:
 - `runbook_proof_health_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `proof_health_runbook_proof_ok=true|false`
 - `proof_health_runbook_missing_count=<n>`
 - `proof_health_runbook_failing_count=<n>`
@@ -1041,9 +1044,9 @@ Outputs:
 - report includes exactly-once runbook context: `exactly_once_runbook_proof_ok`, `exactly_once_runbook_proof_repeats`, `exactly_once_runbook_recommended_action`
 - report includes mapping-integrity runbook context: `mapping_integrity_runbook_proof_ok`, `mapping_integrity_runbook_recommended_action`
 - report includes mapping-coverage runbook context: `mapping_coverage_runbook_proof_ok`, `mapping_coverage_runbook_recommended_action`
-- report includes idempotency+latch runbook context: `idempotency_latch_runbook_idempotency_ok`, `idempotency_latch_runbook_latch_ok`, `idempotency_latch_runbook_recommended_action`
+- report includes idempotency+latch runbook context: `idempotency_latch_runbook_idempotency_ok`, `idempotency_latch_runbook_latch_ok`, `idempotency_latch_runbook_ok`, `idempotency_latch_runbook_budget_ok`, `idempotency_latch_runbook_recommended_action`
 - report includes idempotency-key-format runbook context: `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `idempotency_key_format_runbook_proof_ok`, `idempotency_key_format_runbook_missing_tests_count`, `idempotency_key_format_runbook_failed_tests_count`, `idempotency_key_format_runbook_recommended_action`
-- report includes proof-health runbook context: `proof_health_runbook_proof_ok`, `proof_health_runbook_missing_count`, `proof_health_runbook_failing_count`, `proof_health_runbook_recommended_action`
+- report includes proof-health runbook context: `proof_health_runbook_ok`, `proof_health_runbook_budget_ok`, `proof_health_runbook_proof_ok`, `proof_health_runbook_missing_count`, `proof_health_runbook_failing_count`, `proof_health_runbook_recommended_action`
 - report includes proof-health context: `proof_health_ok`, `proof_health_health_ok`, `proof_health_missing_count`, `proof_health_failing_count`
 - report includes mapping-integrity context: `mapping_integrity_ok`
 - report includes mapping-coverage context: `mapping_coverage_ok`, `mapping_coverage_ratio`, `mapping_coverage_missing_controls_count`, `mapping_coverage_unmapped_controls_count`, `mapping_coverage_duplicate_control_ids_count`, `mapping_coverage_duplicate_mapping_ids_count`

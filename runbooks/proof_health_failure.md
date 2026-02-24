@@ -17,6 +17,7 @@ make runbook-proof-health
 
 ## Outputs
 - `runbook_proof_health_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `proof_health_runbook_proof_ok=true|false`
 - `proof_health_runbook_tracked_count=<n>`
 - `proof_health_runbook_present_count=<n>`

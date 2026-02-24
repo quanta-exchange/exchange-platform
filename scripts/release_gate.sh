@@ -299,6 +299,8 @@ proof_health_missing_count = None
 proof_health_failing_count = None
 idempotency_latch_runbook_idempotency_ok = None
 idempotency_latch_runbook_latch_ok = None
+idempotency_latch_runbook_ok = None
+idempotency_latch_runbook_budget_ok = None
 idempotency_latch_runbook_recommended_action = None
 idempotency_key_format_runbook_ok = None
 idempotency_key_format_runbook_budget_ok = None
@@ -306,6 +308,8 @@ idempotency_key_format_runbook_proof_ok = None
 idempotency_key_format_runbook_missing_tests_count = None
 idempotency_key_format_runbook_failed_tests_count = None
 idempotency_key_format_runbook_recommended_action = None
+proof_health_runbook_ok = None
+proof_health_runbook_budget_ok = None
 proof_health_runbook_proof_ok = None
 proof_health_runbook_missing_count = None
 proof_health_runbook_failing_count = None
@@ -631,6 +635,18 @@ if idempotency_latch_runbook_dir:
         idempotency_latch_runbook_latch_ok = bool(
             idempotency_latch_payload.get("latch_ok", False)
         )
+        runbook_ok_value = idempotency_latch_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            idempotency_latch_runbook_ok = bool(
+                idempotency_latch_runbook_idempotency_ok
+                and idempotency_latch_runbook_latch_ok
+            )
+        else:
+            idempotency_latch_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = idempotency_latch_payload.get("budget_ok")
+        idempotency_latch_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
         idempotency_latch_runbook_recommended_action = idempotency_latch_payload.get(
             "recommended_action"
         )
@@ -678,10 +694,25 @@ if proof_health_runbook_dir:
         with open(candidate, "r", encoding="utf-8") as f:
             proof_health_runbook_payload = json.load(f)
         proof_health_runbook_proof_ok = bool(
-            proof_health_runbook_payload.get("proof_health_ok", False)
+            proof_health_runbook_payload.get(
+                "proof_health_ok", proof_health_runbook_payload.get("proof_ok", False)
+            )
         )
         proof_health_runbook_missing_count = proof_health_runbook_payload.get("missing_count")
         proof_health_runbook_failing_count = proof_health_runbook_payload.get("failing_count")
+        runbook_ok_value = proof_health_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            proof_health_runbook_ok = bool(
+                proof_health_runbook_proof_ok
+                and int(proof_health_runbook_missing_count or 0) == 0
+                and int(proof_health_runbook_failing_count or 0) == 0
+            )
+        else:
+            proof_health_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = proof_health_runbook_payload.get("budget_ok")
+        proof_health_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
         proof_health_runbook_recommended_action = proof_health_runbook_payload.get(
             "recommended_action"
         )
@@ -781,6 +812,8 @@ payload = {
     "proof_health_failing_count": proof_health_failing_count,
     "idempotency_latch_runbook_idempotency_ok": idempotency_latch_runbook_idempotency_ok,
     "idempotency_latch_runbook_latch_ok": idempotency_latch_runbook_latch_ok,
+    "idempotency_latch_runbook_ok": idempotency_latch_runbook_ok,
+    "idempotency_latch_runbook_budget_ok": idempotency_latch_runbook_budget_ok,
     "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook_recommended_action,
     "idempotency_key_format_runbook_ok": idempotency_key_format_runbook_ok,
     "idempotency_key_format_runbook_budget_ok": idempotency_key_format_runbook_budget_ok,
@@ -788,6 +821,8 @@ payload = {
     "idempotency_key_format_runbook_missing_tests_count": idempotency_key_format_runbook_missing_tests_count,
     "idempotency_key_format_runbook_failed_tests_count": idempotency_key_format_runbook_failed_tests_count,
     "idempotency_key_format_runbook_recommended_action": idempotency_key_format_runbook_recommended_action,
+    "proof_health_runbook_ok": proof_health_runbook_ok,
+    "proof_health_runbook_budget_ok": proof_health_runbook_budget_ok,
     "proof_health_runbook_proof_ok": proof_health_runbook_proof_ok,
     "proof_health_runbook_missing_count": proof_health_runbook_missing_count,
     "proof_health_runbook_failing_count": proof_health_runbook_failing_count,

@@ -249,14 +249,24 @@ for key, budget in budgets.items():
             entry["details"].append(f"latch_failed_tests={failed_tests}")
     elif key == "idempotencyLatchRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
         runbook_idempotency_ok = bool(payload.get("idempotency_ok", False))
         runbook_latch_ok = bool(payload.get("latch_ok", False))
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = (
+            bool(runbook_ok_value)
+            if runbook_ok_value is not None
+            else (runbook_idempotency_ok and runbook_latch_ok)
+        )
         if must_ok and (not runbook_idempotency_ok or not runbook_latch_ok):
             entry["ok"] = False
             if not runbook_idempotency_ok:
                 entry["details"].append("idempotency_latch_runbook_idempotency_not_ok")
             if not runbook_latch_ok:
                 entry["details"].append("idempotency_latch_runbook_latch_not_ok")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("idempotency_latch_runbook_not_ok")
     elif key == "idempotencyKeyFormatRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
         must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
@@ -291,12 +301,22 @@ for key, budget in budgets.items():
             )
     elif key == "proofHealthRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
         proof_health_ok = bool(payload.get("proof_health_ok", False))
+        runbook_ok_value = payload.get("runbook_ok")
         missing_count = int(payload.get("missing_count", 0))
         failing_count = int(payload.get("failing_count", 0))
+        runbook_ok = (
+            bool(runbook_ok_value)
+            if runbook_ok_value is not None
+            else (proof_health_ok and missing_count == 0 and failing_count == 0)
+        )
         if must_ok and not proof_health_ok:
             entry["ok"] = False
             entry["details"].append("proof_health_runbook_not_ok")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("proof_health_runbook_execution_not_ok")
         if missing_count > 0:
             entry["ok"] = False
             entry["details"].append(f"proof_health_runbook_missing_count={missing_count}")

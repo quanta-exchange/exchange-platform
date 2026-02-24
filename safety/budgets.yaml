@@ -51,7 +51,8 @@
     "idempotencyLatchRunbook": {
       "required": false,
       "maxAgeSeconds": 604800,
-      "mustBeOk": true
+      "mustBeOk": true,
+      "mustRunbookOk": true
     },
     "idempotencyKeyFormatRunbook": {
       "required": false,
@@ -64,7 +65,8 @@
     "proofHealthRunbook": {
       "required": false,
       "maxAgeSeconds": 604800,
-      "mustBeOk": true
+      "mustBeOk": true,
+      "mustRunbookOk": true
     },
     "exactlyOnceMillion": {
       "required": false,

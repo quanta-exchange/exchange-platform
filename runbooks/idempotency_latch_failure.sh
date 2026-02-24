@@ -71,8 +71,19 @@ extract_value() {
     BUDGET_OK="true"
   fi
 
+  RUNBOOK_OK=true
+  if [[ "$IDEMPOTENCY_CODE" -ne 0 && "$RUNBOOK_ALLOW_PROOF_FAIL" != "true" ]]; then
+    RUNBOOK_OK=false
+  fi
+  if [[ "$LATCH_CODE" -ne 0 && "$RUNBOOK_ALLOW_PROOF_FAIL" != "true" ]]; then
+    RUNBOOK_OK=false
+  fi
+  if [[ "$BUDGET_OK" != "true" && "$RUNBOOK_ALLOW_BUDGET_FAIL" != "true" ]]; then
+    RUNBOOK_OK=false
+  fi
+
   SUMMARY_FILE="$OUT_DIR/idempotency-latch-summary.json"
-  python3 - "$SUMMARY_FILE" "$IDEMPOTENCY_REPORT" "$LATCH_REPORT" "$IDEMPOTENCY_CODE" "$LATCH_CODE" "$BUDGET_OK" <<'PY'
+  python3 - "$SUMMARY_FILE" "$IDEMPOTENCY_REPORT" "$LATCH_REPORT" "$IDEMPOTENCY_CODE" "$LATCH_CODE" "$BUDGET_OK" "$RUNBOOK_OK" "$RUNBOOK_ALLOW_PROOF_FAIL" "$RUNBOOK_ALLOW_BUDGET_FAIL" <<'PY'
 import json
 import pathlib
 import sys
@@ -84,6 +95,9 @@ latch_report = pathlib.Path(sys.argv[3]).resolve() if sys.argv[3] else None
 idempotency_exit_code = int(sys.argv[4])
 latch_exit_code = int(sys.argv[5])
 budget_ok = sys.argv[6].lower() == "true"
+runbook_ok = sys.argv[7].lower() == "true"
+allow_proof_fail = sys.argv[8].lower() == "true"
+allow_budget_fail = sys.argv[9].lower() == "true"
 
 def read_json(path):
     if not path or not path.exists():
@@ -111,7 +125,9 @@ elif not budget_ok:
 
 summary = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "runbook_ok": True,
+    "runbook_ok": runbook_ok,
+    "allow_proof_fail": allow_proof_fail,
+    "allow_budget_fail": allow_budget_fail,
     "idempotency_report": str(idempotency_report) if idempotency_report else None,
     "idempotency_exit_code": idempotency_exit_code,
     "idempotency_ok": idempotency_ok,
@@ -198,17 +214,6 @@ with open(sys.argv[1], "r", encoding="utf-8") as f:
 print(int(payload.get("latch_failed_tests_count", 0)))
 PY
   )"
-
-  RUNBOOK_OK=true
-  if [[ "$IDEMPOTENCY_CODE" -ne 0 && "$RUNBOOK_ALLOW_PROOF_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
-  if [[ "$LATCH_CODE" -ne 0 && "$RUNBOOK_ALLOW_PROOF_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
-  if [[ "$BUDGET_OK" != "true" && "$RUNBOOK_ALLOW_BUDGET_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
 
   echo "idempotency_scope_proof_exit_code=$IDEMPOTENCY_CODE"
   echo "idempotency_scope_proof_ok=$SUMMARY_IDEMPOTENCY_OK"

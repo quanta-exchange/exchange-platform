@@ -581,6 +581,12 @@ report = {
                 "idempotency_latch": {
                     "present": idempotency_latch_runbook_latest.get("present", False),
                     "path": idempotency_latch_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        idempotency_latch_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        idempotency_latch_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
                     "idempotency_ok": (
                         idempotency_latch_runbook_latest.get("payload") or {}
                     ).get("idempotency_ok"),
@@ -627,6 +633,12 @@ report = {
                 "proof_health": {
                     "present": proof_health_runbook_latest.get("present", False),
                     "path": proof_health_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        proof_health_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
                     "proof_health_ok": (
                         proof_health_runbook_latest.get("payload") or {}
                     ).get("proof_health_ok"),

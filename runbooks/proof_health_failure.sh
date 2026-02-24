@@ -78,7 +78,7 @@ PY
   fi
 
   SUMMARY_FILE="$OUT_DIR/proof-health-summary.json"
-  python3 - "$SUMMARY_FILE" "$PROOF_REPORT" "$PROOF_CODE" "$PROOF_METRICS_OK" "$BUDGET_OK" <<'PY'
+  python3 - "$SUMMARY_FILE" "$PROOF_REPORT" "$PROOF_CODE" "$PROOF_METRICS_OK" "$BUDGET_OK" "$RUNBOOK_ALLOW_PROOF_FAIL" "$RUNBOOK_ALLOW_BUDGET_FAIL" <<'PY'
 import json
 import pathlib
 import sys
@@ -89,6 +89,8 @@ proof_report = pathlib.Path(sys.argv[2]).resolve() if sys.argv[2] else None
 proof_exit_code = int(sys.argv[3])
 proof_metrics_ok = sys.argv[4].lower() == "true"
 budget_ok = sys.argv[5].lower() == "true"
+allow_proof_fail = sys.argv[6].lower() == "true"
+allow_budget_fail = sys.argv[7].lower() == "true"
 
 proof_payload = {}
 if proof_report and proof_report.exists():
@@ -123,9 +125,17 @@ elif failing_count > 0:
 elif not budget_ok:
     recommendation = "RUN_BUDGET_FAILURE_RUNBOOK"
 
+runbook_ok = (
+    (proof_exit_code == 0 or allow_proof_fail)
+    and (proof_health_ok or allow_proof_fail)
+    and (budget_ok or allow_budget_fail)
+)
+
 summary = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "runbook_ok": True,
+    "runbook_ok": runbook_ok,
+    "allow_proof_fail": allow_proof_fail,
+    "allow_budget_fail": allow_budget_fail,
     "proof_report": str(proof_report) if proof_report else None,
     "proof_exit_code": proof_exit_code,
     "proof_metrics_ok": proof_metrics_ok,
@@ -223,17 +233,15 @@ values = payload.get("failing_artifacts", []) or []
 print(",".join(str(v) for v in values))
 PY
   )"
-
-  RUNBOOK_OK=true
-  if [[ "$PROOF_CODE" -ne 0 && "$RUNBOOK_ALLOW_PROOF_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
-  if [[ "$SUMMARY_PROOF_HEALTH_OK" != "true" && "$RUNBOOK_ALLOW_PROOF_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
-  if [[ "$BUDGET_OK" != "true" && "$RUNBOOK_ALLOW_BUDGET_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
+  SUMMARY_RUNBOOK_OK="$(
+    python3 - "$SUMMARY_FILE" <<'PY'
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    payload = json.load(f)
+print("true" if payload.get("runbook_ok") else "false")
+PY
+  )"
 
   echo "proof_health_metrics_exit_code=$PROOF_CODE"
   echo "proof_health_metrics_ok=$PROOF_METRICS_OK"
@@ -248,10 +256,10 @@ PY
   echo "proof_health_runbook_recommended_action=$RECOMMENDED_ACTION"
   echo "proof_health_summary_file=$SUMMARY_FILE"
   echo "proof_health_summary_latest=$LATEST_SUMMARY_FILE"
-  echo "runbook_proof_health_ok=$RUNBOOK_OK"
+  echo "runbook_proof_health_ok=$SUMMARY_RUNBOOK_OK"
   echo "runbook_output_dir=$OUT_DIR"
 
-  if [[ "$RUNBOOK_OK" != "true" ]]; then
+  if [[ "$SUMMARY_RUNBOOK_OK" != "true" ]]; then
     exit 1
   fi
 } | tee "$LOG_FILE"

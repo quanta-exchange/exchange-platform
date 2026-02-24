@@ -98,7 +98,14 @@ for name, rel in sources.items():
             elif name.startswith("runbook_"):
                 # runbook summary payloads keep proof semantics.
                 if name == "runbook_idempotency_latch":
-                    ok = bool(payload.get("idempotency_ok", False) and payload.get("latch_ok", False))
+                    runbook_ok_value = payload.get("runbook_ok")
+                    if runbook_ok_value is None:
+                        ok = bool(
+                            payload.get("idempotency_ok", False)
+                            and payload.get("latch_ok", False)
+                        )
+                    else:
+                        ok = bool(runbook_ok_value)
                 elif name == "runbook_idempotency_key_format":
                     runbook_ok_value = payload.get("runbook_ok")
                     if runbook_ok_value is None:
@@ -106,7 +113,11 @@ for name, rel in sources.items():
                     else:
                         ok = bool(runbook_ok_value)
                 elif name == "runbook_proof_health":
-                    ok = bool(payload.get("proof_health_ok", False))
+                    runbook_ok_value = payload.get("runbook_ok")
+                    if runbook_ok_value is None:
+                        ok = bool(payload.get("proof_health_ok", False))
+                    else:
+                        ok = bool(runbook_ok_value)
                 else:
                     ok = bool(payload.get("proof_ok", False))
             else:
