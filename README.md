@@ -1076,6 +1076,7 @@ Outputs:
 - report includes mapping-coverage metrics context: `mapping_coverage_metrics_ok`, `mapping_coverage_metrics_health_ok`, `mapping_coverage_metrics_ratio`, `mapping_coverage_metrics_missing_controls_count`, `mapping_coverage_metrics_unmapped_enforced_controls_count`, `mapping_coverage_metrics_duplicate_control_ids_count`, `mapping_coverage_metrics_duplicate_mapping_ids_count`, `mapping_coverage_metrics_runbook_recommended_action`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 - report includes adversarial runbook context: `adversarial_runbook_ok`, `adversarial_runbook_budget_ok`, `adversarial_runbook_failed_step_count`, `adversarial_runbook_recommended_action`
+- when a runbook is not executed in the current release-gate run, runbook context fields are backfilled from `build/runbooks/*-latest.json` when available
 
 ### 26) Legal archive capture + verify
 ```bash

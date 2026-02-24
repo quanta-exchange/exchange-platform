@@ -231,7 +231,7 @@ run_idempotency_key_format_runbook = sys.argv[25].lower() == "true"
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
 
-repo_root = verification_summary.parents[2]
+repo_root = verification_summary.parents[3]
 
 controls_report_path = summary.get("artifacts", {}).get("controls_check_report")
 budget_report_path = summary.get("artifacts", {}).get("safety_budget_report")
@@ -432,6 +432,30 @@ if policy_signature_runbook_dir:
         policy_signature_runbook_recommended_action = policy_signature_payload.get(
             "recommended_action"
         )
+if (
+    policy_signature_runbook_ok is None
+    and policy_signature_runbook_budget_ok is None
+    and policy_signature_runbook_policy_ok is None
+):
+    candidate = repo_root / "build/runbooks/policy-signature-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            policy_signature_payload = json.load(f)
+        runbook_ok_value = policy_signature_payload.get("runbook_ok")
+        policy_ok_value = policy_signature_payload.get("policy_ok")
+        policy_signature_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        policy_signature_runbook_policy_ok = (
+            bool(policy_ok_value) if policy_ok_value is not None else None
+        )
+        budget_ok_value = policy_signature_payload.get("budget_ok")
+        policy_signature_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        policy_signature_runbook_recommended_action = policy_signature_payload.get(
+            "recommended_action"
+        )
 policy_tamper_report_path = summary.get("artifacts", {}).get("prove_policy_tamper_report")
 if policy_tamper_report_path:
     candidate = pathlib.Path(policy_tamper_report_path)
@@ -448,6 +472,34 @@ if policy_tamper_runbook_dir:
     if not candidate_dir.is_absolute():
         candidate_dir = (verification_summary.parent / candidate_dir).resolve()
     candidate = candidate_dir / "policy-tamper-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            policy_tamper_payload = json.load(f)
+        runbook_ok_value = policy_tamper_payload.get("runbook_ok")
+        policy_tamper_ok_value = policy_tamper_payload.get("policy_tamper_ok")
+        policy_tamper_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        policy_tamper_runbook_policy_tamper_ok = (
+            bool(policy_tamper_ok_value) if policy_tamper_ok_value is not None else None
+        )
+        tamper_detected_value = policy_tamper_payload.get("tamper_detected")
+        policy_tamper_runbook_tamper_detected = (
+            bool(tamper_detected_value) if tamper_detected_value is not None else None
+        )
+        budget_ok_value = policy_tamper_payload.get("budget_ok")
+        policy_tamper_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        policy_tamper_runbook_recommended_action = policy_tamper_payload.get(
+            "recommended_action"
+        )
+if (
+    policy_tamper_runbook_ok is None
+    and policy_tamper_runbook_budget_ok is None
+    and policy_tamper_runbook_policy_tamper_ok is None
+):
+    candidate = repo_root / "build/runbooks/policy-tamper-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             policy_tamper_payload = json.load(f)
@@ -517,6 +569,44 @@ if network_partition_report_path:
         network_partition_ok = bool(network_payload.get("ok", False))
         network_partition_during_reachable = connectivity.get("during_partition_broker_reachable")
         network_partition_recovered = connectivity.get("after_recovery_broker_reachable")
+if (
+    network_partition_runbook_ok is None
+    and network_partition_runbook_budget_ok is None
+):
+    candidate = repo_root / "build/runbooks/network-partition-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            network_runbook_payload = json.load(f)
+        runbook_ok_value = network_runbook_payload.get("runbook_ok")
+        network_partition_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        budget_ok_value = network_runbook_payload.get("budget_ok")
+        network_partition_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        network_partition_runbook_recommended_action = network_runbook_payload.get(
+            "recommended_action"
+        )
+        if network_partition_ok is None:
+            network_partition_ok = bool(network_runbook_payload.get("network_partition_ok", False))
+        if network_partition_during_reachable is None:
+            network_partition_during_reachable = network_runbook_payload.get(
+                "during_partition_broker_reachable"
+            )
+if (
+    network_partition_ok is None
+    and network_partition_during_reachable is None
+    and network_partition_recovered is None
+):
+    candidate = repo_root / "build/chaos/network-partition-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            network_payload = json.load(f)
+        connectivity = network_payload.get("connectivity", {}) if isinstance(network_payload, dict) else {}
+        network_partition_ok = bool(network_payload.get("ok", False))
+        network_partition_during_reachable = connectivity.get("during_partition_broker_reachable")
+        network_partition_recovered = connectivity.get("after_recovery_broker_reachable")
 redpanda_bounce_report_path = summary.get("artifacts", {}).get("redpanda_bounce_runbook_dir")
 if redpanda_bounce_report_path:
     candidate_dir = pathlib.Path(redpanda_bounce_report_path)
@@ -538,6 +628,45 @@ if redpanda_bounce_report_path:
             "recommended_action"
         )
     candidate = candidate_dir / "chaos/redpanda-broker-bounce-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            redpanda_payload = json.load(f)
+        connectivity = redpanda_payload.get("connectivity", {}) if isinstance(redpanda_payload, dict) else {}
+        redpanda_bounce_ok = bool(redpanda_payload.get("ok", False))
+        redpanda_bounce_during_reachable = connectivity.get("during_stop_broker_reachable")
+        redpanda_bounce_recovered = connectivity.get("after_restart_broker_reachable")
+if redpanda_bounce_runbook_ok is None and redpanda_bounce_runbook_budget_ok is None:
+    candidate = repo_root / "build/runbooks/redpanda-broker-bounce-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            redpanda_runbook_payload = json.load(f)
+        runbook_ok_value = redpanda_runbook_payload.get("runbook_ok")
+        redpanda_bounce_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        budget_ok_value = redpanda_runbook_payload.get("budget_ok")
+        redpanda_bounce_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        redpanda_bounce_runbook_recommended_action = redpanda_runbook_payload.get(
+            "recommended_action"
+        )
+        if redpanda_bounce_ok is None:
+            redpanda_bounce_ok = bool(redpanda_runbook_payload.get("redpanda_broker_bounce_ok", False))
+        if redpanda_bounce_during_reachable is None:
+            redpanda_bounce_during_reachable = redpanda_runbook_payload.get(
+                "during_stop_broker_reachable"
+            )
+        if redpanda_bounce_recovered is None:
+            redpanda_bounce_recovered = redpanda_runbook_payload.get(
+                "after_restart_broker_reachable"
+            )
+if (
+    redpanda_bounce_ok is None
+    and redpanda_bounce_during_reachable is None
+    and redpanda_bounce_recovered is None
+):
+    candidate = repo_root / "build/chaos/redpanda-broker-bounce-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             redpanda_payload = json.load(f)
@@ -622,6 +751,26 @@ if exactly_once_runbook_dir:
     if not candidate_dir.is_absolute():
         candidate_dir = (verification_summary.parent / candidate_dir).resolve()
     candidate = candidate_dir / "exactly-once-million-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            runbook_payload = json.load(f)
+        exactly_once_runbook_proof_ok = bool(runbook_payload.get("proof_ok", False))
+        exactly_once_runbook_proof_repeats = runbook_payload.get("proof_repeats")
+        runbook_ok_value = runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            exactly_once_runbook_ok = exactly_once_runbook_proof_ok
+        else:
+            exactly_once_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = runbook_payload.get("budget_ok")
+        exactly_once_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        exactly_once_runbook_recommended_action = runbook_payload.get("recommended_action")
+if (
+    exactly_once_runbook_ok is None
+    and exactly_once_runbook_budget_ok is None
+):
+    candidate = repo_root / "build/runbooks/exactly-once-million-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             runbook_payload = json.load(f)
@@ -749,6 +898,29 @@ if mapping_integrity_runbook_dir:
         mapping_integrity_runbook_recommended_action = mapping_runbook_payload.get(
             "recommended_action"
         )
+if (
+    mapping_integrity_runbook_ok is None
+    and mapping_integrity_runbook_budget_ok is None
+):
+    candidate = repo_root / "build/runbooks/mapping-integrity-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            mapping_runbook_payload = json.load(f)
+        mapping_integrity_runbook_proof_ok = bool(
+            mapping_runbook_payload.get("proof_ok", False)
+        )
+        runbook_ok_value = mapping_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            mapping_integrity_runbook_ok = mapping_integrity_runbook_proof_ok
+        else:
+            mapping_integrity_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = mapping_runbook_payload.get("budget_ok")
+        mapping_integrity_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        mapping_integrity_runbook_recommended_action = mapping_runbook_payload.get(
+            "recommended_action"
+        )
 mapping_coverage_runbook_dir = summary.get("artifacts", {}).get(
     "mapping_coverage_runbook_dir"
 )
@@ -775,6 +947,29 @@ if mapping_coverage_runbook_dir:
         mapping_coverage_runbook_recommended_action = (
             mapping_coverage_runbook_payload.get("recommended_action")
         )
+if (
+    mapping_coverage_runbook_ok is None
+    and mapping_coverage_runbook_budget_ok is None
+):
+    candidate = repo_root / "build/runbooks/mapping-coverage-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            mapping_coverage_runbook_payload = json.load(f)
+        mapping_coverage_runbook_proof_ok = bool(
+            mapping_coverage_runbook_payload.get("proof_ok", False)
+        )
+        runbook_ok_value = mapping_coverage_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            mapping_coverage_runbook_ok = mapping_coverage_runbook_proof_ok
+        else:
+            mapping_coverage_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = mapping_coverage_runbook_payload.get("budget_ok")
+        mapping_coverage_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        mapping_coverage_runbook_recommended_action = (
+            mapping_coverage_runbook_payload.get("recommended_action")
+        )
 idempotency_latch_runbook_dir = summary.get("artifacts", {}).get(
     "idempotency_latch_runbook_dir"
 )
@@ -783,6 +978,35 @@ if idempotency_latch_runbook_dir:
     if not candidate_dir.is_absolute():
         candidate_dir = (verification_summary.parent / candidate_dir).resolve()
     candidate = candidate_dir / "idempotency-latch-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            idempotency_latch_payload = json.load(f)
+        idempotency_latch_runbook_idempotency_ok = bool(
+            idempotency_latch_payload.get("idempotency_ok", False)
+        )
+        idempotency_latch_runbook_latch_ok = bool(
+            idempotency_latch_payload.get("latch_ok", False)
+        )
+        runbook_ok_value = idempotency_latch_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            idempotency_latch_runbook_ok = bool(
+                idempotency_latch_runbook_idempotency_ok
+                and idempotency_latch_runbook_latch_ok
+            )
+        else:
+            idempotency_latch_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = idempotency_latch_payload.get("budget_ok")
+        idempotency_latch_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        idempotency_latch_runbook_recommended_action = idempotency_latch_payload.get(
+            "recommended_action"
+        )
+if (
+    idempotency_latch_runbook_ok is None
+    and idempotency_latch_runbook_budget_ok is None
+):
+    candidate = repo_root / "build/runbooks/idempotency-latch-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             idempotency_latch_payload = json.load(f)
@@ -841,6 +1065,37 @@ if idempotency_key_format_runbook_dir:
         idempotency_key_format_runbook_recommended_action = (
             idempotency_key_format_runbook_payload.get("recommended_action")
         )
+if (
+    idempotency_key_format_runbook_ok is None
+    and idempotency_key_format_runbook_budget_ok is None
+):
+    candidate = repo_root / "build/runbooks/idempotency-key-format-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            idempotency_key_format_runbook_payload = json.load(f)
+        runbook_ok_value = idempotency_key_format_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            idempotency_key_format_runbook_ok = bool(
+                idempotency_key_format_runbook_payload.get("proof_ok", False)
+            )
+        else:
+            idempotency_key_format_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = idempotency_key_format_runbook_payload.get("budget_ok")
+        idempotency_key_format_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        idempotency_key_format_runbook_proof_ok = bool(
+            idempotency_key_format_runbook_payload.get("proof_ok", False)
+        )
+        idempotency_key_format_runbook_missing_tests_count = (
+            idempotency_key_format_runbook_payload.get("missing_tests_count")
+        )
+        idempotency_key_format_runbook_failed_tests_count = (
+            idempotency_key_format_runbook_payload.get("failed_tests_count")
+        )
+        idempotency_key_format_runbook_recommended_action = (
+            idempotency_key_format_runbook_payload.get("recommended_action")
+        )
 proof_health_runbook_dir = summary.get("artifacts", {}).get("proof_health_runbook_dir")
 if proof_health_runbook_dir:
     candidate_dir = pathlib.Path(proof_health_runbook_dir)
@@ -871,6 +1126,56 @@ if proof_health_runbook_dir:
             bool(budget_ok_value) if budget_ok_value is not None else None
         )
         proof_health_runbook_recommended_action = proof_health_runbook_payload.get(
+            "recommended_action"
+        )
+if (
+    proof_health_runbook_ok is None
+    and proof_health_runbook_budget_ok is None
+):
+    candidate = repo_root / "build/runbooks/proof-health-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            proof_health_runbook_payload = json.load(f)
+        proof_health_runbook_proof_ok = bool(
+            proof_health_runbook_payload.get(
+                "proof_health_ok", proof_health_runbook_payload.get("proof_ok", False)
+            )
+        )
+        proof_health_runbook_missing_count = proof_health_runbook_payload.get("missing_count")
+        proof_health_runbook_failing_count = proof_health_runbook_payload.get("failing_count")
+        runbook_ok_value = proof_health_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            proof_health_runbook_ok = bool(
+                proof_health_runbook_proof_ok
+                and int(proof_health_runbook_missing_count or 0) == 0
+                and int(proof_health_runbook_failing_count or 0) == 0
+            )
+        else:
+            proof_health_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = proof_health_runbook_payload.get("budget_ok")
+        proof_health_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        proof_health_runbook_recommended_action = proof_health_runbook_payload.get(
+            "recommended_action"
+        )
+if adversarial_runbook_ok is None and adversarial_runbook_budget_ok is None:
+    candidate = repo_root / "build/runbooks/adversarial-reliability-latest.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            adversarial_runbook_payload = json.load(f)
+        runbook_ok_value = adversarial_runbook_payload.get("runbook_ok")
+        adversarial_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        budget_ok_value = adversarial_runbook_payload.get("budget_ok")
+        adversarial_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        adversarial_runbook_failed_step_count = adversarial_runbook_payload.get(
+            "failed_step_count"
+        )
+        adversarial_runbook_recommended_action = adversarial_runbook_payload.get(
             "recommended_action"
         )
 
