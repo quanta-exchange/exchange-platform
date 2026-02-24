@@ -1047,6 +1047,8 @@ make release-gate
 ./scripts/release_gate.sh --run-adversarial
 # fail gate on advisory control gaps too:
 ./scripts/release_gate.sh --strict-controls
+# require all runbook context fields to be backfilled/present:
+./scripts/release_gate.sh --require-runbook-context
 ```
 Outputs:
 - `release_gate_report=build/release-gate/release-gate-<timestamp>.json`
@@ -1076,17 +1078,22 @@ Outputs:
 - report includes mapping-coverage metrics context: `mapping_coverage_metrics_ok`, `mapping_coverage_metrics_health_ok`, `mapping_coverage_metrics_ratio`, `mapping_coverage_metrics_missing_controls_count`, `mapping_coverage_metrics_unmapped_enforced_controls_count`, `mapping_coverage_metrics_duplicate_control_ids_count`, `mapping_coverage_metrics_duplicate_mapping_ids_count`, `mapping_coverage_metrics_runbook_recommended_action`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 - report includes adversarial runbook context: `adversarial_runbook_ok`, `adversarial_runbook_budget_ok`, `adversarial_runbook_failed_step_count`, `adversarial_runbook_recommended_action`
+- report includes runbook context backfill status: `runbook_context_backfill_ok`, `runbook_context_missing`, `runbook_context_required_fields`
 - when a runbook is not executed in the current release-gate run, runbook context fields are backfilled from `build/runbooks/*-latest.json` when available
 
 ### 25.1) Release-gate runbook fallback smoke
 ```bash
 make release-gate-fallback-smoke
+# verify an already generated release-gate report without re-running gate:
+./scripts/release_gate_fallback_smoke.sh --skip-release-gate --report-file build/release-gate/release-gate-latest.json
+# force gate invocation with runbook-context requirement enabled:
+./scripts/release_gate_fallback_smoke.sh --require-runbook-context
 ```
 Outputs:
 - `release_gate_fallback_smoke_report=build/release-gate-smoke/release-gate-fallback-smoke-<timestamp>.json`
 - `release_gate_fallback_smoke_latest=build/release-gate-smoke/release-gate-fallback-smoke-latest.json`
 - `release_gate_fallback_smoke_ok=true|false`
-- report verifies runbook context keys are present in `release_gate_latest` even when runbooks are not executed in that gate run
+- report prefers `release_gate.runbook_context_backfill_ok`/`runbook_context_missing` when present and falls back to direct field checks for backward compatibility
 
 ### 26) Legal archive capture + verify
 ```bash

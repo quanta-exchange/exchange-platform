@@ -22,6 +22,7 @@ RUN_PROOF_HEALTH_RUNBOOK=false
 RUN_DETERMINISM=false
 RUN_EXACTLY_ONCE_MILLION=false
 STRICT_CONTROLS=false
+REQUIRE_RUNBOOK_CONTEXT=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -103,6 +104,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --strict-controls)
       STRICT_CONTROLS=true
+      shift
+      ;;
+    --require-runbook-context)
+      REQUIRE_RUNBOOK_CONTEXT=true
       shift
       ;;
     *)
@@ -196,7 +201,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$RUN_PROOF_HEALTH_RUNBOOK" "$RUN_MAPPING_COVERAGE_RUNBOOK" "$RUN_IDEMPOTENCY_KEY_FORMAT_RUNBOOK" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$RUN_PROOF_HEALTH_RUNBOOK" "$RUN_MAPPING_COVERAGE_RUNBOOK" "$RUN_IDEMPOTENCY_KEY_FORMAT_RUNBOOK" "$REQUIRE_RUNBOOK_CONTEXT" <<'PY'
 import json
 import pathlib
 import sys
@@ -227,6 +232,7 @@ run_idempotency_latch_runbook = sys.argv[22].lower() == "true"
 run_proof_health_runbook = sys.argv[23].lower() == "true"
 run_mapping_coverage_runbook = sys.argv[24].lower() == "true"
 run_idempotency_key_format_runbook = sys.argv[25].lower() == "true"
+require_runbook_context = sys.argv[26].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -1238,9 +1244,11 @@ controls_gate_ok = True
 if strict_controls:
     controls_gate_ok = controls_advisory_missing == 0
 
+gate_ok_base = verification_ok and bool(summary.get("ok", False)) and controls_gate_ok
+
 payload = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "ok": verification_ok and bool(summary.get("ok", False)) and controls_gate_ok,
+    "ok": gate_ok_base,
     "git_commit": git_commit,
     "git_branch": git_branch,
     "verification_exit_code": verification_exit_code,
@@ -1263,6 +1271,7 @@ payload = {
     "run_determinism": run_determinism,
     "run_exactly_once_million": run_exactly_once_million,
     "strict_controls": strict_controls,
+    "require_runbook_context": require_runbook_context,
     "controls_advisory_missing_count": controls_advisory_missing,
     "controls_advisory_stale_count": controls_advisory_stale,
     "controls_failed_enforced_stale_count": controls_failed_enforced_stale,
@@ -1404,6 +1413,41 @@ payload = {
     "verification_step_count": len(summary.get("steps", [])),
     "failed_steps": [s.get("name") for s in summary.get("steps", []) if s.get("status") != "pass"],
 }
+
+runbook_context_required_fields = [
+    "policy_signature_runbook_ok",
+    "policy_signature_runbook_budget_ok",
+    "policy_tamper_runbook_ok",
+    "policy_tamper_runbook_budget_ok",
+    "network_partition_runbook_ok",
+    "network_partition_runbook_budget_ok",
+    "redpanda_bounce_runbook_ok",
+    "redpanda_bounce_runbook_budget_ok",
+    "adversarial_runbook_ok",
+    "adversarial_runbook_budget_ok",
+    "exactly_once_runbook_ok",
+    "exactly_once_runbook_budget_ok",
+    "mapping_integrity_runbook_ok",
+    "mapping_integrity_runbook_budget_ok",
+    "mapping_coverage_runbook_ok",
+    "mapping_coverage_runbook_budget_ok",
+    "idempotency_latch_runbook_ok",
+    "idempotency_latch_runbook_budget_ok",
+    "idempotency_key_format_runbook_ok",
+    "idempotency_key_format_runbook_budget_ok",
+    "proof_health_runbook_ok",
+    "proof_health_runbook_budget_ok",
+]
+runbook_context_missing = [
+    key for key in runbook_context_required_fields if payload.get(key) is None
+]
+runbook_context_backfill_ok = len(runbook_context_missing) == 0
+payload["runbook_context_required_fields"] = runbook_context_required_fields
+payload["runbook_context_missing"] = runbook_context_missing
+payload["runbook_context_backfill_ok"] = runbook_context_backfill_ok
+payload["ok"] = bool(payload.get("ok")) and (
+    (not require_runbook_context) or runbook_context_backfill_ok
+)
 
 report_file.parent.mkdir(parents=True, exist_ok=True)
 with open(report_file, "w", encoding="utf-8") as f:
