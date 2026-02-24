@@ -584,6 +584,11 @@
       "controlId": "CTRL-117",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Release-gate runbook-context backfill integrity and fallback smoke evidence are surfaced in status/transparency/assurance artifacts so promotion decisions detect missing runbook context deterministically"
+    },
+    {
+      "controlId": "CTRL-118",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
+      "description": "Release-gate context proof validates runbook-context and fallback integrity and is surfaced in safety-budget/proof-health/status/transparency flows for deterministic governance decisions"
     }
   ]
 }

@@ -715,6 +715,12 @@
       "title": "Release gate runbook-context backfill and fallback smoke evidence are surfaced across observability and assurance flows",
       "enforced": false,
       "required_evidence": ["scripts/release_gate.sh", "scripts/release_gate_fallback_smoke.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/assurance_pack.sh", "build/release-gate/release-gate-latest.json", "build/release-gate-smoke/release-gate-fallback-smoke-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-118",
+      "title": "Release gate context proof is generated and surfaced across safety budget, proof health metrics, and observability reports",
+      "enforced": false,
+      "required_evidence": ["scripts/prove_release_gate_context.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/proof_health_metrics.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "build/release-gate/prove-release-gate-context-latest.json", "README.md", "Makefile"]
     }
   ]
 }
