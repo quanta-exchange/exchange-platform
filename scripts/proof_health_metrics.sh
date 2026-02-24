@@ -31,6 +31,7 @@ sources = {
     "mapping_integrity": "build/compliance/prove-mapping-integrity-latest.json",
     "mapping_coverage": "build/compliance/prove-mapping-coverage-latest.json",
     "mapping_coverage_metrics": "build/metrics/mapping-coverage-latest.json",
+    "release_gate_context": "build/release-gate/prove-release-gate-context-latest.json",
     "runbook_exactly_once_million": "build/runbooks/exactly-once-million-latest.json",
     "runbook_policy_signature": "build/runbooks/policy-signature-latest.json",
     "runbook_policy_tamper": "build/runbooks/policy-tamper-latest.json",

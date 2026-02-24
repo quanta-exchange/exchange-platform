@@ -1,7 +1,7 @@
 doctor:
 	./scripts/doctor.sh
 
-.PHONY: doctor load-smoke load-10k load-50k load-all dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate release-gate-fallback-smoke safety-budget compliance-evidence transparency-report proof-health-metrics mapping-coverage-metrics external-replay-demo archive-range verify-archive verify-audit-chain verify-change-audit-chain pii-log-scan anomaly-detector anomaly-smoke rbac-sod-check policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-idempotency-key-format prove-latch-approval prove-breakers prove-candles prove-budget-freshness prove-controls-freshness prove-exactly-once-million prove-mapping-integrity prove-mapping-coverage prove-policy-tamper verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-load-regression runbook-crash-recovery runbook-startup-guardrails runbook-game-day-anomaly runbook-audit-tamper runbook-change-workflow runbook-budget-failure runbook-exactly-once-million runbook-mapping-integrity runbook-mapping-coverage runbook-idempotency-latch runbook-idempotency-key-format runbook-proof-health runbook-adversarial-reliability runbook-policy-signature runbook-policy-tamper runbook-network-partition runbook-redpanda-bounce exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda chaos-network-partition
+.PHONY: doctor load-smoke load-10k load-50k load-all dr-rehearsal invariants snapshot-verify safety-case safety-case-extended safety-case-upload assurance-pack controls-check verification-factory release-gate release-gate-fallback-smoke safety-budget compliance-evidence transparency-report proof-health-metrics mapping-coverage-metrics external-replay-demo archive-range verify-archive verify-audit-chain verify-change-audit-chain pii-log-scan anomaly-detector anomaly-smoke rbac-sod-check policy-sign policy-verify policy-smoke adversarial-tests prove-determinism prove-idempotency prove-idempotency-key-format prove-latch-approval prove-breakers prove-candles prove-budget-freshness prove-controls-freshness prove-exactly-once-million prove-mapping-integrity prove-mapping-coverage prove-policy-tamper prove-release-gate-context verify-service-modes model-check shadow-verify system-status change-proposal change-approve apply-change break-glass-enable break-glass-disable break-glass-status access-review runbook-lag-spike runbook-ws-drop runbook-ws-resume-gap runbook-load-regression runbook-crash-recovery runbook-startup-guardrails runbook-game-day-anomaly runbook-audit-tamper runbook-change-workflow runbook-budget-failure runbook-exactly-once-million runbook-mapping-integrity runbook-mapping-coverage runbook-idempotency-latch runbook-idempotency-key-format runbook-proof-health runbook-adversarial-reliability runbook-policy-signature runbook-policy-tamper runbook-network-partition runbook-redpanda-bounce exactly-once-stress ws-resume-smoke chaos-full chaos-core chaos-ledger chaos-redpanda chaos-network-partition
 
 load-smoke:
 	./scripts/load_smoke.sh
@@ -137,6 +137,9 @@ prove-mapping-coverage:
 
 prove-policy-tamper:
 	./scripts/prove_policy_tamper.sh
+
+prove-release-gate-context:
+	./scripts/prove_release_gate_context.sh
 
 verify-service-modes:
 	./scripts/verify_service_modes.sh

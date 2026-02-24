@@ -70,6 +70,9 @@ release_gate = read_json("build/release-gate/release-gate-latest.json")
 release_gate_fallback_smoke = read_json(
     "build/release-gate-smoke/release-gate-fallback-smoke-latest.json"
 )
+release_gate_context_proof = read_json(
+    "build/release-gate/prove-release-gate-context-latest.json"
+)
 policy_smoke = read_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
 network_partition = read_json("build/chaos/network-partition-latest.json")
@@ -117,6 +120,7 @@ sources = {
     "proof_health": proof_health,
     "release_gate": release_gate,
     "release_gate_fallback_smoke": release_gate_fallback_smoke,
+    "release_gate_context_proof": release_gate_context_proof,
     "policy_smoke": policy_smoke,
     "policy_tamper": policy_tamper,
     "network_partition": network_partition,
@@ -200,6 +204,12 @@ report = {
             "exactly_once_million_ok": bool(exactly_once_million.get("ok")) if exactly_once_million else None,
             "exactly_once_million_repeats": int(exactly_once_million.get("repeats")) if exactly_once_million and exactly_once_million.get("repeats") is not None else None,
             "exactly_once_million_concurrency": int(exactly_once_million.get("concurrency")) if exactly_once_million and exactly_once_million.get("concurrency") is not None else None,
+            "release_gate_context_proof_ok": bool(release_gate_context_proof.get("ok")) if release_gate_context_proof else None,
+            "release_gate_context_proof_failed_checks_count": len((release_gate_context_proof.get("failed_checks", []) or [])) if release_gate_context_proof else None,
+            "release_gate_context_proof_release_gate_present": bool((release_gate_context_proof.get("release_gate", {}) or {}).get("present")) if release_gate_context_proof else None,
+            "release_gate_context_proof_fallback_present": bool((release_gate_context_proof.get("fallback_smoke", {}) or {}).get("present")) if release_gate_context_proof else None,
+            "release_gate_context_proof_runbook_context_missing_count": int((release_gate_context_proof.get("release_gate", {}) or {}).get("runbook_context_missing_count")) if release_gate_context_proof and (release_gate_context_proof.get("release_gate", {}) or {}).get("runbook_context_missing_count") is not None else None,
+            "release_gate_context_proof_fallback_missing_fields_count": int((release_gate_context_proof.get("fallback_smoke", {}) or {}).get("missing_fields_count")) if release_gate_context_proof and (release_gate_context_proof.get("fallback_smoke", {}) or {}).get("missing_fields_count") is not None else None,
         },
         "ws_proxy": {
             "ws_dropped_msgs": float(ws.get("metrics", {}).get("ws_dropped_msgs")) if ws else None,
@@ -405,6 +415,7 @@ report = {
         "proof_health": "build/metrics/proof-health-latest.json",
         "release_gate": "build/release-gate/release-gate-latest.json",
         "release_gate_fallback_smoke": "build/release-gate-smoke/release-gate-fallback-smoke-latest.json",
+        "release_gate_context_proof": "build/release-gate/prove-release-gate-context-latest.json",
         "policy_smoke": "build/policy-smoke/policy-smoke-latest.json",
         "policy_tamper": "build/policy/prove-policy-tamper-latest.json",
         "network_partition": "build/chaos/network-partition-latest.json",

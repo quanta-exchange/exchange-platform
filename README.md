@@ -62,6 +62,7 @@ scripts/
   prove_exactly_once_million.sh # G4.1 million-duplicate exactly-once proof runner
   prove_mapping_integrity.sh # G36 compliance mapping integrity proof runner
   prove_mapping_coverage.sh  # G36 controls↔mapping coverage proof runner
+  prove_release_gate_context.sh # release-gate runbook-context backfill/fallback proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
   prove_candles.sh        # G17 candle correctness proof runner
   snapshot_verify.sh      # G4.2 snapshot checksum + restore rehearsal verifier
@@ -537,7 +538,7 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
-- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `releaseGateContext`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `idempotencyKeyFormat`, `latchApproval`, `idempotencyLatchRunbook`, `idempotencyKeyFormatRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
+- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `releaseGateContext`, `releaseGateContextProof`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `idempotencyKeyFormat`, `latchApproval`, `idempotencyLatchRunbook`, `idempotencyKeyFormatRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
 - supports report freshness policy via `safety/budgets.yaml`:
   - top-level `freshness.defaultMaxAgeSeconds`
   - per-check override `budgets.<check>.maxAgeSeconds`
@@ -557,6 +558,10 @@ Success output includes:
   - `mustContextOk` / `mustFallbackSmokeOk`
   - `maxMissingContextFields` / `maxFallbackMissingFields`
   - `requireRunbookContext` (expected release-gate setting)
+- `releaseGateContextProof` check supports policy fields:
+  - `mustBeOk`
+  - `maxFailedChecks`
+  - `mustExpectRequireRunbookContext`
 
 ### 16.1) Safety budget failure runbook
 ```bash
@@ -648,7 +653,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.evidence_pack`, `checks.compliance.mapping_coverage_proof`, `checks.compliance.mapping_coverage_metrics`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.release_gate`, `checks.compliance.release_gate_fallback_smoke`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.mapping_coverage`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.idempotency_key_format`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `idempotency_key_format`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`, `mapping_coverage`, `mapping_coverage_metrics`)
+- report includes `checks.compliance.evidence_pack`, `checks.compliance.mapping_coverage_proof`, `checks.compliance.mapping_coverage_metrics`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.release_gate`, `checks.compliance.release_gate_fallback_smoke`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.mapping_coverage`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.idempotency_key_format`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `idempotency_key_format`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `release_gate_context`, `proof_health`, `mapping_integrity`, `mapping_coverage`, `mapping_coverage_metrics`)
 
 ### 17.1) Anomaly detector
 ```bash
@@ -749,6 +754,18 @@ Outputs:
 - `mapping_coverage_summary_file=build/runbooks/mapping-coverage-<timestamp>/mapping-coverage-summary.json`
 - `mapping_coverage_summary_latest=build/runbooks/mapping-coverage-latest.json`
 
+### 19.4) Release-gate context proof
+```bash
+make prove-release-gate-context
+# diagnostic mode (do not fail when release/fallback artifacts are absent):
+./scripts/prove_release_gate_context.sh --allow-missing
+```
+Outputs:
+- `prove_release_gate_context_report=build/release-gate/prove-release-gate-context-<timestamp>.json`
+- `prove_release_gate_context_latest=build/release-gate/prove-release-gate-context-latest.json`
+- `prove_release_gate_context_ok=true|false`
+- report includes: `release_gate.*`, `fallback_smoke.*`, `failed_checks`, `expect_require_runbook_context`
+
 ### 20) Transparency report
 ```bash
 make transparency-report
@@ -757,7 +774,7 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
-- integrity summary includes `idempotency_scope_ok`, `idempotency_key_format_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
+- integrity summary includes `idempotency_scope_ok`, `idempotency_key_format_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency`, `release_gate_context_proof_ok`, `release_gate_context_proof_failed_checks_count` proxies
 - governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `policy_signature_runbook_ok`, `policy_signature_runbook_budget_ok`, `policy_tamper_runbook_ok`, `policy_tamper_runbook_budget_ok`, `chaos_network_partition`, `network_partition_runbook_ok`, `network_partition_runbook_budget_ok`, `chaos_redpanda_bounce`, `redpanda_bounce_runbook_ok`, `redpanda_bounce_runbook_budget_ok`, `adversarial_runbook_ok`, `adversarial_runbook_budget_ok`, `release_gate_ok`, `release_gate_runbook_context_backfill_ok`, `release_gate_fallback_smoke_ok`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook_ok`, `exactly_once_runbook_budget_ok`, `mapping_integrity_runbook_ok`, `mapping_integrity_runbook_budget_ok`, `mapping_coverage_runbook_ok`, `mapping_coverage_runbook_budget_ok`, `idempotency_latch_runbook_ok`, `idempotency_latch_runbook_budget_ok`, `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `proof_health_runbook_ok`, `proof_health_runbook_budget_ok`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20.1) Proof health metrics exporter
@@ -771,6 +788,7 @@ Success output includes:
 - `proof_health_metrics_prom_latest=build/metrics/proof-health-latest.prom`
 - `proof_health_metrics_ok=true|false`
 - json includes `ok`, `health_ok`, `export_ok`, `tracked_count`, `present_count`, `missing_count`, `failing_count`
+- tracked proofs include `release_gate_context` when `build/release-gate/prove-release-gate-context-latest.json` exists
 - command success/exit is tied to `export_ok`; operational degradation is read from `ok`/`health_ok`
 - alert examples: `infra/observability/proof-alert-rules.example.yml`
 

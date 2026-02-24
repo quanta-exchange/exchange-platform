@@ -907,6 +907,26 @@ for key, budget in budgets.items():
         if must_runbook_ok and not runbook_ok:
             entry["ok"] = False
             entry["details"].append("adversarial_runbook_execution_not_ok")
+    elif key == "releaseGateContextProof":
+        must_ok = bool(budget.get("mustBeOk", True))
+        proof_ok = bool(payload.get("ok", False))
+        failed_checks_count = len(payload.get("failed_checks", []) or [])
+        if must_ok and not proof_ok:
+            entry["ok"] = False
+            entry["details"].append("release_gate_context_proof_not_ok")
+        max_failed_checks = int(budget.get("maxFailedChecks", 0))
+        if failed_checks_count > max_failed_checks:
+            entry["ok"] = False
+            entry["details"].append(
+                f"release_gate_context_proof_failed_checks_count={failed_checks_count} > {max_failed_checks}"
+            )
+        if bool(budget.get("mustExpectRequireRunbookContext", True)) and not bool(
+            payload.get("expect_require_runbook_context", False)
+        ):
+            entry["ok"] = False
+            entry["details"].append(
+                "release_gate_context_proof_missing_expect_require_runbook_context"
+            )
 
     if not entry["ok"]:
         violations.append(f"{key}:{';'.join(entry['details'])}")

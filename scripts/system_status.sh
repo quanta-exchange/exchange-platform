@@ -276,6 +276,9 @@ release_gate_latest = read_latest_json("build/release-gate/release-gate-latest.j
 release_gate_fallback_smoke_latest = read_latest_json(
     "build/release-gate-smoke/release-gate-fallback-smoke-latest.json"
 )
+release_gate_context_proof_latest = read_latest_json(
+    "build/release-gate/prove-release-gate-context-latest.json"
+)
 policy_smoke_latest = read_latest_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest.json")
 network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
@@ -926,6 +929,53 @@ report = {
                     "path": budget_freshness_latest.get("path"),
                     "ok": (budget_freshness_latest.get("payload") or {}).get("ok"),
                     "error": budget_freshness_latest.get("error"),
+                },
+                "release_gate_context": {
+                    "present": release_gate_context_proof_latest.get("present", False),
+                    "path": release_gate_context_proof_latest.get("path"),
+                    "ok": (release_gate_context_proof_latest.get("payload") or {}).get(
+                        "ok"
+                    ),
+                    "expect_require_runbook_context": (
+                        release_gate_context_proof_latest.get("payload") or {}
+                    ).get("expect_require_runbook_context"),
+                    "failed_checks_count": len(
+                        (
+                            release_gate_context_proof_latest.get("payload") or {}
+                        ).get("failed_checks", [])
+                        or []
+                    ),
+                    "release_gate_present": (
+                        (release_gate_context_proof_latest.get("payload") or {}).get(
+                            "release_gate", {}
+                        )
+                        or {}
+                    ).get("present"),
+                    "release_gate_runbook_context_backfill_ok": (
+                        (release_gate_context_proof_latest.get("payload") or {}).get(
+                            "release_gate", {}
+                        )
+                        or {}
+                    ).get("runbook_context_backfill_ok"),
+                    "release_gate_runbook_context_missing_count": (
+                        (release_gate_context_proof_latest.get("payload") or {}).get(
+                            "release_gate", {}
+                        )
+                        or {}
+                    ).get("runbook_context_missing_count"),
+                    "fallback_smoke_present": (
+                        (release_gate_context_proof_latest.get("payload") or {}).get(
+                            "fallback_smoke", {}
+                        )
+                        or {}
+                    ).get("present"),
+                    "fallback_smoke_missing_fields_count": (
+                        (release_gate_context_proof_latest.get("payload") or {}).get(
+                            "fallback_smoke", {}
+                        )
+                        or {}
+                    ).get("missing_fields_count"),
+                    "error": release_gate_context_proof_latest.get("error"),
                 },
                 "proof_health": {
                     "present": proof_health_latest.get("present", False),
