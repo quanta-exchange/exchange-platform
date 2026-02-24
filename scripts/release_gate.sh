@@ -233,6 +233,17 @@ with open(verification_summary, "r", encoding="utf-8") as f:
 
 repo_root = verification_summary.parents[3]
 
+def resolve_artifact_path(path_value):
+    if not path_value:
+        return None
+    rel_or_abs = pathlib.Path(path_value)
+    if rel_or_abs.is_absolute():
+        return rel_or_abs
+    candidate = (verification_summary.parent / rel_or_abs).resolve()
+    if candidate.exists():
+        return candidate
+    return (repo_root / rel_or_abs).resolve()
+
 controls_report_path = summary.get("artifacts", {}).get("controls_check_report")
 budget_report_path = summary.get("artifacts", {}).get("safety_budget_report")
 controls_advisory_missing = None
@@ -437,7 +448,11 @@ if (
     and policy_signature_runbook_budget_ok is None
     and policy_signature_runbook_policy_ok is None
 ):
-    candidate = repo_root / "build/runbooks/policy-signature-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("policy_signature_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/policy-signature-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             policy_signature_payload = json.load(f)
@@ -499,7 +514,11 @@ if (
     and policy_tamper_runbook_budget_ok is None
     and policy_tamper_runbook_policy_tamper_ok is None
 ):
-    candidate = repo_root / "build/runbooks/policy-tamper-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("policy_tamper_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/policy-tamper-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             policy_tamper_payload = json.load(f)
@@ -573,7 +592,11 @@ if (
     network_partition_runbook_ok is None
     and network_partition_runbook_budget_ok is None
 ):
-    candidate = repo_root / "build/runbooks/network-partition-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("network_partition_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/network-partition-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             network_runbook_payload = json.load(f)
@@ -636,7 +659,11 @@ if redpanda_bounce_report_path:
         redpanda_bounce_during_reachable = connectivity.get("during_stop_broker_reachable")
         redpanda_bounce_recovered = connectivity.get("after_restart_broker_reachable")
 if redpanda_bounce_runbook_ok is None and redpanda_bounce_runbook_budget_ok is None:
-    candidate = repo_root / "build/runbooks/redpanda-broker-bounce-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("redpanda_bounce_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/redpanda-broker-bounce-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             redpanda_runbook_payload = json.load(f)
@@ -770,7 +797,11 @@ if (
     exactly_once_runbook_ok is None
     and exactly_once_runbook_budget_ok is None
 ):
-    candidate = repo_root / "build/runbooks/exactly-once-million-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("exactly_once_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/exactly-once-million-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             runbook_payload = json.load(f)
@@ -902,7 +933,11 @@ if (
     mapping_integrity_runbook_ok is None
     and mapping_integrity_runbook_budget_ok is None
 ):
-    candidate = repo_root / "build/runbooks/mapping-integrity-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("mapping_integrity_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/mapping-integrity-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             mapping_runbook_payload = json.load(f)
@@ -951,7 +986,11 @@ if (
     mapping_coverage_runbook_ok is None
     and mapping_coverage_runbook_budget_ok is None
 ):
-    candidate = repo_root / "build/runbooks/mapping-coverage-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("mapping_coverage_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/mapping-coverage-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             mapping_coverage_runbook_payload = json.load(f)
@@ -1006,7 +1045,11 @@ if (
     idempotency_latch_runbook_ok is None
     and idempotency_latch_runbook_budget_ok is None
 ):
-    candidate = repo_root / "build/runbooks/idempotency-latch-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("idempotency_latch_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/idempotency-latch-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             idempotency_latch_payload = json.load(f)
@@ -1069,7 +1112,11 @@ if (
     idempotency_key_format_runbook_ok is None
     and idempotency_key_format_runbook_budget_ok is None
 ):
-    candidate = repo_root / "build/runbooks/idempotency-key-format-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("idempotency_key_format_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/idempotency-key-format-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             idempotency_key_format_runbook_payload = json.load(f)
@@ -1132,7 +1179,11 @@ if (
     proof_health_runbook_ok is None
     and proof_health_runbook_budget_ok is None
 ):
-    candidate = repo_root / "build/runbooks/proof-health-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("proof_health_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/proof-health-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             proof_health_runbook_payload = json.load(f)
@@ -1160,7 +1211,11 @@ if (
             "recommended_action"
         )
 if adversarial_runbook_ok is None and adversarial_runbook_budget_ok is None:
-    candidate = repo_root / "build/runbooks/adversarial-reliability-latest.json"
+    candidate = resolve_artifact_path(
+        summary.get("artifacts", {}).get("adversarial_runbook_summary_latest")
+    )
+    if candidate is None:
+        candidate = repo_root / "build/runbooks/adversarial-reliability-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             adversarial_runbook_payload = json.load(f)
