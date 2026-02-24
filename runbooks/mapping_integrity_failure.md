@@ -18,6 +18,7 @@ make runbook-mapping-integrity
 
 ## Outputs
 - `runbook_mapping_integrity_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `mapping_integrity_proof_ok=true|false`
 - `mapping_integrity_duplicate_probe_exit_code=<code>`
 - `mapping_integrity_duplicate_mapping_ids_count=<n>`

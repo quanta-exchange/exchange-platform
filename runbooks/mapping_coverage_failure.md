@@ -18,6 +18,7 @@ make runbook-mapping-coverage
 
 ## Outputs
 - `runbook_mapping_coverage_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `mapping_coverage_baseline_ok=true|false`
 - `mapping_coverage_strict_probe_exit_code=<code>`
 - `mapping_coverage_strict_unmapped_controls_count=<n>`

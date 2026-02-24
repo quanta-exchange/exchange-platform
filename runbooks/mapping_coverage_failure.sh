@@ -102,7 +102,7 @@ PY
   fi
 
   SUMMARY_FILE="$OUT_DIR/mapping-coverage-summary.json"
-  python3 - "$SUMMARY_FILE" "$BASE_PROOF_REPORT" "$BASE_PROOF_CODE" "$STRICT_PROBE_REPORT" "$STRICT_PROBE_CODE" "$PARTIAL_PROBE_REPORT" "$PARTIAL_PROBE_CODE" "$BUDGET_OK" <<'PY'
+  python3 - "$SUMMARY_FILE" "$BASE_PROOF_REPORT" "$BASE_PROOF_CODE" "$STRICT_PROBE_REPORT" "$STRICT_PROBE_CODE" "$PARTIAL_PROBE_REPORT" "$PARTIAL_PROBE_CODE" "$BUDGET_OK" "$RUNBOOK_ALLOW_PROOF_FAIL" "$RUNBOOK_ALLOW_BUDGET_FAIL" <<'PY'
 import json
 import pathlib
 import sys
@@ -116,6 +116,8 @@ strict_exit_code = int(sys.argv[5])
 partial_report = pathlib.Path(sys.argv[6]).resolve() if sys.argv[6] else None
 partial_exit_code = int(sys.argv[7])
 budget_ok = sys.argv[8].lower() == "true"
+allow_proof_fail = sys.argv[9].lower() == "true"
+allow_budget_fail = sys.argv[10].lower() == "true"
 
 
 def read_payload(path: pathlib.Path | None):
@@ -152,6 +154,7 @@ partial_probe_expected_pass = (
     and partial_unmapped_enforced_controls_count == 0
 )
 proof_ok = baseline_ok and strict_probe_expected_fail and partial_probe_expected_pass
+runbook_ok = (proof_ok or allow_proof_fail) and (budget_ok or allow_budget_fail)
 
 recommended_action = "NO_ACTION"
 if baseline_exit_code != 0 or not baseline_ok:
@@ -167,7 +170,9 @@ elif not budget_ok:
 
 summary = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "runbook_ok": True,
+    "runbook_ok": runbook_ok,
+    "allow_proof_fail": allow_proof_fail,
+    "allow_budget_fail": allow_budget_fail,
     "proof_ok": proof_ok,
     "baseline_report": str(baseline_report) if baseline_report else None,
     "baseline_exit_code": baseline_exit_code,
@@ -271,14 +276,15 @@ with open(sys.argv[1], "r", encoding="utf-8") as f:
 print(int(payload.get("partial_unmapped_enforced_controls_count", 0)))
 PY
   )"
-
-  RUNBOOK_OK=true
-  if [[ "$SUMMARY_PROOF_OK" != "true" && "$RUNBOOK_ALLOW_PROOF_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
-  if [[ "$BUDGET_OK" != "true" && "$RUNBOOK_ALLOW_BUDGET_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
+  SUMMARY_RUNBOOK_OK="$(
+    python3 - "$SUMMARY_FILE" <<'PY'
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    payload = json.load(f)
+print("true" if payload.get("runbook_ok") else "false")
+PY
+  )"
 
   echo "mapping_coverage_baseline_proof_exit_code=$BASE_PROOF_CODE"
   echo "mapping_coverage_baseline_ok=$SUMMARY_BASELINE_OK"
@@ -292,10 +298,10 @@ PY
   echo "mapping_coverage_recommended_action=$RECOMMENDED_ACTION"
   echo "mapping_coverage_summary_file=$SUMMARY_FILE"
   echo "mapping_coverage_summary_latest=$LATEST_SUMMARY_FILE"
-  echo "runbook_mapping_coverage_ok=$RUNBOOK_OK"
+  echo "runbook_mapping_coverage_ok=$SUMMARY_RUNBOOK_OK"
   echo "runbook_output_dir=$OUT_DIR"
 
-  if [[ "$RUNBOOK_OK" != "true" ]]; then
+  if [[ "$SUMMARY_RUNBOOK_OK" != "true" ]]; then
     exit 1
   fi
 } | tee "$LOG_FILE"

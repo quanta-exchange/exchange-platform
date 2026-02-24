@@ -515,6 +515,12 @@ report = {
                 "exactly_once_million": {
                     "present": exactly_once_runbook_latest.get("present", False),
                     "path": exactly_once_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        exactly_once_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        exactly_once_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
                     "proof_ok": (exactly_once_runbook_latest.get("payload") or {}).get(
                         "proof_ok"
                     ),
@@ -532,6 +538,12 @@ report = {
                 "mapping_integrity": {
                     "present": mapping_integrity_runbook_latest.get("present", False),
                     "path": mapping_integrity_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        mapping_integrity_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        mapping_integrity_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
                     "proof_ok": (mapping_integrity_runbook_latest.get("payload") or {}).get(
                         "proof_ok"
                     ),
@@ -552,6 +564,12 @@ report = {
                 "mapping_coverage": {
                     "present": mapping_coverage_runbook_latest.get("present", False),
                     "path": mapping_coverage_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
                     "proof_ok": (mapping_coverage_runbook_latest.get("payload") or {}).get(
                         "proof_ok"
                     ),

@@ -19,6 +19,7 @@ make runbook-exactly-once-million
 
 ## Outputs
 - `runbook_exactly_once_million_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `exactly_once_million_proof_ok=true|false`
 - `exactly_once_million_proof_repeats=<n>`
 - `exactly_once_million_proof_concurrency=<n>`

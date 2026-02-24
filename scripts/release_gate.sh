@@ -273,6 +273,8 @@ exactly_once_million_repeats = None
 exactly_once_million_concurrency = None
 exactly_once_runbook_proof_ok = None
 exactly_once_runbook_proof_repeats = None
+exactly_once_runbook_ok = None
+exactly_once_runbook_budget_ok = None
 exactly_once_runbook_recommended_action = None
 mapping_integrity_ok = None
 mapping_coverage_ok = None
@@ -290,8 +292,12 @@ mapping_coverage_metrics_duplicate_control_ids_count = None
 mapping_coverage_metrics_duplicate_mapping_ids_count = None
 mapping_coverage_metrics_runbook_recommended_action = None
 mapping_integrity_runbook_proof_ok = None
+mapping_integrity_runbook_ok = None
+mapping_integrity_runbook_budget_ok = None
 mapping_integrity_runbook_recommended_action = None
 mapping_coverage_runbook_proof_ok = None
+mapping_coverage_runbook_ok = None
+mapping_coverage_runbook_budget_ok = None
 mapping_coverage_runbook_recommended_action = None
 proof_health_ok = None
 proof_health_health_ok = None
@@ -496,6 +502,15 @@ if exactly_once_runbook_dir:
             runbook_payload = json.load(f)
         exactly_once_runbook_proof_ok = bool(runbook_payload.get("proof_ok", False))
         exactly_once_runbook_proof_repeats = runbook_payload.get("proof_repeats")
+        runbook_ok_value = runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            exactly_once_runbook_ok = exactly_once_runbook_proof_ok
+        else:
+            exactly_once_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = runbook_payload.get("budget_ok")
+        exactly_once_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
         exactly_once_runbook_recommended_action = runbook_payload.get("recommended_action")
 mapping_integrity_report_path = summary.get("artifacts", {}).get("prove_mapping_integrity_report")
 if mapping_integrity_report_path:
@@ -598,6 +613,15 @@ if mapping_integrity_runbook_dir:
         mapping_integrity_runbook_proof_ok = bool(
             mapping_runbook_payload.get("proof_ok", False)
         )
+        runbook_ok_value = mapping_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            mapping_integrity_runbook_ok = mapping_integrity_runbook_proof_ok
+        else:
+            mapping_integrity_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = mapping_runbook_payload.get("budget_ok")
+        mapping_integrity_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
         mapping_integrity_runbook_recommended_action = mapping_runbook_payload.get(
             "recommended_action"
         )
@@ -614,6 +638,15 @@ if mapping_coverage_runbook_dir:
             mapping_coverage_runbook_payload = json.load(f)
         mapping_coverage_runbook_proof_ok = bool(
             mapping_coverage_runbook_payload.get("proof_ok", False)
+        )
+        runbook_ok_value = mapping_coverage_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            mapping_coverage_runbook_ok = mapping_coverage_runbook_proof_ok
+        else:
+            mapping_coverage_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = mapping_coverage_runbook_payload.get("budget_ok")
+        mapping_coverage_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
         )
         mapping_coverage_runbook_recommended_action = (
             mapping_coverage_runbook_payload.get("recommended_action")
@@ -786,6 +819,8 @@ payload = {
     "exactly_once_million_concurrency": exactly_once_million_concurrency,
     "exactly_once_runbook_proof_ok": exactly_once_runbook_proof_ok,
     "exactly_once_runbook_proof_repeats": exactly_once_runbook_proof_repeats,
+    "exactly_once_runbook_ok": exactly_once_runbook_ok,
+    "exactly_once_runbook_budget_ok": exactly_once_runbook_budget_ok,
     "exactly_once_runbook_recommended_action": exactly_once_runbook_recommended_action,
     "mapping_integrity_ok": mapping_integrity_ok,
     "mapping_coverage_ok": mapping_coverage_ok,
@@ -803,8 +838,12 @@ payload = {
     "mapping_coverage_metrics_duplicate_mapping_ids_count": mapping_coverage_metrics_duplicate_mapping_ids_count,
     "mapping_coverage_metrics_runbook_recommended_action": mapping_coverage_metrics_runbook_recommended_action,
     "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
+    "mapping_integrity_runbook_ok": mapping_integrity_runbook_ok,
+    "mapping_integrity_runbook_budget_ok": mapping_integrity_runbook_budget_ok,
     "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook_recommended_action,
     "mapping_coverage_runbook_proof_ok": mapping_coverage_runbook_proof_ok,
+    "mapping_coverage_runbook_ok": mapping_coverage_runbook_ok,
+    "mapping_coverage_runbook_budget_ok": mapping_coverage_runbook_budget_ok,
     "mapping_coverage_runbook_recommended_action": mapping_coverage_runbook_recommended_action,
     "proof_health_ok": proof_health_ok,
     "proof_health_health_ok": proof_health_health_ok,

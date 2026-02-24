@@ -564,16 +564,36 @@ for key, budget in budgets.items():
             )
     elif key == "mappingIntegrityRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
         runbook_proof_ok = bool(payload.get("proof_ok", False))
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = (
+            bool(runbook_ok_value)
+            if runbook_ok_value is not None
+            else runbook_proof_ok
+        )
         if must_ok and not runbook_proof_ok:
             entry["ok"] = False
             entry["details"].append("mapping_integrity_runbook_proof_not_ok")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_integrity_runbook_not_ok")
     elif key == "mappingCoverageRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
         runbook_proof_ok = bool(payload.get("proof_ok", False))
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = (
+            bool(runbook_ok_value)
+            if runbook_ok_value is not None
+            else runbook_proof_ok
+        )
         if must_ok and not runbook_proof_ok:
             entry["ok"] = False
             entry["details"].append("mapping_coverage_runbook_proof_not_ok")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_coverage_runbook_not_ok")
     elif key == "mappingCoverageMetrics":
         must_ok = bool(budget.get("mustBeOk", True))
         metrics_ok = bool(payload.get("ok", False))

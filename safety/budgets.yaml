@@ -166,12 +166,14 @@
     "mappingIntegrityRunbook": {
       "required": false,
       "maxAgeSeconds": 604800,
-      "mustBeOk": true
+      "mustBeOk": true,
+      "mustRunbookOk": true
     },
     "mappingCoverageRunbook": {
       "required": false,
       "maxAgeSeconds": 604800,
-      "mustBeOk": true
+      "mustBeOk": true,
+      "mustRunbookOk": true
     },
     "mappingCoverageMetrics": {
       "required": false,
