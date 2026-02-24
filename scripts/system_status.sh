@@ -275,6 +275,7 @@ redpanda_bounce_latest = read_latest_json("build/chaos/redpanda-broker-bounce-la
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
 exactly_once_runbook_latest = read_latest_json("build/runbooks/exactly-once-million-latest.json")
 mapping_integrity_runbook_latest = read_latest_json("build/runbooks/mapping-integrity-latest.json")
+mapping_coverage_runbook_latest = read_latest_json("build/runbooks/mapping-coverage-latest.json")
 idempotency_latch_runbook_latest = read_latest_json("build/runbooks/idempotency-latch-latest.json")
 proof_health_runbook_latest = read_latest_json("build/runbooks/proof-health-latest.json")
 
@@ -510,6 +511,35 @@ report = {
                         mapping_integrity_runbook_latest.get("payload") or {}
                     ).get("recommended_action"),
                     "error": mapping_integrity_runbook_latest.get("error"),
+                },
+                "mapping_coverage": {
+                    "present": mapping_coverage_runbook_latest.get("present", False),
+                    "path": mapping_coverage_runbook_latest.get("path"),
+                    "proof_ok": (mapping_coverage_runbook_latest.get("payload") or {}).get(
+                        "proof_ok"
+                    ),
+                    "baseline_ok": (mapping_coverage_runbook_latest.get("payload") or {}).get(
+                        "baseline_ok"
+                    ),
+                    "strict_probe_exit_code": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("strict_probe_exit_code"),
+                    "strict_unmapped_controls_count": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("strict_unmapped_controls_count"),
+                    "partial_probe_exit_code": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("partial_probe_exit_code"),
+                    "partial_unmapped_controls_count": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("partial_unmapped_controls_count"),
+                    "partial_unmapped_enforced_controls_count": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("partial_unmapped_enforced_controls_count"),
+                    "recommended_action": (
+                        mapping_coverage_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": mapping_coverage_runbook_latest.get("error"),
                 },
                 "idempotency_latch": {
                     "present": idempotency_latch_runbook_latest.get("present", False),

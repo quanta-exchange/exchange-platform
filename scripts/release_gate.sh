@@ -15,6 +15,7 @@ RUN_NETWORK_PARTITION=false
 RUN_REDPANDA_BOUNCE=false
 RUN_EXACTLY_ONCE_RUNBOOK=false
 RUN_MAPPING_INTEGRITY_RUNBOOK=false
+RUN_MAPPING_COVERAGE_RUNBOOK=false
 RUN_IDEMPOTENCY_LATCH_RUNBOOK=false
 RUN_PROOF_HEALTH_RUNBOOK=false
 RUN_DETERMINISM=false
@@ -73,6 +74,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-mapping-integrity-runbook)
       RUN_MAPPING_INTEGRITY_RUNBOOK=true
+      shift
+      ;;
+    --run-mapping-coverage-runbook)
+      RUN_MAPPING_COVERAGE_RUNBOOK=true
       shift
       ;;
     --run-idempotency-latch-runbook)
@@ -144,6 +149,9 @@ fi
 if [[ "$RUN_MAPPING_INTEGRITY_RUNBOOK" == "true" ]]; then
   VERIFY_CMD+=("--run-mapping-integrity-runbook")
 fi
+if [[ "$RUN_MAPPING_COVERAGE_RUNBOOK" == "true" ]]; then
+  VERIFY_CMD+=("--run-mapping-coverage-runbook")
+fi
 if [[ "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" == "true" ]]; then
   VERIFY_CMD+=("--run-idempotency-latch-runbook")
 fi
@@ -180,7 +188,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$RUN_PROOF_HEALTH_RUNBOOK" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$RUN_PROOF_HEALTH_RUNBOOK" "$RUN_MAPPING_COVERAGE_RUNBOOK" <<'PY'
 import json
 import pathlib
 import sys
@@ -209,6 +217,7 @@ strict_controls = sys.argv[20].lower() == "true"
 run_mapping_integrity_runbook = sys.argv[21].lower() == "true"
 run_idempotency_latch_runbook = sys.argv[22].lower() == "true"
 run_proof_health_runbook = sys.argv[23].lower() == "true"
+run_mapping_coverage_runbook = sys.argv[24].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -262,6 +271,8 @@ mapping_coverage_duplicate_mapping_ids_count = None
 mapping_coverage_duplicate_control_ids_count = None
 mapping_integrity_runbook_proof_ok = None
 mapping_integrity_runbook_recommended_action = None
+mapping_coverage_runbook_proof_ok = None
+mapping_coverage_runbook_recommended_action = None
 proof_health_ok = None
 proof_health_health_ok = None
 proof_health_missing_count = None
@@ -490,6 +501,23 @@ if mapping_integrity_runbook_dir:
         mapping_integrity_runbook_recommended_action = mapping_runbook_payload.get(
             "recommended_action"
         )
+mapping_coverage_runbook_dir = summary.get("artifacts", {}).get(
+    "mapping_coverage_runbook_dir"
+)
+if mapping_coverage_runbook_dir:
+    candidate_dir = pathlib.Path(mapping_coverage_runbook_dir)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "mapping-coverage-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            mapping_coverage_runbook_payload = json.load(f)
+        mapping_coverage_runbook_proof_ok = bool(
+            mapping_coverage_runbook_payload.get("proof_ok", False)
+        )
+        mapping_coverage_runbook_recommended_action = (
+            mapping_coverage_runbook_payload.get("recommended_action")
+        )
 idempotency_latch_runbook_dir = summary.get("artifacts", {}).get(
     "idempotency_latch_runbook_dir"
 )
@@ -550,6 +578,7 @@ payload = {
     "run_redpanda_bounce": run_redpanda_bounce,
     "run_exactly_once_runbook": run_exactly_once_runbook,
     "run_mapping_integrity_runbook": run_mapping_integrity_runbook,
+    "run_mapping_coverage_runbook": run_mapping_coverage_runbook,
     "run_idempotency_latch_runbook": run_idempotency_latch_runbook,
     "run_proof_health_runbook": run_proof_health_runbook,
     "run_determinism": run_determinism,
@@ -602,6 +631,8 @@ payload = {
     "mapping_coverage_duplicate_control_ids_count": mapping_coverage_duplicate_control_ids_count,
     "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
     "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook_recommended_action,
+    "mapping_coverage_runbook_proof_ok": mapping_coverage_runbook_proof_ok,
+    "mapping_coverage_runbook_recommended_action": mapping_coverage_runbook_recommended_action,
     "proof_health_ok": proof_health_ok,
     "proof_health_health_ok": proof_health_health_ok,
     "proof_health_missing_count": proof_health_missing_count,
@@ -627,6 +658,9 @@ payload = {
     ),
     "verification_run_mapping_integrity_runbook": bool(
         summary.get("run_mapping_integrity_runbook", False)
+    ),
+    "verification_run_mapping_coverage_runbook": bool(
+        summary.get("run_mapping_coverage_runbook", False)
     ),
     "verification_run_idempotency_latch_runbook": bool(
         summary.get("run_idempotency_latch_runbook", False)

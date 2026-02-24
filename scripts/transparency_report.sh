@@ -71,6 +71,7 @@ redpanda_bounce = read_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
 exactly_once_runbook = read_json("build/runbooks/exactly-once-million-latest.json")
 mapping_integrity_runbook = read_json("build/runbooks/mapping-integrity-latest.json")
+mapping_coverage_runbook = read_json("build/runbooks/mapping-coverage-latest.json")
 idempotency_latch_runbook = read_json("build/runbooks/idempotency-latch-latest.json")
 proof_health_runbook = read_json("build/runbooks/proof-health-latest.json")
 
@@ -107,6 +108,7 @@ sources = {
     "adversarial": adversarial,
     "exactly_once_runbook": exactly_once_runbook,
     "mapping_integrity_runbook": mapping_integrity_runbook,
+    "mapping_coverage_runbook": mapping_coverage_runbook,
     "idempotency_latch_runbook": idempotency_latch_runbook,
     "proof_health_runbook": proof_health_runbook,
 }
@@ -266,6 +268,12 @@ report = {
             "exactly_once_runbook_recommended_action": exactly_once_runbook.get("recommended_action") if exactly_once_runbook else None,
             "mapping_integrity_runbook_proof_ok": bool(mapping_integrity_runbook.get("proof_ok")) if mapping_integrity_runbook else None,
             "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook.get("recommended_action") if mapping_integrity_runbook else None,
+            "mapping_coverage_runbook_proof_ok": bool(mapping_coverage_runbook.get("proof_ok")) if mapping_coverage_runbook else None,
+            "mapping_coverage_runbook_baseline_ok": bool(mapping_coverage_runbook.get("baseline_ok")) if mapping_coverage_runbook else None,
+            "mapping_coverage_runbook_strict_probe_exit_code": int(mapping_coverage_runbook.get("strict_probe_exit_code")) if mapping_coverage_runbook and mapping_coverage_runbook.get("strict_probe_exit_code") is not None else None,
+            "mapping_coverage_runbook_partial_probe_exit_code": int(mapping_coverage_runbook.get("partial_probe_exit_code")) if mapping_coverage_runbook and mapping_coverage_runbook.get("partial_probe_exit_code") is not None else None,
+            "mapping_coverage_runbook_partial_unmapped_enforced_controls_count": int(mapping_coverage_runbook.get("partial_unmapped_enforced_controls_count")) if mapping_coverage_runbook and mapping_coverage_runbook.get("partial_unmapped_enforced_controls_count") is not None else None,
+            "mapping_coverage_runbook_recommended_action": mapping_coverage_runbook.get("recommended_action") if mapping_coverage_runbook else None,
             "idempotency_latch_runbook_idempotency_ok": bool(idempotency_latch_runbook.get("idempotency_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_latch_ok": bool(idempotency_latch_runbook.get("latch_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook.get("recommended_action") if idempotency_latch_runbook else None,
@@ -318,6 +326,7 @@ report = {
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
         "exactly_once_runbook": "build/runbooks/exactly-once-million-latest.json",
         "mapping_integrity_runbook": "build/runbooks/mapping-integrity-latest.json",
+        "mapping_coverage_runbook": "build/runbooks/mapping-coverage-latest.json",
         "idempotency_latch_runbook": "build/runbooks/idempotency-latch-latest.json",
         "proof_health_runbook": "build/runbooks/proof-health-latest.json",
     },

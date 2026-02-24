@@ -559,6 +559,11 @@
       "controlId": "CTRL-112",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Independent mapping-coverage proof is wired into verification/release/safety-budget/status/transparency/proof-health and assurance flows so controls-to-framework drift is surfaced before release trust decisions"
+    },
+    {
+      "controlId": "CTRL-113",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for mapping-coverage failure drills and is integrated into verification/release/status/transparency/safety-budget/assurance contexts for deterministic remediation evidence"
     }
   ]
 }

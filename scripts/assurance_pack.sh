@@ -73,6 +73,7 @@ change_workflow_runbook = newest(root.glob("build/runbooks/change-workflow-*/cha
 budget_failure_runbook = newest(root.glob("build/runbooks/budget-failure-*/budget-failure.log"))
 exactly_once_runbook = newest(root.glob("build/runbooks/exactly-once-million-*/exactly-once-million.log"))
 mapping_integrity_runbook = newest(root.glob("build/runbooks/mapping-integrity-*/mapping-integrity.log"))
+mapping_coverage_runbook = newest(root.glob("build/runbooks/mapping-coverage-*/mapping-coverage.log"))
 idempotency_latch_runbook = newest(root.glob("build/runbooks/idempotency-latch-*/idempotency-latch.log"))
 proof_health_runbook = newest(root.glob("build/runbooks/proof-health-*/proof-health.log"))
 policy_signature_runbook = newest(root.glob("build/runbooks/policy-signature-*/policy-signature.log"))
@@ -90,6 +91,7 @@ evidence = [
     {"id": "budget_failure_runbook", "path": pathlib.Path(rel(budget_failure_runbook)) if budget_failure_runbook else None, "required": False},
     {"id": "exactly_once_runbook", "path": pathlib.Path(rel(exactly_once_runbook)) if exactly_once_runbook else None, "required": False},
     {"id": "mapping_integrity_runbook", "path": pathlib.Path(rel(mapping_integrity_runbook)) if mapping_integrity_runbook else None, "required": False},
+    {"id": "mapping_coverage_runbook", "path": pathlib.Path(rel(mapping_coverage_runbook)) if mapping_coverage_runbook else None, "required": False},
     {"id": "idempotency_latch_runbook", "path": pathlib.Path(rel(idempotency_latch_runbook)) if idempotency_latch_runbook else None, "required": False},
     {"id": "proof_health_runbook", "path": pathlib.Path(rel(proof_health_runbook)) if proof_health_runbook else None, "required": False},
     {"id": "policy_signature_runbook", "path": pathlib.Path(rel(policy_signature_runbook)) if policy_signature_runbook else None, "required": False},
@@ -113,6 +115,7 @@ evidence = [
     {"id": "exactly_once_million", "path": pathlib.Path("build/exactly-once/prove-exactly-once-million-latest.json"), "required": False},
     {"id": "exactly_once_runbook_summary", "path": pathlib.Path("build/runbooks/exactly-once-million-latest.json"), "required": False},
     {"id": "mapping_integrity_runbook_summary", "path": pathlib.Path("build/runbooks/mapping-integrity-latest.json"), "required": False},
+    {"id": "mapping_coverage_runbook_summary", "path": pathlib.Path("build/runbooks/mapping-coverage-latest.json"), "required": False},
     {"id": "idempotency_latch_runbook_summary", "path": pathlib.Path("build/runbooks/idempotency-latch-latest.json"), "required": False},
     {"id": "proof_health_runbook_summary", "path": pathlib.Path("build/runbooks/proof-health-latest.json"), "required": False},
     {"id": "proof_health", "path": pathlib.Path("build/metrics/proof-health-latest.json"), "required": False},
@@ -199,6 +202,7 @@ pack = {
         {"id": "G34", "text": "Assurance evidence indexes exactly-once/mapping-integrity/idempotency-latch/proof-health runbook summaries so deterministic remediation outcomes are preserved for audits."},
         {"id": "G35", "text": "Proof-health artifact status captures missing/failing proof counts to support deterministic release and on-call trust decisions."},
         {"id": "G36", "text": "Mapping-coverage proof independently validates controls-to-mapping completeness and duplicate-ID absence so compliance drift is surfaced before release trust decisions."},
+        {"id": "G37", "text": "Mapping-coverage runbook evidence proves strict/full and partial coverage modes behave deterministically under synthetic unmapped-control probes."},
     ],
 }
 

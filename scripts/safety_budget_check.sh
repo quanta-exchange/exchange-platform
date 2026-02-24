@@ -497,6 +497,12 @@ for key, budget in budgets.items():
         if must_ok and not runbook_proof_ok:
             entry["ok"] = False
             entry["details"].append("mapping_integrity_runbook_proof_not_ok")
+    elif key == "mappingCoverageRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        runbook_proof_ok = bool(payload.get("proof_ok", False))
+        if must_ok and not runbook_proof_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_coverage_runbook_proof_not_ok")
     elif key == "proofHealth":
         must_ok = bool(budget.get("mustBeOk", True))
         proof_health_ok = bool(payload.get("ok", False))

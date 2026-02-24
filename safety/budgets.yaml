@@ -152,6 +152,11 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "mappingCoverageRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true
+    },
     "proofHealth": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -207,6 +212,7 @@
     "mappingIntegrity": "build/compliance/prove-mapping-integrity-latest.json",
     "mappingCoverage": "build/compliance/prove-mapping-coverage-latest.json",
     "mappingIntegrityRunbook": "build/runbooks/mapping-integrity-latest.json",
+    "mappingCoverageRunbook": "build/runbooks/mapping-coverage-latest.json",
     "proofHealth": "build/metrics/proof-health-latest.json",
     "chaosNetworkPartition": "build/chaos/network-partition-latest.json",
     "chaosRedpandaBounce": "build/chaos/redpanda-broker-bounce-latest.json",

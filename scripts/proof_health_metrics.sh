@@ -31,6 +31,7 @@ sources = {
     "mapping_coverage": "build/compliance/prove-mapping-coverage-latest.json",
     "runbook_exactly_once_million": "build/runbooks/exactly-once-million-latest.json",
     "runbook_mapping_integrity": "build/runbooks/mapping-integrity-latest.json",
+    "runbook_mapping_coverage": "build/runbooks/mapping-coverage-latest.json",
     "runbook_idempotency_latch": "build/runbooks/idempotency-latch-latest.json",
     "runbook_proof_health": "build/runbooks/proof-health-latest.json",
 }
