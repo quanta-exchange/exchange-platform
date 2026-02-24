@@ -295,6 +295,8 @@ report = {
             "idempotency_latch_runbook_idempotency_ok": bool(idempotency_latch_runbook.get("idempotency_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_latch_ok": bool(idempotency_latch_runbook.get("latch_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook.get("recommended_action") if idempotency_latch_runbook else None,
+            "idempotency_key_format_runbook_ok": bool(idempotency_key_format_runbook.get("runbook_ok")) if idempotency_key_format_runbook and idempotency_key_format_runbook.get("runbook_ok") is not None else None,
+            "idempotency_key_format_runbook_budget_ok": bool(idempotency_key_format_runbook.get("budget_ok")) if idempotency_key_format_runbook and idempotency_key_format_runbook.get("budget_ok") is not None else None,
             "idempotency_key_format_runbook_proof_ok": bool(idempotency_key_format_runbook.get("proof_ok")) if idempotency_key_format_runbook else None,
             "idempotency_key_format_runbook_missing_tests_count": int(idempotency_key_format_runbook.get("missing_tests_count")) if idempotency_key_format_runbook and idempotency_key_format_runbook.get("missing_tests_count") is not None else None,
             "idempotency_key_format_runbook_failed_tests_count": int(idempotency_key_format_runbook.get("failed_tests_count")) if idempotency_key_format_runbook and idempotency_key_format_runbook.get("failed_tests_count") is not None else None,

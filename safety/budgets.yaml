@@ -56,7 +56,10 @@
     "idempotencyKeyFormatRunbook": {
       "required": false,
       "maxAgeSeconds": 604800,
-      "mustBeOk": true
+      "mustBeOk": true,
+      "mustRunbookOk": true,
+      "maxMissingTestsCount": 0,
+      "maxFailedTestsCount": 0
     },
     "proofHealthRunbook": {
       "required": false,

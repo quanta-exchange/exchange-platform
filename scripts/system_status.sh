@@ -601,6 +601,12 @@ report = {
                 "idempotency_key_format": {
                     "present": idempotency_key_format_runbook_latest.get("present", False),
                     "path": idempotency_key_format_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        idempotency_key_format_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        idempotency_key_format_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
                     "proof_ok": (
                         idempotency_key_format_runbook_latest.get("payload") or {}
                     ).get("proof_ok"),

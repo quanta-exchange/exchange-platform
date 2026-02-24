@@ -548,6 +548,10 @@ Success output includes:
 - `exactlyOnceMillion` check supports policy fields:
   - `minRepeats` (default target `1000000`)
   - `enforceAtOrAboveMinRepeats` (below target artifact는 진단용으로만 표시)
+- `idempotencyKeyFormatRunbook` check supports policy fields:
+  - `mustRunbookOk` (default `true`)
+  - `maxMissingTestsCount` (default `0`)
+  - `maxFailedTestsCount` (default `0`)
 
 ### 16.1) Safety budget failure runbook
 ```bash
@@ -618,6 +622,7 @@ RUNBOOK_ALLOW_PROOF_FAIL=true make runbook-idempotency-key-format
 ```
 Outputs:
 - `runbook_idempotency_key_format_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `idempotency_key_format_proof_ok=true|false`
 - `idempotency_key_format_requested_tests_count=<n>`
 - `idempotency_key_format_missing_tests_count=<n>`
@@ -743,7 +748,7 @@ Success output includes:
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
 - integrity summary includes `idempotency_scope_ok`, `idempotency_key_format_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `mapping_coverage_runbook`, `idempotency_latch_runbook`, `proof_health_runbook`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `mapping_coverage_runbook`, `idempotency_latch_runbook`, `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `proof_health_runbook`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20.1) Proof health metrics exporter
 ```bash
@@ -1037,7 +1042,7 @@ Outputs:
 - report includes mapping-integrity runbook context: `mapping_integrity_runbook_proof_ok`, `mapping_integrity_runbook_recommended_action`
 - report includes mapping-coverage runbook context: `mapping_coverage_runbook_proof_ok`, `mapping_coverage_runbook_recommended_action`
 - report includes idempotency+latch runbook context: `idempotency_latch_runbook_idempotency_ok`, `idempotency_latch_runbook_latch_ok`, `idempotency_latch_runbook_recommended_action`
-- report includes idempotency-key-format runbook context: `idempotency_key_format_runbook_proof_ok`, `idempotency_key_format_runbook_missing_tests_count`, `idempotency_key_format_runbook_failed_tests_count`, `idempotency_key_format_runbook_recommended_action`
+- report includes idempotency-key-format runbook context: `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `idempotency_key_format_runbook_proof_ok`, `idempotency_key_format_runbook_missing_tests_count`, `idempotency_key_format_runbook_failed_tests_count`, `idempotency_key_format_runbook_recommended_action`
 - report includes proof-health runbook context: `proof_health_runbook_proof_ok`, `proof_health_runbook_missing_count`, `proof_health_runbook_failing_count`, `proof_health_runbook_recommended_action`
 - report includes proof-health context: `proof_health_ok`, `proof_health_health_ok`, `proof_health_missing_count`, `proof_health_failing_count`
 - report includes mapping-integrity context: `mapping_integrity_ok`

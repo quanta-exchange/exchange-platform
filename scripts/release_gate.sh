@@ -300,6 +300,8 @@ proof_health_failing_count = None
 idempotency_latch_runbook_idempotency_ok = None
 idempotency_latch_runbook_latch_ok = None
 idempotency_latch_runbook_recommended_action = None
+idempotency_key_format_runbook_ok = None
+idempotency_key_format_runbook_budget_ok = None
 idempotency_key_format_runbook_proof_ok = None
 idempotency_key_format_runbook_missing_tests_count = None
 idempotency_key_format_runbook_failed_tests_count = None
@@ -643,6 +645,17 @@ if idempotency_key_format_runbook_dir:
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
             idempotency_key_format_runbook_payload = json.load(f)
+        runbook_ok_value = idempotency_key_format_runbook_payload.get("runbook_ok")
+        if runbook_ok_value is None:
+            idempotency_key_format_runbook_ok = bool(
+                idempotency_key_format_runbook_payload.get("proof_ok", False)
+            )
+        else:
+            idempotency_key_format_runbook_ok = bool(runbook_ok_value)
+        budget_ok_value = idempotency_key_format_runbook_payload.get("budget_ok")
+        idempotency_key_format_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
         idempotency_key_format_runbook_proof_ok = bool(
             idempotency_key_format_runbook_payload.get("proof_ok", False)
         )
@@ -769,6 +782,8 @@ payload = {
     "idempotency_latch_runbook_idempotency_ok": idempotency_latch_runbook_idempotency_ok,
     "idempotency_latch_runbook_latch_ok": idempotency_latch_runbook_latch_ok,
     "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook_recommended_action,
+    "idempotency_key_format_runbook_ok": idempotency_key_format_runbook_ok,
+    "idempotency_key_format_runbook_budget_ok": idempotency_key_format_runbook_budget_ok,
     "idempotency_key_format_runbook_proof_ok": idempotency_key_format_runbook_proof_ok,
     "idempotency_key_format_runbook_missing_tests_count": idempotency_key_format_runbook_missing_tests_count,
     "idempotency_key_format_runbook_failed_tests_count": idempotency_key_format_runbook_failed_tests_count,

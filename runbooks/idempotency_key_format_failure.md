@@ -17,6 +17,7 @@
 
 ## Expected outputs
 - `runbook_idempotency_key_format_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `idempotency_key_format_proof_ok=true|false`
 - `idempotency_key_format_missing_tests_count=<n>`
 - `idempotency_key_format_failed_tests_count=<n>`

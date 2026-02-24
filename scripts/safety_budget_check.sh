@@ -259,21 +259,35 @@ for key, budget in budgets.items():
                 entry["details"].append("idempotency_latch_runbook_latch_not_ok")
     elif key == "idempotencyKeyFormatRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
         runbook_proof_ok = bool(payload.get("proof_ok", False))
+        runbook_ok_value = payload.get("runbook_ok")
         missing_tests_count = int(payload.get("missing_tests_count", 0) or 0)
         failed_tests_count = int(payload.get("failed_tests_count", 0) or 0)
+        runbook_ok = (
+            bool(runbook_ok_value)
+            if runbook_ok_value is not None
+            else (runbook_proof_ok and missing_tests_count == 0 and failed_tests_count == 0)
+        )
         if must_ok and not runbook_proof_ok:
             entry["ok"] = False
             entry["details"].append("idempotency_key_format_runbook_proof_not_ok")
-        if missing_tests_count > 0:
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("idempotency_key_format_runbook_not_ok")
+        max_missing_tests_count = int(budget.get("maxMissingTestsCount", 0))
+        max_failed_tests_count = int(budget.get("maxFailedTestsCount", 0))
+        if missing_tests_count > max_missing_tests_count:
             entry["ok"] = False
             entry["details"].append(
-                f"idempotency_key_format_runbook_missing_tests_count={missing_tests_count}"
+                "idempotency_key_format_runbook_missing_tests_count="
+                f"{missing_tests_count} > {max_missing_tests_count}"
             )
-        if failed_tests_count > 0:
+        if failed_tests_count > max_failed_tests_count:
             entry["ok"] = False
             entry["details"].append(
-                f"idempotency_key_format_runbook_failed_tests_count={failed_tests_count}"
+                "idempotency_key_format_runbook_failed_tests_count="
+                f"{failed_tests_count} > {max_failed_tests_count}"
             )
     elif key == "proofHealthRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
