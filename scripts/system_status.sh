@@ -272,6 +272,10 @@ safety_budget_latest = read_latest_json("build/safety/safety-budget-latest.json"
 budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-latest.json")
 proof_health_latest = read_latest_json("build/metrics/proof-health-latest.json")
 mapping_coverage_metrics_latest = read_latest_json("build/metrics/mapping-coverage-latest.json")
+release_gate_latest = read_latest_json("build/release-gate/release-gate-latest.json")
+release_gate_fallback_smoke_latest = read_latest_json(
+    "build/release-gate-smoke/release-gate-fallback-smoke-latest.json"
+)
 policy_smoke_latest = read_latest_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest.json")
 network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
@@ -496,6 +500,42 @@ report = {
                 "violations_count": len((safety_budget_latest.get("payload") or {}).get("violations", []) or []),
                 "freshness_default_max_age_seconds": (safety_budget_latest.get("payload") or {}).get("freshness_default_max_age_seconds"),
                 "error": safety_budget_latest.get("error"),
+            },
+            "release_gate": {
+                "present": release_gate_latest.get("present", False),
+                "path": release_gate_latest.get("path"),
+                "ok": (release_gate_latest.get("payload") or {}).get("ok"),
+                "runbook_context_backfill_ok": (
+                    release_gate_latest.get("payload") or {}
+                ).get("runbook_context_backfill_ok"),
+                "runbook_context_missing_count": len(
+                    (release_gate_latest.get("payload") or {}).get(
+                        "runbook_context_missing", []
+                    )
+                    or []
+                ),
+                "require_runbook_context": (
+                    release_gate_latest.get("payload") or {}
+                ).get("require_runbook_context"),
+                "error": release_gate_latest.get("error"),
+            },
+            "release_gate_fallback_smoke": {
+                "present": release_gate_fallback_smoke_latest.get("present", False),
+                "path": release_gate_fallback_smoke_latest.get("path"),
+                "ok": (release_gate_fallback_smoke_latest.get("payload") or {}).get("ok"),
+                "used_release_gate_embedded_check": (
+                    release_gate_fallback_smoke_latest.get("payload") or {}
+                ).get("used_release_gate_embedded_check"),
+                "release_gate_runbook_context_backfill_ok": (
+                    release_gate_fallback_smoke_latest.get("payload") or {}
+                ).get("release_gate_runbook_context_backfill_ok"),
+                "missing_fields_count": len(
+                    (release_gate_fallback_smoke_latest.get("payload") or {}).get(
+                        "missing_fields", []
+                    )
+                    or []
+                ),
+                "error": release_gate_fallback_smoke_latest.get("error"),
             },
             "adversarial_tests": {
                 "present": adversarial_latest.get("present", False),

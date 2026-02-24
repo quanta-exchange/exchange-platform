@@ -66,6 +66,10 @@ rbac_sod = read_json("build/security/rbac-sod-check-latest.json")
 anomaly = read_json("build/anomaly/anomaly-detector-latest.json")
 budget_freshness = read_json("build/safety/prove-budget-freshness-latest.json")
 proof_health = read_json("build/metrics/proof-health-latest.json")
+release_gate = read_json("build/release-gate/release-gate-latest.json")
+release_gate_fallback_smoke = read_json(
+    "build/release-gate-smoke/release-gate-fallback-smoke-latest.json"
+)
 policy_smoke = read_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
 network_partition = read_json("build/chaos/network-partition-latest.json")
@@ -111,6 +115,8 @@ sources = {
     "anomaly": anomaly,
     "budget_freshness": budget_freshness,
     "proof_health": proof_health,
+    "release_gate": release_gate,
+    "release_gate_fallback_smoke": release_gate_fallback_smoke,
     "policy_smoke": policy_smoke,
     "policy_tamper": policy_tamper,
     "network_partition": network_partition,
@@ -355,6 +361,12 @@ report = {
             "proof_health_health_ok": bool(proof_health.get("health_ok")) if proof_health else None,
             "proof_health_missing_count": int(proof_health.get("missing_count")) if proof_health and proof_health.get("missing_count") is not None else None,
             "proof_health_failing_count": int(proof_health.get("failing_count")) if proof_health and proof_health.get("failing_count") is not None else None,
+            "release_gate_ok": bool(release_gate.get("ok")) if release_gate else None,
+            "release_gate_runbook_context_backfill_ok": bool(release_gate.get("runbook_context_backfill_ok")) if release_gate and release_gate.get("runbook_context_backfill_ok") is not None else None,
+            "release_gate_runbook_context_missing_count": len((release_gate.get("runbook_context_missing", []) or [])) if release_gate else None,
+            "release_gate_fallback_smoke_ok": bool(release_gate_fallback_smoke.get("ok")) if release_gate_fallback_smoke else None,
+            "release_gate_fallback_smoke_used_embedded_check": bool(release_gate_fallback_smoke.get("used_release_gate_embedded_check")) if release_gate_fallback_smoke and release_gate_fallback_smoke.get("used_release_gate_embedded_check") is not None else None,
+            "release_gate_fallback_smoke_missing_fields_count": len((release_gate_fallback_smoke.get("missing_fields", []) or [])) if release_gate_fallback_smoke else None,
             "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
             "budget_freshness_proof_ok": bool(budget_freshness.get("ok")) if budget_freshness else None,
         },
@@ -391,6 +403,8 @@ report = {
         "anomaly": "build/anomaly/anomaly-detector-latest.json",
         "budget_freshness": "build/safety/prove-budget-freshness-latest.json",
         "proof_health": "build/metrics/proof-health-latest.json",
+        "release_gate": "build/release-gate/release-gate-latest.json",
+        "release_gate_fallback_smoke": "build/release-gate-smoke/release-gate-fallback-smoke-latest.json",
         "policy_smoke": "build/policy-smoke/policy-smoke-latest.json",
         "policy_tamper": "build/policy/prove-policy-tamper-latest.json",
         "network_partition": "build/chaos/network-partition-latest.json",
