@@ -553,6 +553,11 @@ prove_idempotency_key_format_report = sys.argv[73]
 run_idempotency_key_format_runbook = sys.argv[74].lower() == "true"
 idempotency_key_format_runbook_dir = sys.argv[75]
 
+def runbook_summary_path(runbook_dir, filename):
+    if not runbook_dir:
+        return None
+    return f"{str(runbook_dir).rstrip('/')}/{filename}"
+
 steps = []
 ok = True
 with open(steps_tsv, "r", encoding="utf-8") as f:
@@ -602,16 +607,60 @@ summary = {
         "change_workflow_runbook_dir": change_workflow_runbook_dir or None,
         "budget_failure_runbook_dir": budget_failure_runbook_dir or None,
         "policy_signature_runbook_dir": policy_signature_runbook_dir or None,
+        "policy_signature_runbook_summary": runbook_summary_path(
+            policy_signature_runbook_dir, "policy-signature-summary.json"
+        ),
+        "policy_signature_runbook_summary_latest": "build/runbooks/policy-signature-latest.json",
         "policy_tamper_runbook_dir": policy_tamper_runbook_dir or None,
+        "policy_tamper_runbook_summary": runbook_summary_path(
+            policy_tamper_runbook_dir, "policy-tamper-summary.json"
+        ),
+        "policy_tamper_runbook_summary_latest": "build/runbooks/policy-tamper-latest.json",
         "network_partition_runbook_dir": network_partition_runbook_dir or None,
+        "network_partition_runbook_summary": runbook_summary_path(
+            network_partition_runbook_dir, "network-partition-summary.json"
+        ),
+        "network_partition_runbook_summary_latest": "build/runbooks/network-partition-latest.json",
         "redpanda_bounce_runbook_dir": redpanda_bounce_runbook_dir or None,
+        "redpanda_bounce_runbook_summary": runbook_summary_path(
+            redpanda_bounce_runbook_dir, "redpanda-broker-bounce-summary.json"
+        ),
+        "redpanda_bounce_runbook_summary_latest": "build/runbooks/redpanda-broker-bounce-latest.json",
         "exactly_once_runbook_dir": exactly_once_runbook_dir or None,
+        "exactly_once_runbook_summary": runbook_summary_path(
+            exactly_once_runbook_dir, "exactly-once-million-summary.json"
+        ),
+        "exactly_once_runbook_summary_latest": "build/runbooks/exactly-once-million-latest.json",
         "mapping_integrity_runbook_dir": mapping_integrity_runbook_dir or None,
+        "mapping_integrity_runbook_summary": runbook_summary_path(
+            mapping_integrity_runbook_dir, "mapping-integrity-summary.json"
+        ),
+        "mapping_integrity_runbook_summary_latest": "build/runbooks/mapping-integrity-latest.json",
         "mapping_coverage_runbook_dir": mapping_coverage_runbook_dir or None,
+        "mapping_coverage_runbook_summary": runbook_summary_path(
+            mapping_coverage_runbook_dir, "mapping-coverage-summary.json"
+        ),
+        "mapping_coverage_runbook_summary_latest": "build/runbooks/mapping-coverage-latest.json",
         "idempotency_latch_runbook_dir": idempotency_latch_runbook_dir or None,
+        "idempotency_latch_runbook_summary": runbook_summary_path(
+            idempotency_latch_runbook_dir, "idempotency-latch-summary.json"
+        ),
+        "idempotency_latch_runbook_summary_latest": "build/runbooks/idempotency-latch-latest.json",
         "idempotency_key_format_runbook_dir": idempotency_key_format_runbook_dir or None,
+        "idempotency_key_format_runbook_summary": runbook_summary_path(
+            idempotency_key_format_runbook_dir, "idempotency-key-format-summary.json"
+        ),
+        "idempotency_key_format_runbook_summary_latest": "build/runbooks/idempotency-key-format-latest.json",
         "proof_health_runbook_dir": proof_health_runbook_dir or None,
+        "proof_health_runbook_summary": runbook_summary_path(
+            proof_health_runbook_dir, "proof-health-summary.json"
+        ),
+        "proof_health_runbook_summary_latest": "build/runbooks/proof-health-latest.json",
         "adversarial_runbook_dir": adversarial_runbook_dir or None,
+        "adversarial_runbook_summary": runbook_summary_path(
+            adversarial_runbook_dir, "adversarial-reliability-summary.json"
+        ),
+        "adversarial_runbook_summary_latest": "build/runbooks/adversarial-reliability-latest.json",
         "archive_manifest": archive_manifest or None,
         "archive_sha256": archive_sha or None,
         "external_replay_report": external_replay_report or None,
