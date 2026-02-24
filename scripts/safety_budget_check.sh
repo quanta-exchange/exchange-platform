@@ -927,6 +927,66 @@ for key, budget in budgets.items():
             entry["details"].append(
                 "release_gate_context_proof_missing_expect_require_runbook_context"
             )
+    elif key == "releaseGateContextRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
+        proof_ok = bool(payload.get("proof_ok", False))
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = bool(runbook_ok_value) if runbook_ok_value is not None else proof_ok
+        baseline_expected_pass = bool(payload.get("baseline_expected_pass", False))
+        failure_probe_expected_fail = bool(payload.get("failure_probe_expected_fail", False))
+        failure_fallback_expected_fail = bool(
+            payload.get("failure_fallback_expected_fail", False)
+        )
+        failure_probe_failed_checks_count = int(
+            payload.get("failure_probe_failed_checks_count", 0) or 0
+        )
+        failure_fallback_missing_fields_count = int(
+            payload.get("failure_fallback_missing_fields_count", 0) or 0
+        )
+
+        if must_ok and not proof_ok:
+            entry["ok"] = False
+            entry["details"].append("release_gate_context_runbook_proof_not_ok")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("release_gate_context_runbook_not_ok")
+        if bool(budget.get("mustBaselinePass", True)) and not baseline_expected_pass:
+            entry["ok"] = False
+            entry["details"].append("release_gate_context_runbook_baseline_not_passed")
+        if bool(budget.get("mustFailureProbeFail", True)) and not failure_probe_expected_fail:
+            entry["ok"] = False
+            entry["details"].append(
+                "release_gate_context_runbook_failure_probe_not_failed"
+            )
+        if bool(budget.get("mustFailureFallbackFail", True)) and not failure_fallback_expected_fail:
+            entry["ok"] = False
+            entry["details"].append(
+                "release_gate_context_runbook_failure_fallback_not_failed"
+            )
+
+        min_failure_probe_failed_checks_count = int(
+            budget.get("minFailureProbeFailedChecksCount", 1)
+        )
+        if failure_probe_failed_checks_count < min_failure_probe_failed_checks_count:
+            entry["ok"] = False
+            entry["details"].append(
+                "release_gate_context_runbook_failure_probe_failed_checks_count="
+                f"{failure_probe_failed_checks_count} < {min_failure_probe_failed_checks_count}"
+            )
+
+        min_failure_fallback_missing_fields_count = int(
+            budget.get("minFailureFallbackMissingFieldsCount", 1)
+        )
+        if (
+            failure_fallback_missing_fields_count
+            < min_failure_fallback_missing_fields_count
+        ):
+            entry["ok"] = False
+            entry["details"].append(
+                "release_gate_context_runbook_failure_fallback_missing_fields_count="
+                f"{failure_fallback_missing_fields_count} < {min_failure_fallback_missing_fields_count}"
+            )
 
     if not entry["ok"]:
         violations.append(f"{key}:{';'.join(entry['details'])}")

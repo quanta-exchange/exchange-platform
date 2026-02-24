@@ -43,6 +43,7 @@ sources = {
     "runbook_idempotency_latch": "build/runbooks/idempotency-latch-latest.json",
     "runbook_idempotency_key_format": "build/runbooks/idempotency-key-format-latest.json",
     "runbook_proof_health": "build/runbooks/proof-health-latest.json",
+    "runbook_release_gate_context": "build/runbooks/release-gate-context-latest.json",
 }
 
 def parse_utc(raw):

@@ -721,6 +721,12 @@
       "title": "Release gate context proof is generated and surfaced across safety budget, proof health metrics, and observability reports",
       "enforced": false,
       "required_evidence": ["scripts/prove_release_gate_context.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/proof_health_metrics.sh", "scripts/system_status.sh", "scripts/transparency_report.sh", "build/release-gate/prove-release-gate-context-latest.json", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-119",
+      "title": "Runbook-as-code exists for release-gate context failures and is wired into safety budget, proof health, status, transparency, and assurance evidence flows",
+      "enforced": false,
+      "required_evidence": ["runbooks/release_gate_context_failure.sh", "runbooks/release_gate_context_failure.md", "scripts/release_gate_fallback_smoke.sh", "scripts/prove_release_gate_context.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/proof_health_metrics.sh", "scripts/assurance_pack.sh", "README.md", "RUNBOOK.md", "Makefile"]
     }
   ]
 }

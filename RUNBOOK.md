@@ -167,6 +167,7 @@ Gate G1 operational check:
 - Idempotency+latch failure drill: `./runbooks/idempotency_latch_failure.sh`
 - Idempotency-Key format failure drill: `./runbooks/idempotency_key_format_failure.sh`
 - Proof health failure drill: `./runbooks/proof_health_failure.sh`
+- Release-gate context failure drill: `./runbooks/release_gate_context_failure.sh`
 - Policy signature drill: `./runbooks/policy_signature.sh`
 - Policy tamper drill: `./runbooks/policy_tamper.sh`
 - Kafka network partition drill: `./runbooks/network_partition.sh`

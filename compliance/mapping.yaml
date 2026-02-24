@@ -589,6 +589,11 @@
       "controlId": "CTRL-118",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "Release-gate context proof validates runbook-context and fallback integrity and is surfaced in safety-budget/proof-health/status/transparency flows for deterministic governance decisions"
+    },
+    {
+      "controlId": "CTRL-119",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for release-gate context failure drills and is integrated into safety-budget/proof-health/status/transparency/assurance flows for deterministic remediation evidence"
     }
   ]
 }

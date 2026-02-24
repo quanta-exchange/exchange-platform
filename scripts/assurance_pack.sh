@@ -77,6 +77,9 @@ mapping_coverage_runbook = newest(root.glob("build/runbooks/mapping-coverage-*/m
 idempotency_latch_runbook = newest(root.glob("build/runbooks/idempotency-latch-*/idempotency-latch.log"))
 idempotency_key_format_runbook = newest(root.glob("build/runbooks/idempotency-key-format-*/idempotency-key-format.log"))
 proof_health_runbook = newest(root.glob("build/runbooks/proof-health-*/proof-health.log"))
+release_gate_context_runbook = newest(
+    root.glob("build/runbooks/release-gate-context-*/release-gate-context.log")
+)
 policy_signature_runbook = newest(root.glob("build/runbooks/policy-signature-*/policy-signature.log"))
 network_partition_runbook = newest(root.glob("build/runbooks/network-partition-*/network-partition.log"))
 redpanda_bounce_runbook = newest(root.glob("build/runbooks/redpanda-broker-bounce-*/redpanda-broker-bounce.log"))
@@ -96,6 +99,7 @@ evidence = [
     {"id": "idempotency_latch_runbook", "path": pathlib.Path(rel(idempotency_latch_runbook)) if idempotency_latch_runbook else None, "required": False},
     {"id": "idempotency_key_format_runbook", "path": pathlib.Path(rel(idempotency_key_format_runbook)) if idempotency_key_format_runbook else None, "required": False},
     {"id": "proof_health_runbook", "path": pathlib.Path(rel(proof_health_runbook)) if proof_health_runbook else None, "required": False},
+    {"id": "release_gate_context_runbook", "path": pathlib.Path(rel(release_gate_context_runbook)) if release_gate_context_runbook else None, "required": False},
     {"id": "policy_signature_runbook", "path": pathlib.Path(rel(policy_signature_runbook)) if policy_signature_runbook else None, "required": False},
     {"id": "network_partition_runbook", "path": pathlib.Path(rel(network_partition_runbook)) if network_partition_runbook else None, "required": False},
     {"id": "redpanda_bounce_runbook", "path": pathlib.Path(rel(redpanda_bounce_runbook)) if redpanda_bounce_runbook else None, "required": False},
@@ -121,6 +125,7 @@ evidence = [
     {"id": "idempotency_latch_runbook_summary", "path": pathlib.Path("build/runbooks/idempotency-latch-latest.json"), "required": False},
     {"id": "idempotency_key_format_runbook_summary", "path": pathlib.Path("build/runbooks/idempotency-key-format-latest.json"), "required": False},
     {"id": "proof_health_runbook_summary", "path": pathlib.Path("build/runbooks/proof-health-latest.json"), "required": False},
+    {"id": "release_gate_context_runbook_summary", "path": pathlib.Path("build/runbooks/release-gate-context-latest.json"), "required": False},
     {"id": "proof_health", "path": pathlib.Path("build/metrics/proof-health-latest.json"), "required": False},
     {"id": "release_gate", "path": pathlib.Path("build/release-gate/release-gate-latest.json"), "required": False},
     {"id": "release_gate_fallback_smoke", "path": pathlib.Path("build/release-gate-smoke/release-gate-fallback-smoke-latest.json"), "required": False},
@@ -206,7 +211,7 @@ pack = {
         {"id": "G31", "text": "Policy tamper proof confirms modified policy payloads are rejected by signature verification, demonstrating tamper detection."},
         {"id": "G32", "text": "Kafka network-partition drill confirms broker connectivity is lost during isolation and restored with successful post-recovery produce/consume validation."},
         {"id": "G33", "text": "Redpanda broker-bounce drill confirms broker stop/restart creates temporary unavailability and recovers with post-restart consume success."},
-        {"id": "G34", "text": "Assurance evidence indexes exactly-once/mapping-integrity/idempotency-latch/proof-health runbook summaries so deterministic remediation outcomes are preserved for audits."},
+        {"id": "G34", "text": "Assurance evidence indexes exactly-once/mapping-integrity/idempotency-latch/proof-health/release-gate-context runbook summaries so deterministic remediation outcomes are preserved for audits."},
         {"id": "G35", "text": "Proof-health artifact status captures missing/failing proof counts to support deterministic release and on-call trust decisions."},
         {"id": "G36", "text": "Mapping-coverage proof independently validates controls-to-mapping completeness and duplicate-ID absence so compliance drift is surfaced before release trust decisions."},
         {"id": "G37", "text": "Mapping-coverage runbook evidence proves strict/full and partial coverage modes behave deterministically under synthetic unmapped-control probes."},
@@ -214,6 +219,7 @@ pack = {
         {"id": "G39", "text": "Idempotency-Key format policy proof validates create/cancel command rejection and normalization behavior to prevent malformed replay keys from entering order paths."},
         {"id": "G40", "text": "Idempotency-Key format runbook evidence preserves deterministic incident diagnostics and remediation guidance for malformed idempotency-key policy regressions."},
         {"id": "G41", "text": "Release-gate evidence captures runbook-context backfill integrity and fallback smoke outcomes so governance reports can detect missing runbook context before promotion."},
+        {"id": "G42", "text": "Release-gate context runbook evidence validates baseline-pass and tampered-fail enforcement behavior for context proof/fallback checks, preserving deterministic remediation evidence for audit."},
     ],
 }
 

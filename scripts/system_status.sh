@@ -299,6 +299,9 @@ idempotency_key_format_runbook_latest = read_latest_json(
     "build/runbooks/idempotency-key-format-latest.json"
 )
 proof_health_runbook_latest = read_latest_json("build/runbooks/proof-health-latest.json")
+release_gate_context_runbook_latest = read_latest_json(
+    "build/runbooks/release-gate-context-latest.json"
+)
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
 
@@ -853,6 +856,38 @@ report = {
                         proof_health_runbook_latest.get("payload") or {}
                     ).get("recommended_action"),
                     "error": proof_health_runbook_latest.get("error"),
+                },
+                "release_gate_context": {
+                    "present": release_gate_context_runbook_latest.get("present", False),
+                    "path": release_gate_context_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
+                    "proof_ok": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("proof_ok"),
+                    "baseline_expected_pass": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("baseline_expected_pass"),
+                    "failure_probe_expected_fail": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("failure_probe_expected_fail"),
+                    "failure_probe_failed_checks_count": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("failure_probe_failed_checks_count"),
+                    "failure_fallback_expected_fail": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("failure_fallback_expected_fail"),
+                    "failure_fallback_missing_fields_count": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("failure_fallback_missing_fields_count"),
+                    "recommended_action": (
+                        release_gate_context_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": release_gate_context_runbook_latest.get("error"),
                 }
             },
             "proofs": {

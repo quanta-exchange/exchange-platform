@@ -177,6 +177,17 @@
       "maxFailedChecks": 0,
       "mustExpectRequireRunbookContext": true
     },
+    "releaseGateContextRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRunbookOk": true,
+      "mustBaselinePass": true,
+      "mustFailureProbeFail": true,
+      "mustFailureFallbackFail": true,
+      "minFailureProbeFailedChecksCount": 1,
+      "minFailureFallbackMissingFieldsCount": 1
+    },
     "mappingIntegrity": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -299,6 +310,7 @@
     "complianceEvidence": "build/compliance/compliance-evidence-latest.json",
     "releaseGateContext": "build/compliance/compliance-evidence-latest.json",
     "releaseGateContextProof": "build/release-gate/prove-release-gate-context-latest.json",
+    "releaseGateContextRunbook": "build/runbooks/release-gate-context-latest.json",
     "mappingIntegrity": "build/compliance/prove-mapping-integrity-latest.json",
     "mappingCoverage": "build/compliance/prove-mapping-coverage-latest.json",
     "mappingIntegrityRunbook": "build/runbooks/mapping-integrity-latest.json",

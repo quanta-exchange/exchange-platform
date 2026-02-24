@@ -89,6 +89,7 @@ mapping_coverage_runbook = read_json("build/runbooks/mapping-coverage-latest.jso
 idempotency_latch_runbook = read_json("build/runbooks/idempotency-latch-latest.json")
 idempotency_key_format_runbook = read_json("build/runbooks/idempotency-key-format-latest.json")
 proof_health_runbook = read_json("build/runbooks/proof-health-latest.json")
+release_gate_context_runbook = read_json("build/runbooks/release-gate-context-latest.json")
 
 sources = {
     "load": load,
@@ -137,6 +138,7 @@ sources = {
     "idempotency_latch_runbook": idempotency_latch_runbook,
     "idempotency_key_format_runbook": idempotency_key_format_runbook,
     "proof_health_runbook": proof_health_runbook,
+    "release_gate_context_runbook": release_gate_context_runbook,
 }
 
 email_pattern = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -367,6 +369,15 @@ report = {
             "proof_health_runbook_missing_count": int(proof_health_runbook.get("missing_count")) if proof_health_runbook and proof_health_runbook.get("missing_count") is not None else None,
             "proof_health_runbook_failing_count": int(proof_health_runbook.get("failing_count")) if proof_health_runbook and proof_health_runbook.get("failing_count") is not None else None,
             "proof_health_runbook_recommended_action": proof_health_runbook.get("recommended_action") if proof_health_runbook else None,
+            "release_gate_context_runbook_ok": bool(release_gate_context_runbook.get("runbook_ok")) if release_gate_context_runbook and release_gate_context_runbook.get("runbook_ok") is not None else None,
+            "release_gate_context_runbook_budget_ok": bool(release_gate_context_runbook.get("budget_ok")) if release_gate_context_runbook and release_gate_context_runbook.get("budget_ok") is not None else None,
+            "release_gate_context_runbook_proof_ok": bool(release_gate_context_runbook.get("proof_ok")) if release_gate_context_runbook else None,
+            "release_gate_context_runbook_baseline_expected_pass": bool(release_gate_context_runbook.get("baseline_expected_pass")) if release_gate_context_runbook and release_gate_context_runbook.get("baseline_expected_pass") is not None else None,
+            "release_gate_context_runbook_failure_probe_expected_fail": bool(release_gate_context_runbook.get("failure_probe_expected_fail")) if release_gate_context_runbook and release_gate_context_runbook.get("failure_probe_expected_fail") is not None else None,
+            "release_gate_context_runbook_failure_probe_failed_checks_count": int(release_gate_context_runbook.get("failure_probe_failed_checks_count")) if release_gate_context_runbook and release_gate_context_runbook.get("failure_probe_failed_checks_count") is not None else None,
+            "release_gate_context_runbook_failure_fallback_expected_fail": bool(release_gate_context_runbook.get("failure_fallback_expected_fail")) if release_gate_context_runbook and release_gate_context_runbook.get("failure_fallback_expected_fail") is not None else None,
+            "release_gate_context_runbook_failure_fallback_missing_fields_count": int(release_gate_context_runbook.get("failure_fallback_missing_fields_count")) if release_gate_context_runbook and release_gate_context_runbook.get("failure_fallback_missing_fields_count") is not None else None,
+            "release_gate_context_runbook_recommended_action": release_gate_context_runbook.get("recommended_action") if release_gate_context_runbook else None,
             "proof_health_ok": bool(proof_health.get("ok")) if proof_health else None,
             "proof_health_health_ok": bool(proof_health.get("health_ok")) if proof_health else None,
             "proof_health_missing_count": int(proof_health.get("missing_count")) if proof_health and proof_health.get("missing_count") is not None else None,
@@ -432,6 +443,7 @@ report = {
         "idempotency_latch_runbook": "build/runbooks/idempotency-latch-latest.json",
         "idempotency_key_format_runbook": "build/runbooks/idempotency-key-format-latest.json",
         "proof_health_runbook": "build/runbooks/proof-health-latest.json",
+        "release_gate_context_runbook": "build/runbooks/release-gate-context-latest.json",
     },
 }
 
