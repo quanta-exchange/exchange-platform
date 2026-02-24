@@ -6,6 +6,7 @@ TS_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/runbooks/adversarial-reliability-${TS_ID}}"
 LOG_FILE="$OUT_DIR/adversarial-reliability.log"
 ADVERSARIAL_OUT_DIR="$OUT_DIR/adversarial"
+LATEST_SUMMARY_FILE="$ROOT_DIR/build/runbooks/adversarial-reliability-latest.json"
 
 RUNBOOK_ALLOW_ADVERSARIAL_FAIL="${RUNBOOK_ALLOW_ADVERSARIAL_FAIL:-false}"
 RUNBOOK_ALLOW_BUDGET_FAIL="${RUNBOOK_ALLOW_BUDGET_FAIL:-false}"
@@ -128,6 +129,7 @@ with open(summary_file, "w", encoding="utf-8") as f:
     json.dump(summary, f, indent=2, sort_keys=True)
     f.write("\n")
 PY
+  cp "$SUMMARY_FILE" "$LATEST_SUMMARY_FILE"
 
   RECOMMENDED_ACTION="$(
     python3 - "$SUMMARY_FILE" <<'PY'
@@ -161,6 +163,8 @@ PY
 
   echo "adversarial_failed_step_count=$FAILED_STEP_COUNT"
   echo "adversarial_recommended_action=$RECOMMENDED_ACTION"
+  echo "adversarial_reliability_summary_file=$SUMMARY_FILE"
+  echo "adversarial_reliability_summary_latest=$LATEST_SUMMARY_FILE"
   echo "runbook_adversarial_reliability_ok=$SUMMARY_RUNBOOK_OK"
   echo "runbook_output_dir=$OUT_DIR"
 

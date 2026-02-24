@@ -809,7 +809,10 @@ RUNBOOK_ALLOW_BUDGET_FAIL=true make runbook-policy-signature
 ```
 Outputs:
 - `runbook_policy_signature_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `policy_recommended_action=...`
+- `policy_signature_summary_file=build/runbooks/policy-signature-<timestamp>/policy-signature-summary.json`
+- `policy_signature_summary_latest=build/runbooks/policy-signature-latest.json`
 - `runbook_output_dir=build/runbooks/policy-signature-<timestamp>`
 
 Runbook shortcut:
@@ -822,7 +825,10 @@ RUNBOOK_ALLOW_BUDGET_FAIL=true make runbook-policy-tamper
 ```
 Outputs:
 - `runbook_policy_tamper_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `policy_tamper_recommended_action=...`
+- `policy_tamper_summary_file=build/runbooks/policy-tamper-<timestamp>/policy-tamper-summary.json`
+- `policy_tamper_summary_latest=build/runbooks/policy-tamper-latest.json`
 - `runbook_output_dir=build/runbooks/policy-tamper-<timestamp>`
 
 Runbook shortcut:
@@ -835,7 +841,10 @@ RUNBOOK_ALLOW_BUDGET_FAIL=true make runbook-network-partition
 ```
 Outputs:
 - `runbook_network_partition_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `network_partition_recommended_action=...`
+- `network_partition_summary_file=build/runbooks/network-partition-<timestamp>/network-partition-summary.json`
+- `network_partition_summary_latest=build/runbooks/network-partition-latest.json`
 - `runbook_output_dir=build/runbooks/network-partition-<timestamp>`
 
 Runbook shortcut:
@@ -848,7 +857,10 @@ RUNBOOK_ALLOW_BUDGET_FAIL=true make runbook-redpanda-bounce
 ```
 Outputs:
 - `runbook_redpanda_broker_bounce_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `redpanda_broker_bounce_recommended_action=...`
+- `redpanda_broker_bounce_summary_file=build/runbooks/redpanda-broker-bounce-<timestamp>/redpanda-broker-bounce-summary.json`
+- `redpanda_broker_bounce_summary_latest=build/runbooks/redpanda-broker-bounce-latest.json`
 - `runbook_output_dir=build/runbooks/redpanda-broker-bounce-<timestamp>`
 
 Runbook shortcut:
@@ -939,8 +951,11 @@ RUNBOOK_ALLOW_ADVERSARIAL_FAIL=true make runbook-adversarial-reliability
 ```
 Outputs:
 - `runbook_adversarial_reliability_ok=true|false`
+- `runbook_budget_ok=true|false`
 - `adversarial_failed_step_count=<n>`
 - `adversarial_recommended_action=...`
+- `adversarial_reliability_summary_file=build/runbooks/adversarial-reliability-<timestamp>/adversarial-reliability-summary.json`
+- `adversarial_reliability_summary_latest=build/runbooks/adversarial-reliability-latest.json`
 - `runbook_output_dir=build/runbooks/adversarial-reliability-<timestamp>`
 
 ### 22) Change management flow

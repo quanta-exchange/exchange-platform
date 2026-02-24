@@ -32,4 +32,6 @@ Outputs:
 - `prove_policy_tamper_ok=true|false`
 - `policy_tamper_recommended_action=...`
 - `runbook_budget_ok=true|false`
+- `policy_tamper_summary_file=build/runbooks/policy-tamper-<timestamp>/policy-tamper-summary.json`
+- `policy_tamper_summary_latest=build/runbooks/policy-tamper-latest.json`
 - `runbook_output_dir=build/runbooks/policy-tamper-<timestamp>`

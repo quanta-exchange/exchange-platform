@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TS_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/runbooks/policy-tamper-${TS_ID}}"
 LOG_FILE="$OUT_DIR/policy-tamper.log"
+LATEST_SUMMARY_FILE="$ROOT_DIR/build/runbooks/policy-tamper-latest.json"
 
 RUNBOOK_ALLOW_POLICY_TAMPER_FAIL="${RUNBOOK_ALLOW_POLICY_TAMPER_FAIL:-false}"
 RUNBOOK_ALLOW_BUDGET_FAIL="${RUNBOOK_ALLOW_BUDGET_FAIL:-false}"
@@ -107,6 +108,7 @@ with open(summary_file, "w", encoding="utf-8") as f:
     json.dump(summary, f, indent=2, sort_keys=True)
     f.write("\n")
 PY
+  cp "$SUMMARY_FILE" "$LATEST_SUMMARY_FILE"
 
   RECOMMENDED_ACTION="$(
     python3 - "$SUMMARY_FILE" <<'PY'
@@ -130,6 +132,8 @@ PY
   "$ROOT_DIR/scripts/system_status.sh" --out-dir "$OUT_DIR" --report-name "status-after.json" || true
 
   echo "policy_tamper_recommended_action=$RECOMMENDED_ACTION"
+  echo "policy_tamper_summary_file=$SUMMARY_FILE"
+  echo "policy_tamper_summary_latest=$LATEST_SUMMARY_FILE"
   echo "runbook_policy_tamper_ok=$SUMMARY_RUNBOOK_OK"
   echo "runbook_output_dir=$OUT_DIR"
 

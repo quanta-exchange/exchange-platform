@@ -6,6 +6,7 @@ TS_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/build/runbooks/network-partition-${TS_ID}}"
 LOG_FILE="$OUT_DIR/network-partition.log"
 CHAOS_OUT_DIR="$OUT_DIR/chaos"
+LATEST_SUMMARY_FILE="$ROOT_DIR/build/runbooks/network-partition-latest.json"
 
 RUNBOOK_ALLOW_NETWORK_PARTITION_FAIL="${RUNBOOK_ALLOW_NETWORK_PARTITION_FAIL:-false}"
 RUNBOOK_ALLOW_BUDGET_FAIL="${RUNBOOK_ALLOW_BUDGET_FAIL:-false}"
@@ -125,6 +126,7 @@ with open(summary_file, "w", encoding="utf-8") as f:
     json.dump(summary, f, indent=2, sort_keys=True)
     f.write("\n")
 PY
+  cp "$SUMMARY_FILE" "$LATEST_SUMMARY_FILE"
 
   RECOMMENDED_ACTION="$(
     python3 - "$SUMMARY_FILE" <<'PY'
@@ -148,6 +150,8 @@ PY
   "$ROOT_DIR/scripts/system_status.sh" --out-dir "$OUT_DIR" --report-name "status-after.json" || true
 
   echo "network_partition_recommended_action=$RECOMMENDED_ACTION"
+  echo "network_partition_summary_file=$SUMMARY_FILE"
+  echo "network_partition_summary_latest=$LATEST_SUMMARY_FILE"
   echo "runbook_network_partition_ok=$SUMMARY_RUNBOOK_OK"
   echo "runbook_output_dir=$OUT_DIR"
 

@@ -32,4 +32,6 @@ Outputs:
 - `adversarial_failed_step_count=<n>`
 - `adversarial_recommended_action=...`
 - `runbook_budget_ok=true|false`
+- `adversarial_reliability_summary_file=build/runbooks/adversarial-reliability-<timestamp>/adversarial-reliability-summary.json`
+- `adversarial_reliability_summary_latest=build/runbooks/adversarial-reliability-latest.json`
 - `runbook_output_dir=build/runbooks/adversarial-reliability-<timestamp>`

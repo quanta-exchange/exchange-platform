@@ -35,4 +35,6 @@ Outputs:
 - `redpanda_broker_bounce_ok=true|false`
 - `redpanda_broker_bounce_recommended_action=...`
 - `runbook_budget_ok=true|false`
+- `redpanda_broker_bounce_summary_file=build/runbooks/redpanda-broker-bounce-<timestamp>/redpanda-broker-bounce-summary.json`
+- `redpanda_broker_bounce_summary_latest=build/runbooks/redpanda-broker-bounce-latest.json`
 - `runbook_output_dir=build/runbooks/redpanda-broker-bounce-<timestamp>`

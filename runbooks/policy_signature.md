@@ -30,4 +30,6 @@ Outputs:
 - `policy_smoke_ok=true|false`
 - `policy_recommended_action=...`
 - `runbook_budget_ok=true|false`
+- `policy_signature_summary_file=build/runbooks/policy-signature-<timestamp>/policy-signature-summary.json`
+- `policy_signature_summary_latest=build/runbooks/policy-signature-latest.json`
 - `runbook_output_dir=build/runbooks/policy-signature-<timestamp>`

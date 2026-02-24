@@ -35,4 +35,6 @@ Outputs:
 - `chaos_network_partition_ok=true|false`
 - `network_partition_recommended_action=...`
 - `runbook_budget_ok=true|false`
+- `network_partition_summary_file=build/runbooks/network-partition-<timestamp>/network-partition-summary.json`
+- `network_partition_summary_latest=build/runbooks/network-partition-latest.json`
 - `runbook_output_dir=build/runbooks/network-partition-<timestamp>`
