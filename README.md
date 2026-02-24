@@ -1078,6 +1078,16 @@ Outputs:
 - report includes adversarial runbook context: `adversarial_runbook_ok`, `adversarial_runbook_budget_ok`, `adversarial_runbook_failed_step_count`, `adversarial_runbook_recommended_action`
 - when a runbook is not executed in the current release-gate run, runbook context fields are backfilled from `build/runbooks/*-latest.json` when available
 
+### 25.1) Release-gate runbook fallback smoke
+```bash
+make release-gate-fallback-smoke
+```
+Outputs:
+- `release_gate_fallback_smoke_report=build/release-gate-smoke/release-gate-fallback-smoke-<timestamp>.json`
+- `release_gate_fallback_smoke_latest=build/release-gate-smoke/release-gate-fallback-smoke-latest.json`
+- `release_gate_fallback_smoke_ok=true|false`
+- report verifies runbook context keys are present in `release_gate_latest` even when runbooks are not executed in that gate run
+
 ### 26) Legal archive capture + verify
 ```bash
 ./scripts/archive_range.sh --source-file build/load/load-smoke.json
