@@ -17,6 +17,7 @@ RUN_EXACTLY_ONCE_RUNBOOK=false
 RUN_MAPPING_INTEGRITY_RUNBOOK=false
 RUN_MAPPING_COVERAGE_RUNBOOK=false
 RUN_IDEMPOTENCY_LATCH_RUNBOOK=false
+RUN_IDEMPOTENCY_KEY_FORMAT_RUNBOOK=false
 RUN_PROOF_HEALTH_RUNBOOK=false
 RUN_DETERMINISM=false
 RUN_EXACTLY_ONCE_MILLION=false
@@ -82,6 +83,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --run-idempotency-latch-runbook)
       RUN_IDEMPOTENCY_LATCH_RUNBOOK=true
+      shift
+      ;;
+    --run-idempotency-key-format-runbook)
+      RUN_IDEMPOTENCY_KEY_FORMAT_RUNBOOK=true
       shift
       ;;
     --run-proof-health-runbook)
@@ -155,6 +160,9 @@ fi
 if [[ "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" == "true" ]]; then
   VERIFY_CMD+=("--run-idempotency-latch-runbook")
 fi
+if [[ "$RUN_IDEMPOTENCY_KEY_FORMAT_RUNBOOK" == "true" ]]; then
+  VERIFY_CMD+=("--run-idempotency-key-format-runbook")
+fi
 if [[ "$RUN_PROOF_HEALTH_RUNBOOK" == "true" ]]; then
   VERIFY_CMD+=("--run-proof-health-runbook")
 fi
@@ -188,7 +196,7 @@ fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"
 BRANCH="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref HEAD)"
 
-python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$RUN_PROOF_HEALTH_RUNBOOK" "$RUN_MAPPING_COVERAGE_RUNBOOK" <<'PY'
+python3 - "$REPORT_FILE" "$VERIFY_SUMMARY" "$VERIFY_OK" "$VERIFY_EXIT_CODE" "$COMMIT" "$BRANCH" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$RUN_STARTUP_GUARDRAILS" "$RUN_CHANGE_WORKFLOW" "$RUN_ADVERSARIAL" "$RUN_POLICY_SIGNATURE" "$RUN_POLICY_TAMPER" "$RUN_NETWORK_PARTITION" "$RUN_REDPANDA_BOUNCE" "$RUN_EXACTLY_ONCE_RUNBOOK" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$STRICT_CONTROLS" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$RUN_PROOF_HEALTH_RUNBOOK" "$RUN_MAPPING_COVERAGE_RUNBOOK" "$RUN_IDEMPOTENCY_KEY_FORMAT_RUNBOOK" <<'PY'
 import json
 import pathlib
 import sys
@@ -218,6 +226,7 @@ run_mapping_integrity_runbook = sys.argv[21].lower() == "true"
 run_idempotency_latch_runbook = sys.argv[22].lower() == "true"
 run_proof_health_runbook = sys.argv[23].lower() == "true"
 run_mapping_coverage_runbook = sys.argv[24].lower() == "true"
+run_idempotency_key_format_runbook = sys.argv[25].lower() == "true"
 
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
@@ -291,6 +300,10 @@ proof_health_failing_count = None
 idempotency_latch_runbook_idempotency_ok = None
 idempotency_latch_runbook_latch_ok = None
 idempotency_latch_runbook_recommended_action = None
+idempotency_key_format_runbook_proof_ok = None
+idempotency_key_format_runbook_missing_tests_count = None
+idempotency_key_format_runbook_failed_tests_count = None
+idempotency_key_format_runbook_recommended_action = None
 proof_health_runbook_proof_ok = None
 proof_health_runbook_missing_count = None
 proof_health_runbook_failing_count = None
@@ -619,6 +632,29 @@ if idempotency_latch_runbook_dir:
         idempotency_latch_runbook_recommended_action = idempotency_latch_payload.get(
             "recommended_action"
         )
+idempotency_key_format_runbook_dir = summary.get("artifacts", {}).get(
+    "idempotency_key_format_runbook_dir"
+)
+if idempotency_key_format_runbook_dir:
+    candidate_dir = pathlib.Path(idempotency_key_format_runbook_dir)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "idempotency-key-format-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            idempotency_key_format_runbook_payload = json.load(f)
+        idempotency_key_format_runbook_proof_ok = bool(
+            idempotency_key_format_runbook_payload.get("proof_ok", False)
+        )
+        idempotency_key_format_runbook_missing_tests_count = (
+            idempotency_key_format_runbook_payload.get("missing_tests_count")
+        )
+        idempotency_key_format_runbook_failed_tests_count = (
+            idempotency_key_format_runbook_payload.get("failed_tests_count")
+        )
+        idempotency_key_format_runbook_recommended_action = (
+            idempotency_key_format_runbook_payload.get("recommended_action")
+        )
 proof_health_runbook_dir = summary.get("artifacts", {}).get("proof_health_runbook_dir")
 if proof_health_runbook_dir:
     candidate_dir = pathlib.Path(proof_health_runbook_dir)
@@ -661,6 +697,7 @@ payload = {
     "run_mapping_integrity_runbook": run_mapping_integrity_runbook,
     "run_mapping_coverage_runbook": run_mapping_coverage_runbook,
     "run_idempotency_latch_runbook": run_idempotency_latch_runbook,
+    "run_idempotency_key_format_runbook": run_idempotency_key_format_runbook,
     "run_proof_health_runbook": run_proof_health_runbook,
     "run_determinism": run_determinism,
     "run_exactly_once_million": run_exactly_once_million,
@@ -732,6 +769,10 @@ payload = {
     "idempotency_latch_runbook_idempotency_ok": idempotency_latch_runbook_idempotency_ok,
     "idempotency_latch_runbook_latch_ok": idempotency_latch_runbook_latch_ok,
     "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook_recommended_action,
+    "idempotency_key_format_runbook_proof_ok": idempotency_key_format_runbook_proof_ok,
+    "idempotency_key_format_runbook_missing_tests_count": idempotency_key_format_runbook_missing_tests_count,
+    "idempotency_key_format_runbook_failed_tests_count": idempotency_key_format_runbook_failed_tests_count,
+    "idempotency_key_format_runbook_recommended_action": idempotency_key_format_runbook_recommended_action,
     "proof_health_runbook_proof_ok": proof_health_runbook_proof_ok,
     "proof_health_runbook_missing_count": proof_health_runbook_missing_count,
     "proof_health_runbook_failing_count": proof_health_runbook_failing_count,
@@ -756,6 +797,9 @@ payload = {
     ),
     "verification_run_idempotency_latch_runbook": bool(
         summary.get("run_idempotency_latch_runbook", False)
+    ),
+    "verification_run_idempotency_key_format_runbook": bool(
+        summary.get("run_idempotency_key_format_runbook", False)
     ),
     "verification_run_proof_health_runbook": bool(
         summary.get("run_proof_health_runbook", False)

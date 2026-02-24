@@ -53,6 +53,11 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "idempotencyKeyFormatRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true
+    },
     "proofHealthRunbook": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -213,6 +218,7 @@
     "idempotencyKeyFormat": "build/idempotency/prove-idempotency-key-format-latest.json",
     "latchApproval": "build/latch/prove-latch-approval-latest.json",
     "idempotencyLatchRunbook": "build/runbooks/idempotency-latch-latest.json",
+    "idempotencyKeyFormatRunbook": "build/runbooks/idempotency-key-format-latest.json",
     "proofHealthRunbook": "build/runbooks/proof-health-latest.json",
     "exactlyOnceMillion": "build/exactly-once/prove-exactly-once-million-latest.json",
     "invariantsSummary": "build/invariants/invariants-summary.json",

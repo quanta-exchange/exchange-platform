@@ -165,6 +165,7 @@ Gate G1 operational check:
 - Mapping integrity failure drill: `./runbooks/mapping_integrity_failure.sh`
 - Mapping coverage failure drill: `./runbooks/mapping_coverage_failure.sh`
 - Idempotency+latch failure drill: `./runbooks/idempotency_latch_failure.sh`
+- Idempotency-Key format failure drill: `./runbooks/idempotency_key_format_failure.sh`
 - Proof health failure drill: `./runbooks/proof_health_failure.sh`
 - Policy signature drill: `./runbooks/policy_signature.sh`
 - Policy tamper drill: `./runbooks/policy_tamper.sh`
@@ -182,6 +183,7 @@ Gate G1 operational check:
   - with mapping integrity runbook: `./scripts/verification_factory.sh --run-mapping-integrity-runbook`
   - with mapping coverage runbook: `./scripts/verification_factory.sh --run-mapping-coverage-runbook`
   - with idempotency+latch runbook: `./scripts/verification_factory.sh --run-idempotency-latch-runbook`
+  - with idempotency-key-format runbook: `./scripts/verification_factory.sh --run-idempotency-key-format-runbook`
   - with proof-health runbook: `./scripts/verification_factory.sh --run-proof-health-runbook`
   - with determinism proof: `./scripts/verification_factory.sh --run-determinism`
   - with exactly-once million proof: `./scripts/verification_factory.sh --run-exactly-once-million`

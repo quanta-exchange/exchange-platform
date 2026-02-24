@@ -75,6 +75,7 @@ exactly_once_runbook = newest(root.glob("build/runbooks/exactly-once-million-*/e
 mapping_integrity_runbook = newest(root.glob("build/runbooks/mapping-integrity-*/mapping-integrity.log"))
 mapping_coverage_runbook = newest(root.glob("build/runbooks/mapping-coverage-*/mapping-coverage.log"))
 idempotency_latch_runbook = newest(root.glob("build/runbooks/idempotency-latch-*/idempotency-latch.log"))
+idempotency_key_format_runbook = newest(root.glob("build/runbooks/idempotency-key-format-*/idempotency-key-format.log"))
 proof_health_runbook = newest(root.glob("build/runbooks/proof-health-*/proof-health.log"))
 policy_signature_runbook = newest(root.glob("build/runbooks/policy-signature-*/policy-signature.log"))
 network_partition_runbook = newest(root.glob("build/runbooks/network-partition-*/network-partition.log"))
@@ -93,6 +94,7 @@ evidence = [
     {"id": "mapping_integrity_runbook", "path": pathlib.Path(rel(mapping_integrity_runbook)) if mapping_integrity_runbook else None, "required": False},
     {"id": "mapping_coverage_runbook", "path": pathlib.Path(rel(mapping_coverage_runbook)) if mapping_coverage_runbook else None, "required": False},
     {"id": "idempotency_latch_runbook", "path": pathlib.Path(rel(idempotency_latch_runbook)) if idempotency_latch_runbook else None, "required": False},
+    {"id": "idempotency_key_format_runbook", "path": pathlib.Path(rel(idempotency_key_format_runbook)) if idempotency_key_format_runbook else None, "required": False},
     {"id": "proof_health_runbook", "path": pathlib.Path(rel(proof_health_runbook)) if proof_health_runbook else None, "required": False},
     {"id": "policy_signature_runbook", "path": pathlib.Path(rel(policy_signature_runbook)) if policy_signature_runbook else None, "required": False},
     {"id": "network_partition_runbook", "path": pathlib.Path(rel(network_partition_runbook)) if network_partition_runbook else None, "required": False},
@@ -117,6 +119,7 @@ evidence = [
     {"id": "mapping_integrity_runbook_summary", "path": pathlib.Path("build/runbooks/mapping-integrity-latest.json"), "required": False},
     {"id": "mapping_coverage_runbook_summary", "path": pathlib.Path("build/runbooks/mapping-coverage-latest.json"), "required": False},
     {"id": "idempotency_latch_runbook_summary", "path": pathlib.Path("build/runbooks/idempotency-latch-latest.json"), "required": False},
+    {"id": "idempotency_key_format_runbook_summary", "path": pathlib.Path("build/runbooks/idempotency-key-format-latest.json"), "required": False},
     {"id": "proof_health_runbook_summary", "path": pathlib.Path("build/runbooks/proof-health-latest.json"), "required": False},
     {"id": "proof_health", "path": pathlib.Path("build/metrics/proof-health-latest.json"), "required": False},
     {"id": "mapping_coverage", "path": pathlib.Path("build/compliance/prove-mapping-coverage-latest.json"), "required": False},
@@ -207,6 +210,7 @@ pack = {
         {"id": "G37", "text": "Mapping-coverage runbook evidence proves strict/full and partial coverage modes behave deterministically under synthetic unmapped-control probes."},
         {"id": "G38", "text": "Mapping-coverage metrics artifact exports coverage health ratios/counts and runbook action hints for deterministic alerting and release-governance decisions."},
         {"id": "G39", "text": "Idempotency-Key format policy proof validates create/cancel command rejection and normalization behavior to prevent malformed replay keys from entering order paths."},
+        {"id": "G40", "text": "Idempotency-Key format runbook evidence preserves deterministic incident diagnostics and remediation guidance for malformed idempotency-key policy regressions."},
     ],
 }
 

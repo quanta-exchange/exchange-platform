@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/mapping-coverage-runbook/idempotency-latch-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->idempotency-key-format->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->mapping-integrity->mapping-coverage->mapping-coverage-metrics->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/mapping-coverage-runbook/idempotency-latch-runbook/idempotency-key-format-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->idempotency-key-format->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->mapping-integrity->mapping-coverage->mapping-coverage-metrics->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -106,6 +106,8 @@ runbooks/
   mapping_coverage_failure.md # mapping coverage failure drill notes
   idempotency_latch_failure.sh # idempotency+latch failure automated drill
   idempotency_latch_failure.md # idempotency+latch failure drill notes
+  idempotency_key_format_failure.sh # idempotency-key-format failure automated drill
+  idempotency_key_format_failure.md # idempotency-key-format failure drill notes
   proof_health_failure.sh # proof health failure automated drill
   proof_health_failure.md # proof health failure drill notes
   policy_signature.sh     # policy signature automated drill
@@ -452,6 +454,7 @@ Success output includes:
 - `assurance_pack_markdown=build/assurance/<timestamp>/assurance-pack.md`
 - `assurance_pack_ok=true|false`
 - evidence index includes high-risk runbook summaries (`exactly-once`, `mapping-integrity`, `idempotency-latch`, `proof-health`) and `build/metrics/proof-health-latest.json` when present
+- evidence index includes `idempotency-key-format` runbook summary when present
 
 ### 13) Controls check (controls catalog gate)
 ```bash
@@ -485,8 +488,12 @@ make verification-factory
 ./scripts/verification_factory.sh --run-exactly-once-runbook
 # include mapping-integrity failure runbook in same gate:
 ./scripts/verification_factory.sh --run-mapping-integrity-runbook
+# include mapping-coverage failure runbook in same gate:
+./scripts/verification_factory.sh --run-mapping-coverage-runbook
 # include idempotency+latch failure runbook in same gate:
 ./scripts/verification_factory.sh --run-idempotency-latch-runbook
+# include idempotency-key-format failure runbook in same gate:
+./scripts/verification_factory.sh --run-idempotency-key-format-runbook
 # include proof-health failure runbook in same gate:
 ./scripts/verification_factory.sh --run-proof-health-runbook
 # include million-duplicate exactly-once proof in same gate:
@@ -500,7 +507,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_exactly_once_runbook=true|false`, `run_mapping_integrity_runbook=true|false`, `run_idempotency_latch_runbook=true|false`, `run_proof_health_runbook=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `exactly_once_runbook_dir`, `mapping_integrity_runbook_dir`, `idempotency_latch_runbook_dir`, `proof_health_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_idempotency_report`, `prove_idempotency_key_format_report`, `prove_latch_approval_report`, `prove_exactly_once_million_report`, `prove_mapping_integrity_report`, `proof_health_metrics_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_exactly_once_runbook=true|false`, `run_mapping_integrity_runbook=true|false`, `run_mapping_coverage_runbook=true|false`, `run_idempotency_latch_runbook=true|false`, `run_idempotency_key_format_runbook=true|false`, `run_proof_health_runbook=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `exactly_once_runbook_dir`, `mapping_integrity_runbook_dir`, `mapping_coverage_runbook_dir`, `idempotency_latch_runbook_dir`, `idempotency_key_format_runbook_dir`, `proof_health_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_idempotency_report`, `prove_idempotency_key_format_report`, `prove_latch_approval_report`, `prove_exactly_once_million_report`, `prove_mapping_integrity_report`, `proof_health_metrics_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -529,7 +536,7 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
-- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `idempotencyKeyFormat`, `latchApproval`, `idempotencyLatchRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
+- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `idempotencyKeyFormat`, `latchApproval`, `idempotencyLatchRunbook`, `idempotencyKeyFormatRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
 - supports report freshness policy via `safety/budgets.yaml`:
   - top-level `freshness.defaultMaxAgeSeconds`
   - per-check override `budgets.<check>.maxAgeSeconds`
@@ -603,6 +610,23 @@ Outputs:
 - `idempotency_latch_summary_latest=build/runbooks/idempotency-latch-latest.json`
 - `runbook_output_dir=build/runbooks/idempotency-latch-<timestamp>`
 
+### 16.5) Idempotency-Key format failure runbook
+```bash
+make runbook-idempotency-key-format
+# allow drill to continue while collecting evidence:
+RUNBOOK_ALLOW_PROOF_FAIL=true make runbook-idempotency-key-format
+```
+Outputs:
+- `runbook_idempotency_key_format_ok=true|false`
+- `idempotency_key_format_proof_ok=true|false`
+- `idempotency_key_format_requested_tests_count=<n>`
+- `idempotency_key_format_missing_tests_count=<n>`
+- `idempotency_key_format_failed_tests_count=<n>`
+- `idempotency_key_format_recommended_action=...`
+- `idempotency_key_format_summary_file=build/runbooks/idempotency-key-format-<timestamp>/idempotency-key-format-summary.json`
+- `idempotency_key_format_summary_latest=build/runbooks/idempotency-key-format-latest.json`
+- `runbook_output_dir=build/runbooks/idempotency-key-format-<timestamp>`
+
 ### 17) System status snapshot
 ```bash
 make system-status
@@ -611,7 +635,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.evidence_pack`, `checks.compliance.mapping_coverage_proof`, `checks.compliance.mapping_coverage_metrics`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.mapping_coverage`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `idempotency_key_format`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`, `mapping_coverage`, `mapping_coverage_metrics`)
+- report includes `checks.compliance.evidence_pack`, `checks.compliance.mapping_coverage_proof`, `checks.compliance.mapping_coverage_metrics`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.mapping_coverage`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.idempotency_key_format`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `idempotency_key_format`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`, `mapping_coverage`, `mapping_coverage_metrics`)
 
 ### 17.1) Anomaly detector
 ```bash
@@ -644,6 +668,7 @@ make runbook-exactly-once-million
 make runbook-mapping-integrity
 make runbook-mapping-coverage
 make runbook-idempotency-latch
+make runbook-idempotency-key-format
 make runbook-proof-health
 make runbook-policy-signature
 make runbook-policy-tamper
@@ -652,7 +677,7 @@ make runbook-redpanda-bounce
 make runbook-adversarial-reliability
 ```
 Success output includes:
-- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_exactly_once_million_ok=true` or `runbook_mapping_integrity_ok=true` or `runbook_mapping_coverage_ok=true` or `runbook_idempotency_latch_ok=true` or `runbook_proof_health_ok=true` or `runbook_policy_signature_ok=true` or `runbook_policy_tamper_ok=true` or `runbook_network_partition_ok=true` or `runbook_redpanda_broker_bounce_ok=true` or `runbook_adversarial_reliability_ok=true`
+- `runbook_lag_spike_ok=true` or `runbook_load_regression_ok=true` or `runbook_ws_drop_spike_ok=true` or `runbook_ws_resume_gap_spike_ok=true` or `runbook_startup_guardrails_ok=true` or `runbook_game_day_anomaly_ok=true` or `runbook_audit_tamper_ok=true` or `runbook_change_workflow_ok=true` or `runbook_budget_failure_ok=true` or `runbook_exactly_once_million_ok=true` or `runbook_mapping_integrity_ok=true` or `runbook_mapping_coverage_ok=true` or `runbook_idempotency_latch_ok=true` or `runbook_idempotency_key_format_ok=true` or `runbook_proof_health_ok=true` or `runbook_policy_signature_ok=true` or `runbook_policy_tamper_ok=true` or `runbook_network_partition_ok=true` or `runbook_redpanda_broker_bounce_ok=true` or `runbook_adversarial_reliability_ok=true`
 - `runbook_output_dir=build/runbooks/...`
 - `status-before.json` / `status-after.json` (core/edge/ledger/kafka/ws snapshot)
 
@@ -983,6 +1008,8 @@ make release-gate
 ./scripts/release_gate.sh --run-mapping-coverage-runbook
 # include idempotency+latch failure runbook in gate:
 ./scripts/release_gate.sh --run-idempotency-latch-runbook
+# include idempotency-key-format failure runbook in gate:
+./scripts/release_gate.sh --run-idempotency-key-format-runbook
 # include proof-health failure runbook in gate:
 ./scripts/release_gate.sh --run-proof-health-runbook
 # include million-duplicate exactly-once proof in gate:
@@ -1010,6 +1037,7 @@ Outputs:
 - report includes mapping-integrity runbook context: `mapping_integrity_runbook_proof_ok`, `mapping_integrity_runbook_recommended_action`
 - report includes mapping-coverage runbook context: `mapping_coverage_runbook_proof_ok`, `mapping_coverage_runbook_recommended_action`
 - report includes idempotency+latch runbook context: `idempotency_latch_runbook_idempotency_ok`, `idempotency_latch_runbook_latch_ok`, `idempotency_latch_runbook_recommended_action`
+- report includes idempotency-key-format runbook context: `idempotency_key_format_runbook_proof_ok`, `idempotency_key_format_runbook_missing_tests_count`, `idempotency_key_format_runbook_failed_tests_count`, `idempotency_key_format_runbook_recommended_action`
 - report includes proof-health runbook context: `proof_health_runbook_proof_ok`, `proof_health_runbook_missing_count`, `proof_health_runbook_failing_count`, `proof_health_runbook_recommended_action`
 - report includes proof-health context: `proof_health_ok`, `proof_health_health_ok`, `proof_health_missing_count`, `proof_health_failing_count`
 - report includes mapping-integrity context: `mapping_integrity_ok`
@@ -1075,6 +1103,8 @@ Outputs:
 `--run-mapping-integrity-runbook`를 주면 mapping integrity runbook 단계가 추가 실행됩니다.
 `--run-mapping-coverage-runbook`를 주면 mapping coverage runbook 단계가 추가 실행됩니다.
 `--run-idempotency-latch-runbook`를 주면 idempotency+latch runbook 단계가 추가 실행됩니다.
+`--run-idempotency-key-format-runbook`를 주면 idempotency-key-format runbook 단계가 추가 실행됩니다.
+`--run-proof-health-runbook`를 주면 proof-health runbook 단계가 추가 실행됩니다.
 `--run-determinism`를 주면 deterministic replay proof 단계가 추가 실행됩니다.
 `--run-exactly-once-million`를 주면 million-duplicate exactly-once proof 단계가 추가 실행됩니다.
 `--run-adversarial`를 주면 adversarial reliability runbook 단계가 추가 실행됩니다.

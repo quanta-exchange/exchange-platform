@@ -574,6 +574,11 @@
       "controlId": "CTRL-115",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
       "description": "Idempotency-Key format proof verifies malformed key rejection and normalization behavior, and surfaces this control across verification/release/safety-budget/status/transparency/assurance evidence flows"
+    },
+    {
+      "controlId": "CTRL-116",
+      "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
+      "description": "Runbook-as-code exists for idempotency-key-format failure drills and is integrated into verification/release/status/transparency/safety-budget/proof-health/assurance contexts for deterministic remediation evidence"
     }
   ]
 }

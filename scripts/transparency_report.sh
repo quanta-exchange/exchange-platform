@@ -75,6 +75,7 @@ exactly_once_runbook = read_json("build/runbooks/exactly-once-million-latest.jso
 mapping_integrity_runbook = read_json("build/runbooks/mapping-integrity-latest.json")
 mapping_coverage_runbook = read_json("build/runbooks/mapping-coverage-latest.json")
 idempotency_latch_runbook = read_json("build/runbooks/idempotency-latch-latest.json")
+idempotency_key_format_runbook = read_json("build/runbooks/idempotency-key-format-latest.json")
 proof_health_runbook = read_json("build/runbooks/proof-health-latest.json")
 
 sources = {
@@ -114,6 +115,7 @@ sources = {
     "mapping_integrity_runbook": mapping_integrity_runbook,
     "mapping_coverage_runbook": mapping_coverage_runbook,
     "idempotency_latch_runbook": idempotency_latch_runbook,
+    "idempotency_key_format_runbook": idempotency_key_format_runbook,
     "proof_health_runbook": proof_health_runbook,
 }
 
@@ -293,6 +295,10 @@ report = {
             "idempotency_latch_runbook_idempotency_ok": bool(idempotency_latch_runbook.get("idempotency_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_latch_ok": bool(idempotency_latch_runbook.get("latch_ok")) if idempotency_latch_runbook else None,
             "idempotency_latch_runbook_recommended_action": idempotency_latch_runbook.get("recommended_action") if idempotency_latch_runbook else None,
+            "idempotency_key_format_runbook_proof_ok": bool(idempotency_key_format_runbook.get("proof_ok")) if idempotency_key_format_runbook else None,
+            "idempotency_key_format_runbook_missing_tests_count": int(idempotency_key_format_runbook.get("missing_tests_count")) if idempotency_key_format_runbook and idempotency_key_format_runbook.get("missing_tests_count") is not None else None,
+            "idempotency_key_format_runbook_failed_tests_count": int(idempotency_key_format_runbook.get("failed_tests_count")) if idempotency_key_format_runbook and idempotency_key_format_runbook.get("failed_tests_count") is not None else None,
+            "idempotency_key_format_runbook_recommended_action": idempotency_key_format_runbook.get("recommended_action") if idempotency_key_format_runbook else None,
             "proof_health_runbook_proof_ok": bool(proof_health_runbook.get("proof_health_ok")) if proof_health_runbook else None,
             "proof_health_runbook_missing_count": int(proof_health_runbook.get("missing_count")) if proof_health_runbook and proof_health_runbook.get("missing_count") is not None else None,
             "proof_health_runbook_failing_count": int(proof_health_runbook.get("failing_count")) if proof_health_runbook and proof_health_runbook.get("failing_count") is not None else None,
@@ -346,6 +352,7 @@ report = {
         "mapping_integrity_runbook": "build/runbooks/mapping-integrity-latest.json",
         "mapping_coverage_runbook": "build/runbooks/mapping-coverage-latest.json",
         "idempotency_latch_runbook": "build/runbooks/idempotency-latch-latest.json",
+        "idempotency_key_format_runbook": "build/runbooks/idempotency-key-format-latest.json",
         "proof_health_runbook": "build/runbooks/proof-health-latest.json",
     },
 }

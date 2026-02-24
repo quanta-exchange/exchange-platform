@@ -257,6 +257,24 @@ for key, budget in budgets.items():
                 entry["details"].append("idempotency_latch_runbook_idempotency_not_ok")
             if not runbook_latch_ok:
                 entry["details"].append("idempotency_latch_runbook_latch_not_ok")
+    elif key == "idempotencyKeyFormatRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        runbook_proof_ok = bool(payload.get("proof_ok", False))
+        missing_tests_count = int(payload.get("missing_tests_count", 0) or 0)
+        failed_tests_count = int(payload.get("failed_tests_count", 0) or 0)
+        if must_ok and not runbook_proof_ok:
+            entry["ok"] = False
+            entry["details"].append("idempotency_key_format_runbook_proof_not_ok")
+        if missing_tests_count > 0:
+            entry["ok"] = False
+            entry["details"].append(
+                f"idempotency_key_format_runbook_missing_tests_count={missing_tests_count}"
+            )
+        if failed_tests_count > 0:
+            entry["ok"] = False
+            entry["details"].append(
+                f"idempotency_key_format_runbook_failed_tests_count={failed_tests_count}"
+            )
     elif key == "proofHealthRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
         proof_health_ok = bool(payload.get("proof_health_ok", False))

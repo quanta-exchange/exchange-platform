@@ -281,6 +281,9 @@ exactly_once_runbook_latest = read_latest_json("build/runbooks/exactly-once-mill
 mapping_integrity_runbook_latest = read_latest_json("build/runbooks/mapping-integrity-latest.json")
 mapping_coverage_runbook_latest = read_latest_json("build/runbooks/mapping-coverage-latest.json")
 idempotency_latch_runbook_latest = read_latest_json("build/runbooks/idempotency-latch-latest.json")
+idempotency_key_format_runbook_latest = read_latest_json(
+    "build/runbooks/idempotency-key-format-latest.json"
+)
 proof_health_runbook_latest = read_latest_json("build/runbooks/proof-health-latest.json")
 
 ok = bool(core_up and edge_reachable and ledger_ready_ok and kafka_status.get("up"))
@@ -594,6 +597,26 @@ report = {
                         idempotency_latch_runbook_latest.get("payload") or {}
                     ).get("recommended_action"),
                     "error": idempotency_latch_runbook_latest.get("error"),
+                },
+                "idempotency_key_format": {
+                    "present": idempotency_key_format_runbook_latest.get("present", False),
+                    "path": idempotency_key_format_runbook_latest.get("path"),
+                    "proof_ok": (
+                        idempotency_key_format_runbook_latest.get("payload") or {}
+                    ).get("proof_ok"),
+                    "requested_tests_count": (
+                        idempotency_key_format_runbook_latest.get("payload") or {}
+                    ).get("requested_tests_count"),
+                    "missing_tests_count": (
+                        idempotency_key_format_runbook_latest.get("payload") or {}
+                    ).get("missing_tests_count"),
+                    "failed_tests_count": (
+                        idempotency_key_format_runbook_latest.get("payload") or {}
+                    ).get("failed_tests_count"),
+                    "recommended_action": (
+                        idempotency_key_format_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": idempotency_key_format_runbook_latest.get("error"),
                 },
                 "proof_health": {
                     "present": proof_health_runbook_latest.get("present", False),
