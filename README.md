@@ -752,7 +752,7 @@ Success output includes:
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
 - integrity summary includes `idempotency_scope_ok`, `idempotency_key_format_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook_ok`, `exactly_once_runbook_budget_ok`, `mapping_integrity_runbook_ok`, `mapping_integrity_runbook_budget_ok`, `mapping_coverage_runbook_ok`, `mapping_coverage_runbook_budget_ok`, `idempotency_latch_runbook_ok`, `idempotency_latch_runbook_budget_ok`, `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `proof_health_runbook_ok`, `proof_health_runbook_budget_ok`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `policy_signature_runbook_ok`, `policy_signature_runbook_budget_ok`, `policy_tamper_runbook_ok`, `policy_tamper_runbook_budget_ok`, `chaos_network_partition`, `network_partition_runbook_ok`, `network_partition_runbook_budget_ok`, `chaos_redpanda_bounce`, `redpanda_bounce_runbook_ok`, `redpanda_bounce_runbook_budget_ok`, `adversarial_runbook_ok`, `adversarial_runbook_budget_ok`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook_ok`, `exactly_once_runbook_budget_ok`, `mapping_integrity_runbook_ok`, `mapping_integrity_runbook_budget_ok`, `mapping_coverage_runbook_ok`, `mapping_coverage_runbook_budget_ok`, `idempotency_latch_runbook_ok`, `idempotency_latch_runbook_budget_ok`, `idempotency_key_format_runbook_ok`, `idempotency_key_format_runbook_budget_ok`, `proof_health_runbook_ok`, `proof_health_runbook_budget_ok`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20.1) Proof health metrics exporter
 ```bash
@@ -1056,9 +1056,11 @@ Outputs:
 - report includes safety budget context: `safety_budget_ok`, `safety_budget_violations`
 - report includes policy-signature context: `policy_smoke_ok`
 - report includes policy-tamper context: `policy_tamper_ok`, `policy_tamper_detected`
+- report includes policy runbook context: `policy_signature_runbook_ok`, `policy_signature_runbook_budget_ok`, `policy_signature_runbook_policy_ok`, `policy_signature_runbook_recommended_action`, `policy_tamper_runbook_ok`, `policy_tamper_runbook_budget_ok`, `policy_tamper_runbook_policy_tamper_ok`, `policy_tamper_runbook_tamper_detected`, `policy_tamper_runbook_recommended_action`
 - report includes compliance mapping context: `compliance_require_full_mapping`, `compliance_ok`, `compliance_missing_controls_count`, `compliance_duplicate_mapping_ids_count`, `compliance_unmapped_controls_count`, `compliance_unmapped_enforced_controls_count`, `compliance_mapping_coverage_ratio`
 - report includes network-partition context: `network_partition_ok`, `network_partition_during_reachable`, `network_partition_recovered`
 - report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
+- report includes chaos runbook context: `network_partition_runbook_ok`, `network_partition_runbook_budget_ok`, `network_partition_runbook_recommended_action`, `redpanda_bounce_runbook_ok`, `redpanda_bounce_runbook_budget_ok`, `redpanda_bounce_runbook_recommended_action`
 - report includes determinism context: `determinism_ok`, `determinism_executed_runs`, `determinism_distinct_hash_count`
 - report includes idempotency/latch proof context: `idempotency_scope_ok`, `idempotency_scope_passed`, `idempotency_scope_failed`, `idempotency_key_format_ok`, `idempotency_key_format_missing_tests_count`, `idempotency_key_format_failed_tests_count`, `latch_approval_ok`, `latch_approval_missing_tests_count`, `latch_approval_failed_tests_count`
 - report includes exactly-once-million context: `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency`
@@ -1073,6 +1075,7 @@ Outputs:
 - report includes mapping-coverage context: `mapping_coverage_ok`, `mapping_coverage_ratio`, `mapping_coverage_missing_controls_count`, `mapping_coverage_unmapped_controls_count`, `mapping_coverage_duplicate_control_ids_count`, `mapping_coverage_duplicate_mapping_ids_count`
 - report includes mapping-coverage metrics context: `mapping_coverage_metrics_ok`, `mapping_coverage_metrics_health_ok`, `mapping_coverage_metrics_ratio`, `mapping_coverage_metrics_missing_controls_count`, `mapping_coverage_metrics_unmapped_enforced_controls_count`, `mapping_coverage_metrics_duplicate_control_ids_count`, `mapping_coverage_metrics_duplicate_mapping_ids_count`, `mapping_coverage_metrics_runbook_recommended_action`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
+- report includes adversarial runbook context: `adversarial_runbook_ok`, `adversarial_runbook_budget_ok`, `adversarial_runbook_failed_step_count`, `adversarial_runbook_recommended_action`
 
 ### 26) Legal archive capture + verify
 ```bash

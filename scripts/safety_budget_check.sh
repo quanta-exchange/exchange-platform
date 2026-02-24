@@ -453,6 +453,34 @@ for key, budget in budgets.items():
         if bool(budget.get("mustDetectTamper", True)) and not tamper_detected:
             entry["ok"] = False
             entry["details"].append("policy_tamper_not_detected")
+    elif key == "policySignatureRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
+        policy_ok = bool(payload.get("policy_ok", False))
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = bool(runbook_ok_value) if runbook_ok_value is not None else policy_ok
+        if must_ok and not policy_ok:
+            entry["ok"] = False
+            entry["details"].append("policy_signature_runbook_policy_not_ok")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("policy_signature_runbook_not_ok")
+    elif key == "policyTamperRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
+        tamper_ok = bool(payload.get("policy_tamper_ok", False))
+        tamper_detected = bool(payload.get("tamper_detected", False))
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = bool(runbook_ok_value) if runbook_ok_value is not None else tamper_ok
+        if must_ok and not tamper_ok:
+            entry["ok"] = False
+            entry["details"].append("policy_tamper_runbook_proof_not_ok")
+        if bool(budget.get("mustDetectTamper", True)) and not tamper_detected:
+            entry["ok"] = False
+            entry["details"].append("policy_tamper_runbook_not_detected")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("policy_tamper_runbook_not_ok")
     elif key == "complianceEvidence":
         must_ok = bool(budget.get("mustBeOk", True))
         compliance_ok = bool(payload.get("ok", False))
@@ -713,6 +741,50 @@ for key, budget in budgets.items():
         if bool(budget.get("mustConsumeAfterRecovery", True)) and not post_consume_ok:
             entry["ok"] = False
             entry["details"].append("chaos_redpanda_bounce_no_post_recovery_consume")
+    elif key == "networkPartitionRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
+        partition_ok = bool(payload.get("network_partition_ok", False))
+        during_reachable_raw = payload.get("during_partition_broker_reachable")
+        during_reachable = bool(during_reachable_raw) if during_reachable_raw is not None else True
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = bool(runbook_ok_value) if runbook_ok_value is not None else partition_ok
+        if must_ok and not partition_ok:
+            entry["ok"] = False
+            entry["details"].append("network_partition_runbook_not_ok")
+        if bool(budget.get("mustLoseConnectivity", True)) and during_reachable:
+            entry["ok"] = False
+            entry["details"].append("network_partition_runbook_did_not_lose_connectivity")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("network_partition_runbook_execution_not_ok")
+    elif key == "redpandaBounceRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
+        bounce_ok = bool(payload.get("redpanda_broker_bounce_ok", False))
+        during_reachable_raw = payload.get("during_stop_broker_reachable")
+        after_reachable_raw = payload.get("after_restart_broker_reachable")
+        post_consume_ok_raw = payload.get("post_restart_consume_ok")
+        during_reachable = bool(during_reachable_raw) if during_reachable_raw is not None else True
+        after_reachable = bool(after_reachable_raw) if after_reachable_raw is not None else False
+        post_consume_ok = bool(post_consume_ok_raw) if post_consume_ok_raw is not None else False
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = bool(runbook_ok_value) if runbook_ok_value is not None else bounce_ok
+        if must_ok and not bounce_ok:
+            entry["ok"] = False
+            entry["details"].append("redpanda_bounce_runbook_not_ok")
+        if bool(budget.get("mustLoseConnectivity", True)) and during_reachable:
+            entry["ok"] = False
+            entry["details"].append("redpanda_bounce_runbook_did_not_lose_connectivity")
+        if bool(budget.get("mustRecoverConnectivity", True)) and not after_reachable:
+            entry["ok"] = False
+            entry["details"].append("redpanda_bounce_runbook_did_not_recover_connectivity")
+        if bool(budget.get("mustConsumeAfterRecovery", True)) and not post_consume_ok:
+            entry["ok"] = False
+            entry["details"].append("redpanda_bounce_runbook_no_post_recovery_consume")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("redpanda_bounce_runbook_execution_not_ok")
     elif key == "adversarial":
         must_ok = bool(budget.get("mustBeOk", True))
         adversarial_ok = bool(payload.get("ok", False))
@@ -749,6 +821,32 @@ for key, budget in budgets.items():
         ):
             entry["ok"] = False
             entry["details"].append("adversarial_exactly_once_skip_not_allowed")
+    elif key == "adversarialRunbook":
+        must_ok = bool(budget.get("mustBeOk", True))
+        must_runbook_ok = bool(budget.get("mustRunbookOk", must_ok))
+        adversarial_ok = bool(payload.get("adversarial_ok", False))
+        failed_step_count = int(payload.get("failed_step_count", 0) or 0)
+        exactly_once_status = str(payload.get("exactly_once_status", "") or "")
+        runbook_ok_value = payload.get("runbook_ok")
+        runbook_ok = bool(runbook_ok_value) if runbook_ok_value is not None else adversarial_ok
+        if must_ok and not adversarial_ok:
+            entry["ok"] = False
+            entry["details"].append("adversarial_runbook_proof_not_ok")
+        max_failed_step_count = int(budget.get("maxFailedStepCount", 0))
+        if failed_step_count > max_failed_step_count:
+            entry["ok"] = False
+            entry["details"].append(
+                f"adversarial_runbook_failed_step_count={failed_step_count} > {max_failed_step_count}"
+            )
+        if (
+            exactly_once_status == "skip"
+            and not bool(budget.get("allowExactlyOnceSkip", True))
+        ):
+            entry["ok"] = False
+            entry["details"].append("adversarial_runbook_exactly_once_skip_not_allowed")
+        if must_runbook_ok and not runbook_ok:
+            entry["ok"] = False
+            entry["details"].append("adversarial_runbook_execution_not_ok")
 
     if not entry["ok"]:
         violations.append(f"{key}:{';'.join(entry['details'])}")

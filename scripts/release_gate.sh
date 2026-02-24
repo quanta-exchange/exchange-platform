@@ -231,6 +231,8 @@ run_idempotency_key_format_runbook = sys.argv[25].lower() == "true"
 with open(verification_summary, "r", encoding="utf-8") as f:
     summary = json.load(f)
 
+repo_root = verification_summary.parents[2]
+
 controls_report_path = summary.get("artifacts", {}).get("controls_check_report")
 budget_report_path = summary.get("artifacts", {}).get("safety_budget_report")
 controls_advisory_missing = None
@@ -241,8 +243,17 @@ safety_budget_violations = []
 adversarial_tests_ok = None
 adversarial_failed_steps = []
 policy_smoke_ok = None
+policy_signature_runbook_ok = None
+policy_signature_runbook_budget_ok = None
+policy_signature_runbook_policy_ok = None
+policy_signature_runbook_recommended_action = None
 policy_tamper_ok = None
 policy_tamper_detected = None
+policy_tamper_runbook_ok = None
+policy_tamper_runbook_budget_ok = None
+policy_tamper_runbook_policy_tamper_ok = None
+policy_tamper_runbook_tamper_detected = None
+policy_tamper_runbook_recommended_action = None
 compliance_require_full_mapping = summary.get("compliance_require_full_mapping")
 compliance_ok = None
 compliance_missing_controls_count = None
@@ -253,9 +264,15 @@ compliance_mapping_coverage_ratio = None
 network_partition_ok = None
 network_partition_during_reachable = None
 network_partition_recovered = None
+network_partition_runbook_ok = None
+network_partition_runbook_budget_ok = None
+network_partition_runbook_recommended_action = None
 redpanda_bounce_ok = None
 redpanda_bounce_during_reachable = None
 redpanda_bounce_recovered = None
+redpanda_bounce_runbook_ok = None
+redpanda_bounce_runbook_budget_ok = None
+redpanda_bounce_runbook_recommended_action = None
 determinism_ok = None
 determinism_executed_runs = None
 determinism_distinct_hash_count = None
@@ -320,6 +337,10 @@ proof_health_runbook_proof_ok = None
 proof_health_runbook_missing_count = None
 proof_health_runbook_failing_count = None
 proof_health_runbook_recommended_action = None
+adversarial_runbook_ok = None
+adversarial_runbook_budget_ok = None
+adversarial_runbook_failed_step_count = None
+adversarial_runbook_recommended_action = None
 if controls_report_path:
     candidate = pathlib.Path(controls_report_path)
     if not candidate.is_absolute():
@@ -355,6 +376,29 @@ if adversarial_report_path:
             for step in (adversarial_payload.get("steps", []) or [])
             if step.get("status") == "fail"
         ]
+adversarial_runbook_dir = summary.get("artifacts", {}).get("adversarial_runbook_dir")
+if adversarial_runbook_dir:
+    candidate_dir = pathlib.Path(adversarial_runbook_dir)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "adversarial-reliability-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            adversarial_runbook_payload = json.load(f)
+        runbook_ok_value = adversarial_runbook_payload.get("runbook_ok")
+        adversarial_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        budget_ok_value = adversarial_runbook_payload.get("budget_ok")
+        adversarial_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        adversarial_runbook_failed_step_count = adversarial_runbook_payload.get(
+            "failed_step_count"
+        )
+        adversarial_runbook_recommended_action = adversarial_runbook_payload.get(
+            "recommended_action"
+        )
 policy_smoke_report_path = summary.get("artifacts", {}).get("policy_smoke_report")
 if policy_smoke_report_path:
     candidate = pathlib.Path(policy_smoke_report_path)
@@ -364,6 +408,30 @@ if policy_smoke_report_path:
         with open(candidate, "r", encoding="utf-8") as f:
             policy_payload = json.load(f)
         policy_smoke_ok = bool(policy_payload.get("ok", False))
+policy_signature_runbook_dir = summary.get("artifacts", {}).get("policy_signature_runbook_dir")
+if policy_signature_runbook_dir:
+    candidate_dir = pathlib.Path(policy_signature_runbook_dir)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "policy-signature-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            policy_signature_payload = json.load(f)
+        runbook_ok_value = policy_signature_payload.get("runbook_ok")
+        policy_ok_value = policy_signature_payload.get("policy_ok")
+        policy_signature_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        policy_signature_runbook_policy_ok = (
+            bool(policy_ok_value) if policy_ok_value is not None else None
+        )
+        budget_ok_value = policy_signature_payload.get("budget_ok")
+        policy_signature_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        policy_signature_runbook_recommended_action = policy_signature_payload.get(
+            "recommended_action"
+        )
 policy_tamper_report_path = summary.get("artifacts", {}).get("prove_policy_tamper_report")
 if policy_tamper_report_path:
     candidate = pathlib.Path(policy_tamper_report_path)
@@ -374,6 +442,34 @@ if policy_tamper_report_path:
             tamper_payload = json.load(f)
         policy_tamper_ok = bool(tamper_payload.get("ok", False))
         policy_tamper_detected = bool(tamper_payload.get("tamper_detected", False))
+policy_tamper_runbook_dir = summary.get("artifacts", {}).get("policy_tamper_runbook_dir")
+if policy_tamper_runbook_dir:
+    candidate_dir = pathlib.Path(policy_tamper_runbook_dir)
+    if not candidate_dir.is_absolute():
+        candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    candidate = candidate_dir / "policy-tamper-summary.json"
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            policy_tamper_payload = json.load(f)
+        runbook_ok_value = policy_tamper_payload.get("runbook_ok")
+        policy_tamper_ok_value = policy_tamper_payload.get("policy_tamper_ok")
+        policy_tamper_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        policy_tamper_runbook_policy_tamper_ok = (
+            bool(policy_tamper_ok_value) if policy_tamper_ok_value is not None else None
+        )
+        tamper_detected_value = policy_tamper_payload.get("tamper_detected")
+        policy_tamper_runbook_tamper_detected = (
+            bool(tamper_detected_value) if tamper_detected_value is not None else None
+        )
+        budget_ok_value = policy_tamper_payload.get("budget_ok")
+        policy_tamper_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        policy_tamper_runbook_recommended_action = policy_tamper_payload.get(
+            "recommended_action"
+        )
 compliance_report_path = summary.get("artifacts", {}).get("compliance_evidence_report")
 if compliance_report_path:
     candidate = pathlib.Path(compliance_report_path)
@@ -398,6 +494,21 @@ if network_partition_report_path:
     candidate_dir = pathlib.Path(network_partition_report_path)
     if not candidate_dir.is_absolute():
         candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    runbook_candidate = candidate_dir / "network-partition-summary.json"
+    if runbook_candidate.exists():
+        with open(runbook_candidate, "r", encoding="utf-8") as f:
+            network_runbook_payload = json.load(f)
+        runbook_ok_value = network_runbook_payload.get("runbook_ok")
+        network_partition_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        budget_ok_value = network_runbook_payload.get("budget_ok")
+        network_partition_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        network_partition_runbook_recommended_action = network_runbook_payload.get(
+            "recommended_action"
+        )
     candidate = candidate_dir / "chaos/network-partition-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
@@ -411,6 +522,21 @@ if redpanda_bounce_report_path:
     candidate_dir = pathlib.Path(redpanda_bounce_report_path)
     if not candidate_dir.is_absolute():
         candidate_dir = (verification_summary.parent / candidate_dir).resolve()
+    runbook_candidate = candidate_dir / "redpanda-broker-bounce-summary.json"
+    if runbook_candidate.exists():
+        with open(runbook_candidate, "r", encoding="utf-8") as f:
+            redpanda_runbook_payload = json.load(f)
+        runbook_ok_value = redpanda_runbook_payload.get("runbook_ok")
+        redpanda_bounce_runbook_ok = (
+            bool(runbook_ok_value) if runbook_ok_value is not None else None
+        )
+        budget_ok_value = redpanda_runbook_payload.get("budget_ok")
+        redpanda_bounce_runbook_budget_ok = (
+            bool(budget_ok_value) if budget_ok_value is not None else None
+        )
+        redpanda_bounce_runbook_recommended_action = redpanda_runbook_payload.get(
+            "recommended_action"
+        )
     candidate = candidate_dir / "chaos/redpanda-broker-bounce-latest.json"
     if candidate.exists():
         with open(candidate, "r", encoding="utf-8") as f:
@@ -452,7 +578,6 @@ if idempotency_key_format_report_path:
             verification_summary.parent / idempotency_key_format_candidate
         ).resolve()
 else:
-    repo_root = verification_summary.parents[2]
     idempotency_key_format_candidate = (
         repo_root / "build/idempotency/prove-idempotency-key-format-latest.json"
     )
@@ -555,7 +680,6 @@ if mapping_coverage_metrics_report_path:
         ).resolve()
 else:
     # Fallback for legacy verification summaries that do not expose the metrics artifact.
-    repo_root = verification_summary.parents[2]
     mapping_coverage_metrics_candidate = (
         repo_root / "build/metrics/mapping-coverage-latest.json"
     )
@@ -787,8 +911,17 @@ payload = {
     "adversarial_tests_ok": adversarial_tests_ok,
     "adversarial_failed_steps": adversarial_failed_steps,
     "policy_smoke_ok": policy_smoke_ok,
+    "policy_signature_runbook_ok": policy_signature_runbook_ok,
+    "policy_signature_runbook_budget_ok": policy_signature_runbook_budget_ok,
+    "policy_signature_runbook_policy_ok": policy_signature_runbook_policy_ok,
+    "policy_signature_runbook_recommended_action": policy_signature_runbook_recommended_action,
     "policy_tamper_ok": policy_tamper_ok,
     "policy_tamper_detected": policy_tamper_detected,
+    "policy_tamper_runbook_ok": policy_tamper_runbook_ok,
+    "policy_tamper_runbook_budget_ok": policy_tamper_runbook_budget_ok,
+    "policy_tamper_runbook_policy_tamper_ok": policy_tamper_runbook_policy_tamper_ok,
+    "policy_tamper_runbook_tamper_detected": policy_tamper_runbook_tamper_detected,
+    "policy_tamper_runbook_recommended_action": policy_tamper_runbook_recommended_action,
     "compliance_require_full_mapping": compliance_require_full_mapping,
     "compliance_ok": compliance_ok,
     "compliance_missing_controls_count": compliance_missing_controls_count,
@@ -799,9 +932,15 @@ payload = {
     "network_partition_ok": network_partition_ok,
     "network_partition_during_reachable": network_partition_during_reachable,
     "network_partition_recovered": network_partition_recovered,
+    "network_partition_runbook_ok": network_partition_runbook_ok,
+    "network_partition_runbook_budget_ok": network_partition_runbook_budget_ok,
+    "network_partition_runbook_recommended_action": network_partition_runbook_recommended_action,
     "redpanda_bounce_ok": redpanda_bounce_ok,
     "redpanda_bounce_during_reachable": redpanda_bounce_during_reachable,
     "redpanda_bounce_recovered": redpanda_bounce_recovered,
+    "redpanda_bounce_runbook_ok": redpanda_bounce_runbook_ok,
+    "redpanda_bounce_runbook_budget_ok": redpanda_bounce_runbook_budget_ok,
+    "redpanda_bounce_runbook_recommended_action": redpanda_bounce_runbook_recommended_action,
     "determinism_ok": determinism_ok,
     "determinism_executed_runs": determinism_executed_runs,
     "determinism_distinct_hash_count": determinism_distinct_hash_count,
@@ -837,6 +976,10 @@ payload = {
     "mapping_coverage_metrics_duplicate_control_ids_count": mapping_coverage_metrics_duplicate_control_ids_count,
     "mapping_coverage_metrics_duplicate_mapping_ids_count": mapping_coverage_metrics_duplicate_mapping_ids_count,
     "mapping_coverage_metrics_runbook_recommended_action": mapping_coverage_metrics_runbook_recommended_action,
+    "adversarial_runbook_ok": adversarial_runbook_ok,
+    "adversarial_runbook_budget_ok": adversarial_runbook_budget_ok,
+    "adversarial_runbook_failed_step_count": adversarial_runbook_failed_step_count,
+    "adversarial_runbook_recommended_action": adversarial_runbook_recommended_action,
     "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
     "mapping_integrity_runbook_ok": mapping_integrity_runbook_ok,
     "mapping_integrity_runbook_budget_ok": mapping_integrity_runbook_budget_ok,

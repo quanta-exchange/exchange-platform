@@ -71,6 +71,11 @@ policy_tamper = read_json("build/policy/prove-policy-tamper-latest.json")
 network_partition = read_json("build/chaos/network-partition-latest.json")
 redpanda_bounce = read_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial = read_json("build/adversarial/adversarial-tests-latest.json")
+policy_signature_runbook = read_json("build/runbooks/policy-signature-latest.json")
+policy_tamper_runbook = read_json("build/runbooks/policy-tamper-latest.json")
+network_partition_runbook = read_json("build/runbooks/network-partition-latest.json")
+redpanda_bounce_runbook = read_json("build/runbooks/redpanda-broker-bounce-latest.json")
+adversarial_runbook = read_json("build/runbooks/adversarial-reliability-latest.json")
 exactly_once_runbook = read_json("build/runbooks/exactly-once-million-latest.json")
 mapping_integrity_runbook = read_json("build/runbooks/mapping-integrity-latest.json")
 mapping_coverage_runbook = read_json("build/runbooks/mapping-coverage-latest.json")
@@ -111,6 +116,11 @@ sources = {
     "network_partition": network_partition,
     "redpanda_bounce": redpanda_bounce,
     "adversarial": adversarial,
+    "policy_signature_runbook": policy_signature_runbook,
+    "policy_tamper_runbook": policy_tamper_runbook,
+    "network_partition_runbook": network_partition_runbook,
+    "redpanda_bounce_runbook": redpanda_bounce_runbook,
+    "adversarial_runbook": adversarial_runbook,
     "exactly_once_runbook": exactly_once_runbook,
     "mapping_integrity_runbook": mapping_integrity_runbook,
     "mapping_coverage_runbook": mapping_coverage_runbook,
@@ -231,6 +241,15 @@ report = {
             "policy_signature_file": policy_smoke.get("signature_file") if policy_smoke else None,
             "policy_tamper_ok": bool(policy_tamper.get("ok")) if policy_tamper else None,
             "policy_tamper_detected": bool(policy_tamper.get("tamper_detected")) if policy_tamper else None,
+            "policy_signature_runbook_ok": bool(policy_signature_runbook.get("runbook_ok")) if policy_signature_runbook and policy_signature_runbook.get("runbook_ok") is not None else None,
+            "policy_signature_runbook_budget_ok": bool(policy_signature_runbook.get("budget_ok")) if policy_signature_runbook and policy_signature_runbook.get("budget_ok") is not None else None,
+            "policy_signature_runbook_policy_ok": bool(policy_signature_runbook.get("policy_ok")) if policy_signature_runbook and policy_signature_runbook.get("policy_ok") is not None else None,
+            "policy_signature_runbook_recommended_action": policy_signature_runbook.get("recommended_action") if policy_signature_runbook else None,
+            "policy_tamper_runbook_ok": bool(policy_tamper_runbook.get("runbook_ok")) if policy_tamper_runbook and policy_tamper_runbook.get("runbook_ok") is not None else None,
+            "policy_tamper_runbook_budget_ok": bool(policy_tamper_runbook.get("budget_ok")) if policy_tamper_runbook and policy_tamper_runbook.get("budget_ok") is not None else None,
+            "policy_tamper_runbook_policy_tamper_ok": bool(policy_tamper_runbook.get("policy_tamper_ok")) if policy_tamper_runbook and policy_tamper_runbook.get("policy_tamper_ok") is not None else None,
+            "policy_tamper_runbook_tamper_detected": bool(policy_tamper_runbook.get("tamper_detected")) if policy_tamper_runbook and policy_tamper_runbook.get("tamper_detected") is not None else None,
+            "policy_tamper_runbook_recommended_action": policy_tamper_runbook.get("recommended_action") if policy_tamper_runbook else None,
             "chaos_network_partition_ok": bool(network_partition.get("ok")) if network_partition else None,
             "chaos_network_partition_method": (
                 (network_partition.get("scenario", {}) or {}).get("applied_isolation_method")
@@ -263,6 +282,17 @@ report = {
                 if redpanda_bounce
                 else None
             ),
+            "network_partition_runbook_ok": bool(network_partition_runbook.get("runbook_ok")) if network_partition_runbook and network_partition_runbook.get("runbook_ok") is not None else None,
+            "network_partition_runbook_budget_ok": bool(network_partition_runbook.get("budget_ok")) if network_partition_runbook and network_partition_runbook.get("budget_ok") is not None else None,
+            "network_partition_runbook_method": network_partition_runbook.get("applied_isolation_method") if network_partition_runbook else None,
+            "network_partition_runbook_during_reachable": network_partition_runbook.get("during_partition_broker_reachable") if network_partition_runbook else None,
+            "network_partition_runbook_recommended_action": network_partition_runbook.get("recommended_action") if network_partition_runbook else None,
+            "redpanda_bounce_runbook_ok": bool(redpanda_bounce_runbook.get("runbook_ok")) if redpanda_bounce_runbook and redpanda_bounce_runbook.get("runbook_ok") is not None else None,
+            "redpanda_bounce_runbook_budget_ok": bool(redpanda_bounce_runbook.get("budget_ok")) if redpanda_bounce_runbook and redpanda_bounce_runbook.get("budget_ok") is not None else None,
+            "redpanda_bounce_runbook_during_reachable": redpanda_bounce_runbook.get("during_stop_broker_reachable") if redpanda_bounce_runbook else None,
+            "redpanda_bounce_runbook_after_recovery_reachable": redpanda_bounce_runbook.get("after_restart_broker_reachable") if redpanda_bounce_runbook else None,
+            "redpanda_bounce_runbook_post_recovery_consume_ok": redpanda_bounce_runbook.get("post_restart_consume_ok") if redpanda_bounce_runbook else None,
+            "redpanda_bounce_runbook_recommended_action": redpanda_bounce_runbook.get("recommended_action") if redpanda_bounce_runbook else None,
             "adversarial_ok": bool(adversarial.get("ok")) if adversarial else None,
             "adversarial_failed_step_count": (
                 len([s for s in (adversarial.get("steps", []) or []) if isinstance(s, dict) and s.get("status") == "fail"])
@@ -281,6 +311,12 @@ report = {
                 if adversarial
                 else None
             ),
+            "adversarial_runbook_ok": bool(adversarial_runbook.get("runbook_ok")) if adversarial_runbook and adversarial_runbook.get("runbook_ok") is not None else None,
+            "adversarial_runbook_budget_ok": bool(adversarial_runbook.get("budget_ok")) if adversarial_runbook and adversarial_runbook.get("budget_ok") is not None else None,
+            "adversarial_runbook_failed_step_count": int(adversarial_runbook.get("failed_step_count")) if adversarial_runbook and adversarial_runbook.get("failed_step_count") is not None else None,
+            "adversarial_runbook_skipped_step_count": int(adversarial_runbook.get("skipped_step_count")) if adversarial_runbook and adversarial_runbook.get("skipped_step_count") is not None else None,
+            "adversarial_runbook_exactly_once_status": adversarial_runbook.get("exactly_once_status") if adversarial_runbook else None,
+            "adversarial_runbook_recommended_action": adversarial_runbook.get("recommended_action") if adversarial_runbook else None,
             "exactly_once_runbook_proof_ok": bool(exactly_once_runbook.get("proof_ok")) if exactly_once_runbook else None,
             "exactly_once_runbook_proof_repeats": int(exactly_once_runbook.get("proof_repeats")) if exactly_once_runbook and exactly_once_runbook.get("proof_repeats") is not None else None,
             "exactly_once_runbook_ok": bool(exactly_once_runbook.get("runbook_ok")) if exactly_once_runbook and exactly_once_runbook.get("runbook_ok") is not None else None,
@@ -360,6 +396,11 @@ report = {
         "network_partition": "build/chaos/network-partition-latest.json",
         "redpanda_bounce": "build/chaos/redpanda-broker-bounce-latest.json",
         "adversarial": "build/adversarial/adversarial-tests-latest.json",
+        "policy_signature_runbook": "build/runbooks/policy-signature-latest.json",
+        "policy_tamper_runbook": "build/runbooks/policy-tamper-latest.json",
+        "network_partition_runbook": "build/runbooks/network-partition-latest.json",
+        "redpanda_bounce_runbook": "build/runbooks/redpanda-broker-bounce-latest.json",
+        "adversarial_runbook": "build/runbooks/adversarial-reliability-latest.json",
         "exactly_once_runbook": "build/runbooks/exactly-once-million-latest.json",
         "mapping_integrity_runbook": "build/runbooks/mapping-integrity-latest.json",
         "mapping_coverage_runbook": "build/runbooks/mapping-coverage-latest.json",

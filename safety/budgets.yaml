@@ -136,6 +136,19 @@
       "mustBeOk": true,
       "mustDetectTamper": true
     },
+    "policySignatureRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRunbookOk": true
+    },
+    "policyTamperRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRunbookOk": true,
+      "mustDetectTamper": true
+    },
     "complianceEvidence": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -214,6 +227,30 @@
       "mustBeOk": true,
       "mustPassSteps": ["policy_smoke", "ws_smoke", "ws_resume_smoke", "prove_candles", "snapshot_verify"],
       "allowExactlyOnceSkip": true
+    },
+    "networkPartitionRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRunbookOk": true,
+      "mustLoseConnectivity": true
+    },
+    "redpandaBounceRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRunbookOk": true,
+      "mustLoseConnectivity": true,
+      "mustRecoverConnectivity": true,
+      "mustConsumeAfterRecovery": true
+    },
+    "adversarialRunbook": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRunbookOk": true,
+      "maxFailedStepCount": 0,
+      "allowExactlyOnceSkip": true
     }
   },
   "reports": {
@@ -239,6 +276,8 @@
     "anomaly": "build/anomaly/anomaly-detector-latest.json",
     "policySmoke": "build/policy-smoke/policy-smoke-latest.json",
     "policyTamper": "build/policy/prove-policy-tamper-latest.json",
+    "policySignatureRunbook": "build/runbooks/policy-signature-latest.json",
+    "policyTamperRunbook": "build/runbooks/policy-tamper-latest.json",
     "complianceEvidence": "build/compliance/compliance-evidence-latest.json",
     "mappingIntegrity": "build/compliance/prove-mapping-integrity-latest.json",
     "mappingCoverage": "build/compliance/prove-mapping-coverage-latest.json",
@@ -248,6 +287,9 @@
     "proofHealth": "build/metrics/proof-health-latest.json",
     "chaosNetworkPartition": "build/chaos/network-partition-latest.json",
     "chaosRedpandaBounce": "build/chaos/redpanda-broker-bounce-latest.json",
-    "adversarial": "build/adversarial/adversarial-tests-latest.json"
+    "adversarial": "build/adversarial/adversarial-tests-latest.json",
+    "networkPartitionRunbook": "build/runbooks/network-partition-latest.json",
+    "redpandaBounceRunbook": "build/runbooks/redpanda-broker-bounce-latest.json",
+    "adversarialRunbook": "build/runbooks/adversarial-reliability-latest.json"
   }
 }

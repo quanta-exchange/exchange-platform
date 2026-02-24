@@ -277,6 +277,13 @@ policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest
 network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
 redpanda_bounce_latest = read_latest_json("build/chaos/redpanda-broker-bounce-latest.json")
 adversarial_latest = read_latest_json("build/adversarial/adversarial-tests-latest.json")
+policy_signature_runbook_latest = read_latest_json("build/runbooks/policy-signature-latest.json")
+policy_tamper_runbook_latest = read_latest_json("build/runbooks/policy-tamper-latest.json")
+network_partition_runbook_latest = read_latest_json("build/runbooks/network-partition-latest.json")
+redpanda_bounce_runbook_latest = read_latest_json(
+    "build/runbooks/redpanda-broker-bounce-latest.json"
+)
+adversarial_runbook_latest = read_latest_json("build/runbooks/adversarial-reliability-latest.json")
 exactly_once_runbook_latest = read_latest_json("build/runbooks/exactly-once-million-latest.json")
 mapping_integrity_runbook_latest = read_latest_json("build/runbooks/mapping-integrity-latest.json")
 mapping_coverage_runbook_latest = read_latest_json("build/runbooks/mapping-coverage-latest.json")
@@ -512,6 +519,133 @@ report = {
                 "error": adversarial_latest.get("error"),
             },
             "runbooks": {
+                "policy_signature": {
+                    "present": policy_signature_runbook_latest.get("present", False),
+                    "path": policy_signature_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        policy_signature_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        policy_signature_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
+                    "policy_ok": (
+                        policy_signature_runbook_latest.get("payload") or {}
+                    ).get("policy_ok"),
+                    "policy_exit_code": (
+                        policy_signature_runbook_latest.get("payload") or {}
+                    ).get("policy_exit_code"),
+                    "recommended_action": (
+                        policy_signature_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": policy_signature_runbook_latest.get("error"),
+                },
+                "policy_tamper": {
+                    "present": policy_tamper_runbook_latest.get("present", False),
+                    "path": policy_tamper_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        policy_tamper_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        policy_tamper_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
+                    "policy_tamper_ok": (
+                        policy_tamper_runbook_latest.get("payload") or {}
+                    ).get("policy_tamper_ok"),
+                    "tamper_detected": (
+                        policy_tamper_runbook_latest.get("payload") or {}
+                    ).get("tamper_detected"),
+                    "policy_tamper_exit_code": (
+                        policy_tamper_runbook_latest.get("payload") or {}
+                    ).get("policy_tamper_exit_code"),
+                    "recommended_action": (
+                        policy_tamper_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": policy_tamper_runbook_latest.get("error"),
+                },
+                "network_partition": {
+                    "present": network_partition_runbook_latest.get("present", False),
+                    "path": network_partition_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        network_partition_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        network_partition_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
+                    "network_partition_ok": (
+                        network_partition_runbook_latest.get("payload") or {}
+                    ).get("network_partition_ok"),
+                    "applied_isolation_method": (
+                        network_partition_runbook_latest.get("payload") or {}
+                    ).get("applied_isolation_method"),
+                    "during_partition_broker_reachable": (
+                        network_partition_runbook_latest.get("payload") or {}
+                    ).get("during_partition_broker_reachable"),
+                    "network_partition_exit_code": (
+                        network_partition_runbook_latest.get("payload") or {}
+                    ).get("network_partition_exit_code"),
+                    "recommended_action": (
+                        network_partition_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": network_partition_runbook_latest.get("error"),
+                },
+                "redpanda_broker_bounce": {
+                    "present": redpanda_bounce_runbook_latest.get("present", False),
+                    "path": redpanda_bounce_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
+                    "redpanda_broker_bounce_ok": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("redpanda_broker_bounce_ok"),
+                    "during_stop_broker_reachable": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("during_stop_broker_reachable"),
+                    "after_restart_broker_reachable": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("after_restart_broker_reachable"),
+                    "post_restart_consume_ok": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("post_restart_consume_ok"),
+                    "redpanda_broker_bounce_exit_code": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("redpanda_broker_bounce_exit_code"),
+                    "recommended_action": (
+                        redpanda_bounce_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": redpanda_bounce_runbook_latest.get("error"),
+                },
+                "adversarial_reliability": {
+                    "present": adversarial_runbook_latest.get("present", False),
+                    "path": adversarial_runbook_latest.get("path"),
+                    "runbook_ok": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("runbook_ok"),
+                    "budget_ok": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("budget_ok"),
+                    "adversarial_ok": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("adversarial_ok"),
+                    "failed_step_count": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("failed_step_count"),
+                    "skipped_step_count": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("skipped_step_count"),
+                    "exactly_once_status": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("exactly_once_status"),
+                    "adversarial_exit_code": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("adversarial_exit_code"),
+                    "recommended_action": (
+                        adversarial_runbook_latest.get("payload") or {}
+                    ).get("recommended_action"),
+                    "error": adversarial_runbook_latest.get("error"),
+                },
                 "exactly_once_million": {
                     "present": exactly_once_runbook_latest.get("present", False),
                     "path": exactly_once_runbook_latest.get("path"),
