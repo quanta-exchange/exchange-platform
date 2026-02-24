@@ -705,6 +705,7 @@ Success output includes:
 - report includes `require_full_mapping=true|false`
 - report includes mapping integrity fields: `missing_controls_count`, `duplicate_mapping_ids_count`, `unmapped_controls_count`, `unmapped_enforced_controls_count`, `mapping_coverage_ratio`
 - report includes stale-evidence summaries: `failed_enforced_stale_count`, `advisory_stale_count`
+- report includes release-gate context snapshots when available: `release_gate.*`, `release_gate_fallback_smoke.*`, `release_gate_context_ok`, `release_gate_fallback_smoke_ok`
 
 ### 19.1) Mapping integrity proof
 ```bash

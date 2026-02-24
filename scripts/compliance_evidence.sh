@@ -50,7 +50,7 @@ TS_ID="$(date -u +"%Y%m%dT%H%M%SZ")"
 REPORT_FILE="$OUT_DIR/compliance-evidence-${TS_ID}.json"
 LATEST_FILE="$OUT_DIR/compliance-evidence-latest.json"
 
-python3 - "$MAPPING_FILE" "$CONTROLS_REPORT" "$REPORT_FILE" "$REQUIRE_FULL_MAPPING" <<'PY'
+python3 - "$MAPPING_FILE" "$CONTROLS_REPORT" "$REPORT_FILE" "$REQUIRE_FULL_MAPPING" "$ROOT_DIR" <<'PY'
 import json
 import pathlib
 import sys
@@ -61,12 +61,20 @@ mapping_file = pathlib.Path(sys.argv[1]).resolve()
 controls_file = pathlib.Path(sys.argv[2]).resolve()
 report_file = pathlib.Path(sys.argv[3]).resolve()
 require_full_mapping = sys.argv[4].strip().lower() == "true"
+root_dir = pathlib.Path(sys.argv[5]).resolve()
 
 with open(mapping_file, "r", encoding="utf-8") as f:
     mappings = json.load(f).get("mappings", [])
 
 with open(controls_file, "r", encoding="utf-8") as f:
     controls_payload = json.load(f)
+
+
+def load_optional_json(path: pathlib.Path):
+    if not path.exists():
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 controls_by_id = {r.get("id"): r for r in controls_payload.get("results", [])}
 control_ids = {cid for cid in controls_by_id.keys() if cid}
@@ -132,6 +140,27 @@ mapping_coverage_ratio = (
     else 1.0
 )
 
+release_gate_path = root_dir / "build/release-gate/release-gate-latest.json"
+release_gate_payload = load_optional_json(release_gate_path)
+release_gate_missing = list((release_gate_payload or {}).get("runbook_context_missing", []) or [])
+release_gate_context_ok = None
+if release_gate_payload is not None:
+    release_gate_context_ok = bool(
+        (release_gate_payload or {}).get("runbook_context_backfill_ok")
+    )
+
+release_gate_fallback_path = (
+    root_dir
+    / "build/release-gate-smoke/release-gate-fallback-smoke-latest.json"
+)
+release_gate_fallback_payload = load_optional_json(release_gate_fallback_path)
+release_gate_fallback_missing = list(
+    (release_gate_fallback_payload or {}).get("missing_fields", []) or []
+)
+release_gate_fallback_ok = None
+if release_gate_fallback_payload is not None:
+    release_gate_fallback_ok = bool((release_gate_fallback_payload or {}).get("ok"))
+
 payload = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "ok": (
@@ -163,6 +192,29 @@ payload = {
     "advisory_stale_controls": advisory_stale_controls,
     "advisory_stale_count": len(advisory_stale_controls),
     "controls_report_source": str(controls_file),
+    "release_gate": {
+        "path": str(release_gate_path),
+        "present": release_gate_payload is not None,
+        "ok": (release_gate_payload or {}).get("ok"),
+        "require_runbook_context": (release_gate_payload or {}).get(
+            "require_runbook_context"
+        ),
+        "runbook_context_backfill_ok": (release_gate_payload or {}).get(
+            "runbook_context_backfill_ok"
+        ),
+        "runbook_context_missing_count": len(release_gate_missing),
+    },
+    "release_gate_fallback_smoke": {
+        "path": str(release_gate_fallback_path),
+        "present": release_gate_fallback_payload is not None,
+        "ok": (release_gate_fallback_payload or {}).get("ok"),
+        "used_release_gate_embedded_check": (
+            release_gate_fallback_payload or {}
+        ).get("used_release_gate_embedded_check"),
+        "missing_fields_count": len(release_gate_fallback_missing),
+    },
+    "release_gate_context_ok": release_gate_context_ok,
+    "release_gate_fallback_smoke_ok": release_gate_fallback_ok,
     "mappings": rows,
 }
 
