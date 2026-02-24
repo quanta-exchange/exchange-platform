@@ -304,6 +304,9 @@ fi
 if ! run_step "safety-budget" "$ROOT_DIR/scripts/safety_budget_check.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "prove-release-gate-context" "$ROOT_DIR/scripts/prove_release_gate_context.sh" --allow-missing --allow-require-runbook-context-false; then
+  HAS_FAILURE=true
+fi
 if ! run_step "runbook-budget-failure" "$ROOT_DIR/runbooks/budget_failure.sh"; then
   HAS_FAILURE=true
 fi
@@ -405,6 +408,7 @@ TRANSPARENCY_LOG="$LOG_DIR/transparency-report.log"
 PROOF_HEALTH_METRICS_LOG="$LOG_DIR/proof-health-metrics.log"
 ACCESS_REVIEW_LOG="$LOG_DIR/access-review.log"
 SAFETY_BUDGET_LOG="$LOG_DIR/safety-budget.log"
+PROVE_RELEASE_GATE_CONTEXT_LOG="$LOG_DIR/prove-release-gate-context.log"
 BUDGET_FAILURE_RUNBOOK_LOG="$LOG_DIR/runbook-budget-failure.log"
 POLICY_SIGNATURE_RUNBOOK_LOG="$LOG_DIR/runbook-policy-signature.log"
 POLICY_TAMPER_RUNBOOK_LOG="$LOG_DIR/runbook-policy-tamper.log"
@@ -459,6 +463,7 @@ TRANSPARENCY_REPORT="$(extract_value "transparency_report_file" "$TRANSPARENCY_L
 PROOF_HEALTH_METRICS_REPORT="$(extract_value "proof_health_metrics_report" "$PROOF_HEALTH_METRICS_LOG")"
 ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG")"
 SAFETY_BUDGET_REPORT="$(extract_value "safety_budget_report" "$SAFETY_BUDGET_LOG")"
+PROVE_RELEASE_GATE_CONTEXT_REPORT="$(extract_value "prove_release_gate_context_report" "$PROVE_RELEASE_GATE_CONTEXT_LOG")"
 BUDGET_FAILURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$BUDGET_FAILURE_RUNBOOK_LOG")"
 POLICY_SIGNATURE_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$POLICY_SIGNATURE_RUNBOOK_LOG")"
 POLICY_TAMPER_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$POLICY_TAMPER_RUNBOOK_LOG")"
@@ -702,6 +707,25 @@ summary = {
 
 with open(summary_path, "w", encoding="utf-8") as f:
     json.dump(summary, f, indent=2, sort_keys=True)
+    f.write("\n")
+PY
+
+python3 - "$SUMMARY_JSON" "$PROVE_RELEASE_GATE_CONTEXT_REPORT" <<'PY'
+import json
+import pathlib
+import sys
+
+summary_path = pathlib.Path(sys.argv[1]).resolve()
+proof_report = sys.argv[2]
+
+with open(summary_path, "r", encoding="utf-8") as f:
+    payload = json.load(f)
+
+artifacts = payload.setdefault("artifacts", {})
+artifacts["prove_release_gate_context_report"] = proof_report or None
+
+with open(summary_path, "w", encoding="utf-8") as f:
+    json.dump(payload, f, indent=2, sort_keys=True)
     f.write("\n")
 PY
 
