@@ -59,7 +59,7 @@ extract_value() {
   fi
 
   SUMMARY_FILE="$OUT_DIR/adversarial-reliability-summary.json"
-  python3 - "$SUMMARY_FILE" "$ADVERSARIAL_REPORT" "$ADVERSARIAL_CODE" "$BUDGET_OK" <<'PY'
+  python3 - "$SUMMARY_FILE" "$ADVERSARIAL_REPORT" "$ADVERSARIAL_CODE" "$BUDGET_OK" "$RUNBOOK_ALLOW_ADVERSARIAL_FAIL" "$RUNBOOK_ALLOW_BUDGET_FAIL" <<'PY'
 import json
 import pathlib
 import sys
@@ -69,6 +69,8 @@ summary_file = pathlib.Path(sys.argv[1]).resolve()
 adversarial_report = pathlib.Path(sys.argv[2]).resolve()
 adversarial_exit_code = int(sys.argv[3])
 budget_ok = sys.argv[4].lower() == "true"
+allow_adversarial_fail = sys.argv[5].lower() == "true"
+allow_budget_fail = sys.argv[6].lower() == "true"
 
 payload = {}
 if adversarial_report.exists():
@@ -99,12 +101,19 @@ if adversarial_exit_code != 0:
 elif not budget_ok:
     recommendation = "RUN_BUDGET_FAILURE_RUNBOOK"
 
+adversarial_ok = bool(payload.get("ok", False)) if payload else False
+runbook_ok = (
+    ((adversarial_exit_code == 0) and adversarial_ok) or allow_adversarial_fail
+) and (budget_ok or allow_budget_fail)
+
 summary = {
     "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "runbook_ok": True,
+    "runbook_ok": runbook_ok,
+    "allow_adversarial_fail": allow_adversarial_fail,
+    "allow_budget_fail": allow_budget_fail,
     "adversarial_report": str(adversarial_report),
     "adversarial_exit_code": adversarial_exit_code,
-    "adversarial_ok": bool(payload.get("ok", False)) if payload else False,
+    "adversarial_ok": adversarial_ok,
     "failed_steps": failed_steps,
     "failed_step_count": len(failed_steps),
     "skipped_steps": skipped_steps,
@@ -138,23 +147,24 @@ with open(sys.argv[1], "r", encoding="utf-8") as f:
 print(int(payload.get("failed_step_count", 0)))
 PY
   )"
+  SUMMARY_RUNBOOK_OK="$(
+    python3 - "$SUMMARY_FILE" <<'PY'
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    payload = json.load(f)
+print("true" if payload.get("runbook_ok") else "false")
+PY
+  )"
 
   "$ROOT_DIR/scripts/system_status.sh" --out-dir "$OUT_DIR" --report-name "status-after.json" || true
 
   echo "adversarial_failed_step_count=$FAILED_STEP_COUNT"
   echo "adversarial_recommended_action=$RECOMMENDED_ACTION"
-  RUNBOOK_OK=true
-  if [[ "$ADVERSARIAL_CODE" -ne 0 && "$RUNBOOK_ALLOW_ADVERSARIAL_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
-  if [[ "$BUDGET_OK" != "true" && "$RUNBOOK_ALLOW_BUDGET_FAIL" != "true" ]]; then
-    RUNBOOK_OK=false
-  fi
-
-  echo "runbook_adversarial_reliability_ok=$RUNBOOK_OK"
+  echo "runbook_adversarial_reliability_ok=$SUMMARY_RUNBOOK_OK"
   echo "runbook_output_dir=$OUT_DIR"
 
-  if [[ "$RUNBOOK_OK" != "true" ]]; then
+  if [[ "$SUMMARY_RUNBOOK_OK" != "true" ]]; then
     exit 1
   fi
 } | tee "$LOG_FILE"
