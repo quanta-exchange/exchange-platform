@@ -92,6 +92,7 @@ fi
 if [[ "$RUN_EXTENDED_CHECKS" == "true" ]]; then
   run_cmd "exactly-once-stress" ./scripts/exactly_once_stress.sh
   run_cmd "prove-idempotency" ./scripts/prove_idempotency_scope.sh
+  run_cmd "prove-idempotency-key-format" ./scripts/prove_idempotency_key_format.sh
   run_cmd "prove-latch-approval" ./scripts/prove_latch_approval.sh
   run_cmd "reconciliation-smoke" ./scripts/smoke_reconciliation_safety.sh
   run_cmd "chaos-replay" ./scripts/chaos_replay.sh
@@ -135,6 +136,7 @@ declare -a OPTIONAL_EXTENDED_EVIDENCE=(
   "build/exactly-once/exactly-once-stress.json"
   "build/exactly-once/prove-exactly-once-million-latest.json"
   "build/idempotency/prove-idempotency-latest.json"
+  "build/idempotency/prove-idempotency-key-format-latest.json"
   "build/latch/prove-latch-approval-latest.json"
   "build/safety/prove-budget-freshness-latest.json"
   "build/reconciliation/smoke-reconciliation-safety.json"

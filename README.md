@@ -241,7 +241,7 @@ make load-all   # runs smoke -> 10k -> 50k and writes combined report
 ./scripts/invariants.sh
 ./scripts/snapshot_verify.sh
 make safety-case
-# optional full safety-case proof set (exactly-once + idempotency-scope + latch-approval + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
+# optional full safety-case proof set (exactly-once + idempotency-scope + idempotency-key-format + latch-approval + reconciliation + chaos + determinism + breakers + service-mode matrix 포함)
 make safety-case-extended
 ```
 `load-*` profiles assume Trading Core is reachable (`EDGE_CORE_ADDR`, default `localhost:50051`).  
@@ -500,7 +500,7 @@ VERIFICATION_STARTUP_ALLOW_CORE_FAIL=true ./scripts/verification_factory.sh --ru
 Success output includes:
 - `verification_summary=build/verification/<timestamp>/verification-summary.json`
 - `verification_ok=true|false`
-- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_exactly_once_runbook=true|false`, `run_mapping_integrity_runbook=true|false`, `run_idempotency_latch_runbook=true|false`, `run_proof_health_runbook=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `exactly_once_runbook_dir`, `mapping_integrity_runbook_dir`, `idempotency_latch_runbook_dir`, `proof_health_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_idempotency_report`, `prove_latch_approval_report`, `prove_exactly_once_million_report`, `prove_mapping_integrity_report`, `proof_health_metrics_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
+- summary includes `run_load_profiles=true|false`, `run_startup_guardrails=true|false`, `run_change_workflow=true|false`, `run_policy_signature=true|false`, `run_policy_tamper=true|false`, `run_network_partition=true|false`, `run_redpanda_bounce=true|false`, `run_exactly_once_runbook=true|false`, `run_mapping_integrity_runbook=true|false`, `run_idempotency_latch_runbook=true|false`, `run_proof_health_runbook=true|false`, `run_determinism=true|false`, `run_exactly_once_million=true|false`, `run_adversarial=true|false`, `compliance_require_full_mapping=true|false` and optional artifacts (`load_all_report`, `startup_guardrails_runbook_dir`, `change_workflow_runbook_dir`, `policy_signature_runbook_dir`, `policy_tamper_runbook_dir`, `network_partition_runbook_dir`, `redpanda_bounce_runbook_dir`, `exactly_once_runbook_dir`, `mapping_integrity_runbook_dir`, `idempotency_latch_runbook_dir`, `proof_health_runbook_dir`, `policy_smoke_report`, `prove_policy_tamper_report`, `prove_determinism_report`, `prove_idempotency_report`, `prove_idempotency_key_format_report`, `prove_latch_approval_report`, `prove_exactly_once_million_report`, `prove_mapping_integrity_report`, `proof_health_metrics_report`, `adversarial_runbook_dir`, `adversarial_tests_report`, `budget_failure_runbook_dir`, `verify_change_audit_chain_report`, `prove_controls_freshness_report`, `prove_budget_freshness_report`, `anomaly_detector_report`)
 
 ### 15) Signed policy smoke
 ```bash
@@ -1231,7 +1231,7 @@ Market order liquidity policy (v1):
   - load smoke report
   - DR rehearsal report
   - `make safety-case` artifact bundle + integrity hash
-  - `make safety-case-extended` for exactly-once/idempotency-scope/latch-approval/reconciliation/chaos/determinism evidence 포함 번들
+  - `make safety-case-extended` for exactly-once/idempotency-scope/idempotency-key-format/latch-approval/reconciliation/chaos/determinism evidence 포함 번들
 
 ## Service endpoints (local)
 - Edge Gateway: `http://localhost:8081`
