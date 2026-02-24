@@ -579,6 +579,11 @@
       "controlId": "CTRL-116",
       "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
       "description": "Runbook-as-code exists for idempotency-key-format failure drills and is integrated into verification/release/status/transparency/safety-budget/proof-health/assurance contexts for deterministic remediation evidence"
+    },
+    {
+      "controlId": "CTRL-117",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Release-gate runbook-context backfill integrity and fallback smoke evidence are surfaced in status/transparency/assurance artifacts so promotion decisions detect missing runbook context deterministically"
     }
   ]
 }

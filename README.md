@@ -455,6 +455,7 @@ Success output includes:
 - `assurance_pack_ok=true|false`
 - evidence index includes high-risk runbook summaries (`exactly-once`, `mapping-integrity`, `idempotency-latch`, `proof-health`) and `build/metrics/proof-health-latest.json` when present
 - evidence index includes `idempotency-key-format` runbook summary when present
+- evidence index includes `build/release-gate/release-gate-latest.json` and `build/release-gate-smoke/release-gate-fallback-smoke-latest.json` when present
 
 ### 13) Controls check (controls catalog gate)
 ```bash

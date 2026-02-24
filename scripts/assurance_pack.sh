@@ -122,6 +122,8 @@ evidence = [
     {"id": "idempotency_key_format_runbook_summary", "path": pathlib.Path("build/runbooks/idempotency-key-format-latest.json"), "required": False},
     {"id": "proof_health_runbook_summary", "path": pathlib.Path("build/runbooks/proof-health-latest.json"), "required": False},
     {"id": "proof_health", "path": pathlib.Path("build/metrics/proof-health-latest.json"), "required": False},
+    {"id": "release_gate", "path": pathlib.Path("build/release-gate/release-gate-latest.json"), "required": False},
+    {"id": "release_gate_fallback_smoke", "path": pathlib.Path("build/release-gate-smoke/release-gate-fallback-smoke-latest.json"), "required": False},
     {"id": "mapping_coverage", "path": pathlib.Path("build/compliance/prove-mapping-coverage-latest.json"), "required": False},
     {"id": "mapping_coverage_metrics", "path": pathlib.Path("build/metrics/mapping-coverage-latest.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
@@ -211,6 +213,7 @@ pack = {
         {"id": "G38", "text": "Mapping-coverage metrics artifact exports coverage health ratios/counts and runbook action hints for deterministic alerting and release-governance decisions."},
         {"id": "G39", "text": "Idempotency-Key format policy proof validates create/cancel command rejection and normalization behavior to prevent malformed replay keys from entering order paths."},
         {"id": "G40", "text": "Idempotency-Key format runbook evidence preserves deterministic incident diagnostics and remediation guidance for malformed idempotency-key policy regressions."},
+        {"id": "G41", "text": "Release-gate evidence captures runbook-context backfill integrity and fallback smoke outcomes so governance reports can detect missing runbook context before promotion."},
     ],
 }
 
