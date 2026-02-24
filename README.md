@@ -445,6 +445,7 @@ Success output includes:
 - `assurance_pack_json=build/assurance/<timestamp>/assurance-pack.json`
 - `assurance_pack_markdown=build/assurance/<timestamp>/assurance-pack.md`
 - `assurance_pack_ok=true|false`
+- evidence index includes high-risk runbook summaries (`exactly-once`, `mapping-integrity`, `idempotency-latch`, `proof-health`) and `build/metrics/proof-health-latest.json` when present
 
 ### 13) Controls check (controls catalog gate)
 ```bash

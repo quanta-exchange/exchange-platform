@@ -549,6 +549,11 @@
       "controlId": "CTRL-110",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "Proof-health artifacts expose overall/missing/failing counters and are budgeted/alerted so release trust and on-call routing react deterministically to missing or failed proofs"
+    },
+    {
+      "controlId": "CTRL-111",
+      "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
+      "description": "Assurance pack indexes high-risk runbook summaries and proof-health artifacts so external audits can reconstruct deterministic remediation outcomes from one evidence bundle"
     }
   ]
 }

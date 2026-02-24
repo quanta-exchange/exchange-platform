@@ -673,6 +673,12 @@
       "title": "Proof health reports expose missing/failing counts and overall health for alerting and release-budget checks",
       "enforced": false,
       "required_evidence": ["scripts/proof_health_metrics.sh", "infra/observability/proof-alert-rules.example.yml", "scripts/release_gate.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/system_status.sh", "scripts/transparency_report.sh", "README.md"]
+    },
+    {
+      "id": "CTRL-111",
+      "title": "Assurance pack indexes high-risk runbook summaries and proof-health artifacts for audit-ready safety evidence",
+      "enforced": false,
+      "required_evidence": ["scripts/assurance_pack.sh", "build/runbooks/exactly-once-million-latest.json", "build/runbooks/mapping-integrity-latest.json", "build/runbooks/idempotency-latch-latest.json", "build/runbooks/proof-health-latest.json", "build/metrics/proof-health-latest.json", "README.md"]
     }
   ]
 }
