@@ -54,3 +54,31 @@ groups:
         annotations:
           summary: "Runbook recommends follow-up action"
           description: "Runbook {{ $labels.runbook }} recommends {{ $labels.action }}."
+  - name: mapping-coverage-alerts
+    rules:
+      - alert: MappingCoverageMetricsExportFailed
+        expr: mapping_coverage_export_ok == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Mapping coverage metrics export failed"
+          description: "Latest mapping coverage metrics artifact could not be exported."
+
+      - alert: MappingCoverageDegraded
+        expr: mapping_coverage_overall_ok == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Mapping coverage health degraded"
+          description: "Coverage ratio or mapping integrity counters are out of threshold."
+
+      - alert: MappingCoverageRunbookActionRequired
+        expr: mapping_coverage_runbook_recommended_action{action!="NO_ACTION"} == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mapping coverage runbook follow-up required"
+          description: "Runbook recommends {{ $labels.action }} for mapping coverage remediation."

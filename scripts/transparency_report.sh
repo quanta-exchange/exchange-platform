@@ -57,6 +57,7 @@ controls_freshness = read_json("build/controls/prove-controls-freshness-latest.j
 compliance = read_json("build/compliance/compliance-evidence-latest.json")
 mapping_integrity = read_json("build/compliance/prove-mapping-integrity-latest.json")
 mapping_coverage = read_json("build/compliance/prove-mapping-coverage-latest.json")
+mapping_coverage_metrics = read_json("build/metrics/mapping-coverage-latest.json")
 audit_chain = read_json("build/audit/verify-audit-chain-latest.json")
 change_audit_chain = read_json("build/change-audit/verify-change-audit-chain-latest.json")
 pii_log_scan = read_json("build/security/pii-log-scan-latest.json")
@@ -94,6 +95,7 @@ sources = {
     "compliance": compliance,
     "mapping_integrity": mapping_integrity,
     "mapping_coverage": mapping_coverage,
+    "mapping_coverage_metrics": mapping_coverage_metrics,
     "audit_chain": audit_chain,
     "change_audit_chain": change_audit_chain,
     "pii_log_scan": pii_log_scan,
@@ -200,6 +202,15 @@ report = {
             "mapping_coverage_unmapped_enforced_controls_count": int(mapping_coverage.get("unmapped_enforced_controls_count")) if mapping_coverage and mapping_coverage.get("unmapped_enforced_controls_count") is not None else None,
             "mapping_coverage_duplicate_control_ids_count": int(mapping_coverage.get("duplicate_control_ids_count")) if mapping_coverage and mapping_coverage.get("duplicate_control_ids_count") is not None else None,
             "mapping_coverage_duplicate_mapping_ids_count": int(mapping_coverage.get("duplicate_mapping_ids_count")) if mapping_coverage and mapping_coverage.get("duplicate_mapping_ids_count") is not None else None,
+            "mapping_coverage_metrics_ok": bool(mapping_coverage_metrics.get("ok")) if mapping_coverage_metrics else None,
+            "mapping_coverage_metrics_health_ok": bool(mapping_coverage_metrics.get("health_ok")) if mapping_coverage_metrics else None,
+            "mapping_coverage_metrics_export_ok": bool(mapping_coverage_metrics.get("export_ok")) if mapping_coverage_metrics else None,
+            "mapping_coverage_metrics_ratio": float(mapping_coverage_metrics.get("mapping_coverage_ratio")) if mapping_coverage_metrics and mapping_coverage_metrics.get("mapping_coverage_ratio") is not None else None,
+            "mapping_coverage_metrics_missing_controls_count": int(mapping_coverage_metrics.get("missing_controls_count")) if mapping_coverage_metrics and mapping_coverage_metrics.get("missing_controls_count") is not None else None,
+            "mapping_coverage_metrics_unmapped_enforced_controls_count": int(mapping_coverage_metrics.get("unmapped_enforced_controls_count")) if mapping_coverage_metrics and mapping_coverage_metrics.get("unmapped_enforced_controls_count") is not None else None,
+            "mapping_coverage_metrics_duplicate_control_ids_count": int(mapping_coverage_metrics.get("duplicate_control_ids_count")) if mapping_coverage_metrics and mapping_coverage_metrics.get("duplicate_control_ids_count") is not None else None,
+            "mapping_coverage_metrics_duplicate_mapping_ids_count": int(mapping_coverage_metrics.get("duplicate_mapping_ids_count")) if mapping_coverage_metrics and mapping_coverage_metrics.get("duplicate_mapping_ids_count") is not None else None,
+            "mapping_coverage_metrics_runbook_recommended_action": mapping_coverage_metrics.get("runbook_recommended_action") if mapping_coverage_metrics else None,
             "audit_chain_ok": bool(audit_chain.get("ok")) if audit_chain else None,
             "audit_chain_mode": audit_chain.get("mode") if audit_chain else None,
             "change_audit_chain_ok": bool(change_audit_chain.get("ok")) if change_audit_chain else None,
@@ -312,6 +323,7 @@ report = {
         "compliance": "build/compliance/compliance-evidence-latest.json",
         "mapping_integrity": "build/compliance/prove-mapping-integrity-latest.json",
         "mapping_coverage": "build/compliance/prove-mapping-coverage-latest.json",
+        "mapping_coverage_metrics": "build/metrics/mapping-coverage-latest.json",
         "audit_chain": "build/audit/verify-audit-chain-latest.json",
         "change_audit_chain": "build/change-audit/verify-change-audit-chain-latest.json",
         "pii_log_scan": "build/security/pii-log-scan-latest.json",

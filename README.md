@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/mapping-coverage-runbook/idempotency-latch-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->mapping-integrity->mapping-coverage->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/mapping-coverage-runbook/idempotency-latch-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->mapping-integrity->mapping-coverage->mapping-coverage-metrics->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -51,6 +51,7 @@ scripts/
   compliance_evidence.sh  # G36 controls-to-framework evidence pack
   transparency_report.sh  # G34 public transparency report generator
   proof_health_metrics.sh # proof/runbook artifact health -> Prometheus textfile exporter
+  mapping_coverage_metrics.sh # mapping-coverage proof health -> Prometheus textfile exporter
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
   prove_idempotency_scope.sh # G4.1 idempotency scope/TTL proof runner
@@ -608,7 +609,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.evidence_pack`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`)
+- report includes `checks.compliance.evidence_pack`, `checks.compliance.mapping_coverage_proof`, `checks.compliance.mapping_coverage_metrics`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.mapping_coverage`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`, `mapping_coverage`, `mapping_coverage_metrics`)
 
 ### 17.1) Anomaly detector
 ```bash
@@ -731,7 +732,21 @@ Success output includes:
 - command success/exit is tied to `export_ok`; operational degradation is read from `ok`/`health_ok`
 - alert examples: `infra/observability/proof-alert-rules.example.yml`
 
-### 20) External replay demo
+### 20.2) Mapping coverage metrics exporter
+```bash
+make mapping-coverage-metrics
+```
+Success output includes:
+- `mapping_coverage_metrics_report=build/metrics/mapping-coverage-<timestamp>.json`
+- `mapping_coverage_metrics_latest=build/metrics/mapping-coverage-latest.json`
+- `mapping_coverage_metrics_prom=build/metrics/mapping-coverage-<timestamp>.prom`
+- `mapping_coverage_metrics_prom_latest=build/metrics/mapping-coverage-latest.prom`
+- `mapping_coverage_metrics_ok=true|false`
+- json includes `ok`, `health_ok`, `export_ok`, `mapping_coverage_ratio`, `missing_controls_count`, `unmapped_enforced_controls_count`, `duplicate_control_ids_count`, `duplicate_mapping_ids_count`, `runbook_recommended_action`
+- command success/exit is tied to `export_ok`; operational degradation is read from `ok`/`health_ok`
+- alert examples: `infra/observability/proof-alert-rules.example.yml`
+
+### 20.3) External replay demo
 ```bash
 make external-replay-demo
 ```
@@ -997,6 +1012,7 @@ Outputs:
 - report includes proof-health context: `proof_health_ok`, `proof_health_health_ok`, `proof_health_missing_count`, `proof_health_failing_count`
 - report includes mapping-integrity context: `mapping_integrity_ok`
 - report includes mapping-coverage context: `mapping_coverage_ok`, `mapping_coverage_ratio`, `mapping_coverage_missing_controls_count`, `mapping_coverage_unmapped_controls_count`, `mapping_coverage_duplicate_control_ids_count`, `mapping_coverage_duplicate_mapping_ids_count`
+- report includes mapping-coverage metrics context: `mapping_coverage_metrics_ok`, `mapping_coverage_metrics_health_ok`, `mapping_coverage_metrics_ratio`, `mapping_coverage_metrics_missing_controls_count`, `mapping_coverage_metrics_unmapped_enforced_controls_count`, `mapping_coverage_metrics_duplicate_control_ids_count`, `mapping_coverage_metrics_duplicate_mapping_ids_count`, `mapping_coverage_metrics_runbook_recommended_action`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 
 ### 26) Legal archive capture + verify

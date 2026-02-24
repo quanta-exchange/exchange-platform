@@ -269,6 +269,14 @@ mapping_coverage_missing_controls_count = None
 mapping_coverage_unmapped_controls_count = None
 mapping_coverage_duplicate_mapping_ids_count = None
 mapping_coverage_duplicate_control_ids_count = None
+mapping_coverage_metrics_ok = None
+mapping_coverage_metrics_health_ok = None
+mapping_coverage_metrics_ratio = None
+mapping_coverage_metrics_missing_controls_count = None
+mapping_coverage_metrics_unmapped_enforced_controls_count = None
+mapping_coverage_metrics_duplicate_control_ids_count = None
+mapping_coverage_metrics_duplicate_mapping_ids_count = None
+mapping_coverage_metrics_runbook_recommended_action = None
 mapping_integrity_runbook_proof_ok = None
 mapping_integrity_runbook_recommended_action = None
 mapping_coverage_runbook_proof_ok = None
@@ -472,6 +480,50 @@ if mapping_coverage_report_path:
         mapping_coverage_duplicate_control_ids_count = mapping_coverage_payload.get(
             "duplicate_control_ids_count"
         )
+mapping_coverage_metrics_report_path = summary.get("artifacts", {}).get(
+    "mapping_coverage_metrics_report"
+)
+mapping_coverage_metrics_candidate = None
+if mapping_coverage_metrics_report_path:
+    mapping_coverage_metrics_candidate = pathlib.Path(mapping_coverage_metrics_report_path)
+    if not mapping_coverage_metrics_candidate.is_absolute():
+        mapping_coverage_metrics_candidate = (
+            verification_summary.parent / mapping_coverage_metrics_candidate
+        ).resolve()
+else:
+    # Fallback for legacy verification summaries that do not expose the metrics artifact.
+    repo_root = verification_summary.parents[2]
+    mapping_coverage_metrics_candidate = (
+        repo_root / "build/metrics/mapping-coverage-latest.json"
+    )
+
+if mapping_coverage_metrics_candidate and mapping_coverage_metrics_candidate.exists():
+    with open(mapping_coverage_metrics_candidate, "r", encoding="utf-8") as f:
+        mapping_coverage_metrics_payload = json.load(f)
+    mapping_coverage_metrics_ok = bool(mapping_coverage_metrics_payload.get("ok", False))
+    mapping_coverage_metrics_health_ok = bool(
+        mapping_coverage_metrics_payload.get(
+            "health_ok", mapping_coverage_metrics_ok
+        )
+    )
+    mapping_coverage_metrics_ratio = mapping_coverage_metrics_payload.get(
+        "mapping_coverage_ratio"
+    )
+    mapping_coverage_metrics_missing_controls_count = (
+        mapping_coverage_metrics_payload.get("missing_controls_count")
+    )
+    mapping_coverage_metrics_unmapped_enforced_controls_count = (
+        mapping_coverage_metrics_payload.get("unmapped_enforced_controls_count")
+    )
+    mapping_coverage_metrics_duplicate_control_ids_count = (
+        mapping_coverage_metrics_payload.get("duplicate_control_ids_count")
+    )
+    mapping_coverage_metrics_duplicate_mapping_ids_count = (
+        mapping_coverage_metrics_payload.get("duplicate_mapping_ids_count")
+    )
+    mapping_coverage_metrics_runbook_recommended_action = (
+        mapping_coverage_metrics_payload.get("runbook_recommended_action")
+    )
 proof_health_report_path = summary.get("artifacts", {}).get("proof_health_metrics_report")
 if proof_health_report_path:
     candidate = pathlib.Path(proof_health_report_path)
@@ -629,6 +681,14 @@ payload = {
     "mapping_coverage_unmapped_controls_count": mapping_coverage_unmapped_controls_count,
     "mapping_coverage_duplicate_mapping_ids_count": mapping_coverage_duplicate_mapping_ids_count,
     "mapping_coverage_duplicate_control_ids_count": mapping_coverage_duplicate_control_ids_count,
+    "mapping_coverage_metrics_ok": mapping_coverage_metrics_ok,
+    "mapping_coverage_metrics_health_ok": mapping_coverage_metrics_health_ok,
+    "mapping_coverage_metrics_ratio": mapping_coverage_metrics_ratio,
+    "mapping_coverage_metrics_missing_controls_count": mapping_coverage_metrics_missing_controls_count,
+    "mapping_coverage_metrics_unmapped_enforced_controls_count": mapping_coverage_metrics_unmapped_enforced_controls_count,
+    "mapping_coverage_metrics_duplicate_control_ids_count": mapping_coverage_metrics_duplicate_control_ids_count,
+    "mapping_coverage_metrics_duplicate_mapping_ids_count": mapping_coverage_metrics_duplicate_mapping_ids_count,
+    "mapping_coverage_metrics_runbook_recommended_action": mapping_coverage_metrics_runbook_recommended_action,
     "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
     "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook_recommended_action,
     "mapping_coverage_runbook_proof_ok": mapping_coverage_runbook_proof_ok,

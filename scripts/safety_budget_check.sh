@@ -503,6 +503,63 @@ for key, budget in budgets.items():
         if must_ok and not runbook_proof_ok:
             entry["ok"] = False
             entry["details"].append("mapping_coverage_runbook_proof_not_ok")
+    elif key == "mappingCoverageMetrics":
+        must_ok = bool(budget.get("mustBeOk", True))
+        metrics_ok = bool(payload.get("ok", False))
+        metrics_health_ok = bool(payload.get("health_ok", metrics_ok))
+        mapping_coverage_ratio = float(payload.get("mapping_coverage_ratio", 0.0) or 0.0)
+        missing_controls_count = int(payload.get("missing_controls_count", 0) or 0)
+        unmapped_enforced_controls_count = int(
+            payload.get("unmapped_enforced_controls_count", 0) or 0
+        )
+        duplicate_control_ids_count = int(
+            payload.get("duplicate_control_ids_count", 0) or 0
+        )
+        duplicate_mapping_ids_count = int(
+            payload.get("duplicate_mapping_ids_count", 0) or 0
+        )
+        if must_ok and not metrics_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_coverage_metrics_not_ok")
+        if bool(budget.get("mustHealthBeOk", True)) and not metrics_health_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_coverage_metrics_health_not_ok")
+        min_coverage_ratio = float(budget.get("minCoverageRatio", 1.0))
+        if mapping_coverage_ratio < min_coverage_ratio:
+            entry["ok"] = False
+            entry["details"].append(
+                f"mapping_coverage_metrics_ratio={mapping_coverage_ratio} < {min_coverage_ratio}"
+            )
+        max_missing_controls = int(budget.get("maxMissingControls", 0))
+        if missing_controls_count > max_missing_controls:
+            entry["ok"] = False
+            entry["details"].append(
+                "mapping_coverage_metrics_missing_controls_count="
+                f"{missing_controls_count} > {max_missing_controls}"
+            )
+        max_unmapped_enforced_controls = int(
+            budget.get("maxUnmappedEnforcedControls", 0)
+        )
+        if unmapped_enforced_controls_count > max_unmapped_enforced_controls:
+            entry["ok"] = False
+            entry["details"].append(
+                "mapping_coverage_metrics_unmapped_enforced_controls_count="
+                f"{unmapped_enforced_controls_count} > {max_unmapped_enforced_controls}"
+            )
+        max_duplicate_control_ids = int(budget.get("maxDuplicateControlIds", 0))
+        if duplicate_control_ids_count > max_duplicate_control_ids:
+            entry["ok"] = False
+            entry["details"].append(
+                "mapping_coverage_metrics_duplicate_control_ids_count="
+                f"{duplicate_control_ids_count} > {max_duplicate_control_ids}"
+            )
+        max_duplicate_mapping_ids = int(budget.get("maxDuplicateMappingIds", 0))
+        if duplicate_mapping_ids_count > max_duplicate_mapping_ids:
+            entry["ok"] = False
+            entry["details"].append(
+                "mapping_coverage_metrics_duplicate_mapping_ids_count="
+                f"{duplicate_mapping_ids_count} > {max_duplicate_mapping_ids}"
+            )
     elif key == "proofHealth":
         must_ok = bool(budget.get("mustBeOk", True))
         proof_health_ok = bool(payload.get("ok", False))

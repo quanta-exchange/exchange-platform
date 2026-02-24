@@ -120,6 +120,7 @@ evidence = [
     {"id": "proof_health_runbook_summary", "path": pathlib.Path("build/runbooks/proof-health-latest.json"), "required": False},
     {"id": "proof_health", "path": pathlib.Path("build/metrics/proof-health-latest.json"), "required": False},
     {"id": "mapping_coverage", "path": pathlib.Path("build/compliance/prove-mapping-coverage-latest.json"), "required": False},
+    {"id": "mapping_coverage_metrics", "path": pathlib.Path("build/metrics/mapping-coverage-latest.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},
     {"id": "redpanda_bounce", "path": pathlib.Path("build/chaos/redpanda-broker-bounce-latest.json"), "required": False},
@@ -203,6 +204,7 @@ pack = {
         {"id": "G35", "text": "Proof-health artifact status captures missing/failing proof counts to support deterministic release and on-call trust decisions."},
         {"id": "G36", "text": "Mapping-coverage proof independently validates controls-to-mapping completeness and duplicate-ID absence so compliance drift is surfaced before release trust decisions."},
         {"id": "G37", "text": "Mapping-coverage runbook evidence proves strict/full and partial coverage modes behave deterministically under synthetic unmapped-control probes."},
+        {"id": "G38", "text": "Mapping-coverage metrics artifact exports coverage health ratios/counts and runbook action hints for deterministic alerting and release-governance decisions."},
     ],
 }
 

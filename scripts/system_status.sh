@@ -268,6 +268,7 @@ pii_scan_latest = read_latest_json("build/security/pii-log-scan-latest.json")
 safety_budget_latest = read_latest_json("build/safety/safety-budget-latest.json")
 budget_freshness_latest = read_latest_json("build/safety/prove-budget-freshness-latest.json")
 proof_health_latest = read_latest_json("build/metrics/proof-health-latest.json")
+mapping_coverage_metrics_latest = read_latest_json("build/metrics/mapping-coverage-latest.json")
 policy_smoke_latest = read_latest_json("build/policy-smoke/policy-smoke-latest.json")
 policy_tamper_latest = read_latest_json("build/policy/prove-policy-tamper-latest.json")
 network_partition_latest = read_latest_json("build/chaos/network-partition-latest.json")
@@ -355,6 +356,36 @@ report = {
                     mapping_coverage_latest.get("payload") or {}
                 ).get("duplicate_mapping_ids_count"),
                 "error": mapping_coverage_latest.get("error"),
+            },
+            "mapping_coverage_metrics": {
+                "present": mapping_coverage_metrics_latest.get("present", False),
+                "path": mapping_coverage_metrics_latest.get("path"),
+                "ok": (mapping_coverage_metrics_latest.get("payload") or {}).get("ok"),
+                "health_ok": (mapping_coverage_metrics_latest.get("payload") or {}).get(
+                    "health_ok"
+                ),
+                "export_ok": (mapping_coverage_metrics_latest.get("payload") or {}).get(
+                    "export_ok"
+                ),
+                "mapping_coverage_ratio": (
+                    mapping_coverage_metrics_latest.get("payload") or {}
+                ).get("mapping_coverage_ratio"),
+                "missing_controls_count": (
+                    mapping_coverage_metrics_latest.get("payload") or {}
+                ).get("missing_controls_count"),
+                "unmapped_enforced_controls_count": (
+                    mapping_coverage_metrics_latest.get("payload") or {}
+                ).get("unmapped_enforced_controls_count"),
+                "duplicate_control_ids_count": (
+                    mapping_coverage_metrics_latest.get("payload") or {}
+                ).get("duplicate_control_ids_count"),
+                "duplicate_mapping_ids_count": (
+                    mapping_coverage_metrics_latest.get("payload") or {}
+                ).get("duplicate_mapping_ids_count"),
+                "runbook_recommended_action": (
+                    mapping_coverage_metrics_latest.get("payload") or {}
+                ).get("runbook_recommended_action"),
+                "error": mapping_coverage_metrics_latest.get("error"),
             },
             "controls": {
                 "present": controls_latest.get("present", False),
@@ -697,6 +728,36 @@ report = {
                         mapping_coverage_latest.get("payload") or {}
                     ).get("duplicate_mapping_ids_count"),
                     "error": mapping_coverage_latest.get("error"),
+                },
+                "mapping_coverage_metrics": {
+                    "present": mapping_coverage_metrics_latest.get("present", False),
+                    "path": mapping_coverage_metrics_latest.get("path"),
+                    "ok": (mapping_coverage_metrics_latest.get("payload") or {}).get("ok"),
+                    "health_ok": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("health_ok"),
+                    "export_ok": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("export_ok"),
+                    "mapping_coverage_ratio": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("mapping_coverage_ratio"),
+                    "missing_controls_count": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("missing_controls_count"),
+                    "unmapped_enforced_controls_count": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("unmapped_enforced_controls_count"),
+                    "duplicate_control_ids_count": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("duplicate_control_ids_count"),
+                    "duplicate_mapping_ids_count": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("duplicate_mapping_ids_count"),
+                    "runbook_recommended_action": (
+                        mapping_coverage_metrics_latest.get("payload") or {}
+                    ).get("runbook_recommended_action"),
+                    "error": mapping_coverage_metrics_latest.get("error"),
                 },
             },
         },
