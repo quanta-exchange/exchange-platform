@@ -23,6 +23,9 @@ Base: `/v1`
   - `X-TS` (epoch ms)
   - `X-SIGNATURE`
   - `Idempotency-Key` (required for write)
+    - charset: `A-Z a-z 0-9 . _ : -`
+    - max length: `128`
+    - invalid format returns `400 invalid Idempotency-Key`
 - Signature canonical string:
   - `METHOD + "\\n" + PATH + "\\n" + X-TS + "\\n" + RAW_BODY`
 - Replay defense:

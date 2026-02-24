@@ -53,6 +53,7 @@ const (
 	defaultBookDepth      = 20
 	defaultCandleInterval = "1m"
 	consumerErrorGraceMs  = int64(10_000)
+	maxIdempotencyKeyLen  = 128
 )
 
 var wsSymbolPattern = regexp.MustCompile("^[A-Z0-9]{2,16}-[A-Z0-9]{2,16}$")
@@ -1908,15 +1909,40 @@ func sessionLookupToken(rawToken string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func normalizeIdempotencyKey(raw string) (string, bool) {
+	key := strings.TrimSpace(raw)
+	if key == "" {
+		return "", false
+	}
+	if len(key) > maxIdempotencyKeyLen {
+		return "", false
+	}
+	for _, ch := range key {
+		if (ch >= 'a' && ch <= 'z') ||
+			(ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') ||
+			ch == '.' || ch == '_' || ch == ':' || ch == '-' {
+			continue
+		}
+		return "", false
+	}
+	return key, true
+}
+
 func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	apiKey := s.apiKeyFromContext(r.Context())
 	if apiKey == "" {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login required"})
 		return
 	}
-	idemKey := r.Header.Get("Idempotency-Key")
-	if idemKey == "" {
+	idemRaw := r.Header.Get("Idempotency-Key")
+	if strings.TrimSpace(idemRaw) == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Idempotency-Key required"})
+		return
+	}
+	idemKey, ok := normalizeIdempotencyKey(idemRaw)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid Idempotency-Key"})
 		return
 	}
 	rawBody, err := io.ReadAll(r.Body)
@@ -2073,9 +2099,14 @@ func (s *Server) handleCancelOrder(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "login required"})
 		return
 	}
-	idemKey := r.Header.Get("Idempotency-Key")
-	if idemKey == "" {
+	idemRaw := r.Header.Get("Idempotency-Key")
+	if strings.TrimSpace(idemRaw) == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Idempotency-Key required"})
+		return
+	}
+	idemKey, ok := normalizeIdempotencyKey(idemRaw)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid Idempotency-Key"})
 		return
 	}
 	orderID := chi.URLParam(r, "orderId")

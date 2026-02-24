@@ -1325,6 +1325,9 @@ Request headers for trading endpoints:
 - `X-TS` (epoch ms)
 - `X-SIGNATURE` (HMAC-SHA256 of `METHOD\nPATH\nX-TS\nBODY`)
 - `Idempotency-Key` (POST/DELETE required)
+  - allowed charset: `A-Z a-z 0-9 . _ : -`
+  - max length: `128`
+  - invalid keys are rejected with `400 invalid Idempotency-Key`
 
 Auth hardening notes:
 - unknown `X-API-KEY` 요청도 client(IP) 단위 rate-limit가 적용되어 key enumeration 시도를 제한합니다.

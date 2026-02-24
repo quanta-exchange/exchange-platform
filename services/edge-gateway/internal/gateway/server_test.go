@@ -356,6 +356,27 @@ func TestCreateOrderRequiresIdempotencyKey(t *testing.T) {
 	}
 }
 
+func TestCreateOrderRejectsInvalidIdempotencyKey(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	body := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1","timeInForce":"GTC"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(body))
+	for k, vals := range signHeaders(t, http.MethodPost, "/v1/orders", body, time.Now().UnixMilli()) {
+		req.Header[k] = vals
+	}
+	req.Header.Set("Idempotency-Key", "bad/key")
+	w := httptest.NewRecorder()
+
+	s.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 got %d body=%s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "invalid Idempotency-Key") {
+		t.Fatalf("expected invalid idempotency key body, got %s", w.Body.String())
+	}
+}
+
 func TestCreateOrderIsIdempotent(t *testing.T) {
 	s, cleanup := newTestServer(t)
 	defer cleanup()
@@ -789,6 +810,47 @@ func TestCancelOrderFailsClosedWhenSymbolIsMissing(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "order_symbol_missing") {
 		t.Fatalf("expected order_symbol_missing body, got %s", w.Body.String())
+	}
+}
+
+func TestCancelOrderRejectsInvalidIdempotencyKey(t *testing.T) {
+	s, cleanup := newTestServer(t)
+	defer cleanup()
+
+	createBody := []byte(`{"symbol":"BTC-KRW","side":"BUY","type":"LIMIT","price":"100","qty":"1","timeInForce":"GTC"}`)
+	createReq := httptest.NewRequest(http.MethodPost, "/v1/orders", bytes.NewReader(createBody))
+	for k, vals := range signHeaders(t, http.MethodPost, "/v1/orders", createBody, time.Now().UnixMilli()) {
+		createReq.Header[k] = vals
+	}
+	createReq.Header.Set("Idempotency-Key", "idem-cancel-invalid-create")
+	createW := httptest.NewRecorder()
+	s.Router().ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusOK {
+		t.Fatalf("create failed: %d body=%s", createW.Code, createW.Body.String())
+	}
+
+	var created OrderResponse
+	if err := json.Unmarshal(createW.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+	if created.OrderID == "" {
+		t.Fatalf("expected non-empty order id")
+	}
+
+	cancelPath := "/v1/orders/" + created.OrderID
+	cancelReq := httptest.NewRequest(http.MethodDelete, cancelPath, nil)
+	for k, vals := range signHeaders(t, http.MethodDelete, cancelPath, nil, time.Now().UnixMilli()+1) {
+		cancelReq.Header[k] = vals
+	}
+	cancelReq.Header.Set("Idempotency-Key", "bad/key")
+	cancelW := httptest.NewRecorder()
+	s.Router().ServeHTTP(cancelW, cancelReq)
+
+	if cancelW.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 got %d body=%s", cancelW.Code, cancelW.Body.String())
+	}
+	if !strings.Contains(cancelW.Body.String(), "invalid Idempotency-Key") {
+		t.Fatalf("expected invalid idempotency key body, got %s", cancelW.Body.String())
 	}
 }
 
@@ -1521,6 +1583,24 @@ func TestOriginAllowed(t *testing.T) {
 	}
 	if originAllowed(allowed, "") {
 		t.Fatalf("expected empty origin to fail when allowlist is configured")
+	}
+}
+
+func TestNormalizeIdempotencyKey(t *testing.T) {
+	if key, ok := normalizeIdempotencyKey("idem-OK_1:2.3"); !ok || key != "idem-OK_1:2.3" {
+		t.Fatalf("expected valid key normalization, got key=%q ok=%v", key, ok)
+	}
+	if _, ok := normalizeIdempotencyKey(""); ok {
+		t.Fatalf("expected empty key to be invalid")
+	}
+	if _, ok := normalizeIdempotencyKey("bad key"); ok {
+		t.Fatalf("expected whitespace key to be invalid")
+	}
+	if _, ok := normalizeIdempotencyKey("bad/key"); ok {
+		t.Fatalf("expected slash key to be invalid")
+	}
+	if _, ok := normalizeIdempotencyKey(strings.Repeat("a", maxIdempotencyKeyLen+1)); ok {
+		t.Fatalf("expected too-long key to be invalid")
 	}
 }
 
