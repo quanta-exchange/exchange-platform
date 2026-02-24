@@ -434,6 +434,63 @@ for key, budget in budgets.items():
         if must_ok and not mapping_integrity_ok:
             entry["ok"] = False
             entry["details"].append("mapping_integrity_not_ok")
+    elif key == "mappingCoverage":
+        must_ok = bool(budget.get("mustBeOk", True))
+        mapping_coverage_ok = bool(payload.get("ok", False))
+        require_full_coverage = bool(payload.get("require_full_coverage", False))
+        mapping_coverage_ratio = float(payload.get("mapping_coverage_ratio", 0.0) or 0.0)
+        duplicate_control_ids_count = int(payload.get("duplicate_control_ids_count", 0) or 0)
+        duplicate_mapping_ids_count = int(payload.get("duplicate_mapping_ids_count", 0) or 0)
+        missing_controls_count = int(payload.get("missing_controls_count", 0) or 0)
+        unmapped_controls_count = int(payload.get("unmapped_controls_count", 0) or 0)
+        unmapped_enforced_controls_count = int(
+            payload.get("unmapped_enforced_controls_count", 0) or 0
+        )
+        if must_ok and not mapping_coverage_ok:
+            entry["ok"] = False
+            entry["details"].append("mapping_coverage_not_ok")
+        if bool(budget.get("mustRequireFullCoverage", True)) and not require_full_coverage:
+            entry["ok"] = False
+            entry["details"].append("mapping_coverage_not_full_coverage_mode")
+        min_coverage_ratio = float(budget.get("minCoverageRatio", 1.0))
+        if mapping_coverage_ratio < min_coverage_ratio:
+            entry["ok"] = False
+            entry["details"].append(
+                f"mapping_coverage_ratio={mapping_coverage_ratio} < {min_coverage_ratio}"
+            )
+        max_duplicate_control_ids = int(budget.get("maxDuplicateControlIds", 0))
+        if duplicate_control_ids_count > max_duplicate_control_ids:
+            entry["ok"] = False
+            entry["details"].append(
+                "mapping_coverage_duplicate_control_ids_count="
+                f"{duplicate_control_ids_count} > {max_duplicate_control_ids}"
+            )
+        max_duplicate_mapping_ids = int(budget.get("maxDuplicateMappingIds", 0))
+        if duplicate_mapping_ids_count > max_duplicate_mapping_ids:
+            entry["ok"] = False
+            entry["details"].append(
+                "mapping_coverage_duplicate_mapping_ids_count="
+                f"{duplicate_mapping_ids_count} > {max_duplicate_mapping_ids}"
+            )
+        max_missing_controls = int(budget.get("maxMissingControls", 0))
+        if missing_controls_count > max_missing_controls:
+            entry["ok"] = False
+            entry["details"].append(
+                f"mapping_coverage_missing_controls_count={missing_controls_count} > {max_missing_controls}"
+            )
+        max_unmapped_controls = int(budget.get("maxUnmappedControls", 0))
+        if unmapped_controls_count > max_unmapped_controls:
+            entry["ok"] = False
+            entry["details"].append(
+                f"mapping_coverage_unmapped_controls_count={unmapped_controls_count} > {max_unmapped_controls}"
+            )
+        max_unmapped_enforced_controls = int(budget.get("maxUnmappedEnforcedControls", 0))
+        if unmapped_enforced_controls_count > max_unmapped_enforced_controls:
+            entry["ok"] = False
+            entry["details"].append(
+                "mapping_coverage_unmapped_enforced_controls_count="
+                f"{unmapped_enforced_controls_count} > {max_unmapped_enforced_controls}"
+            )
     elif key == "mappingIntegrityRunbook":
         must_ok = bool(budget.get("mustBeOk", True))
         runbook_proof_ok = bool(payload.get("proof_ok", False))

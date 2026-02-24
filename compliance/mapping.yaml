@@ -554,6 +554,11 @@
       "controlId": "CTRL-111",
       "frameworks": ["SOC2:CC8.1", "ISO27001:A.5.37"],
       "description": "Assurance pack indexes high-risk runbook summaries and proof-health artifacts so external audits can reconstruct deterministic remediation outcomes from one evidence bundle"
+    },
+    {
+      "controlId": "CTRL-112",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Independent mapping-coverage proof is wired into verification/release/safety-budget/status/transparency/proof-health and assurance flows so controls-to-framework drift is surfaced before release trust decisions"
     }
   ]
 }

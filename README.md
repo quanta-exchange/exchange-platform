@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/idempotency-latch-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/idempotency-latch-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->mapping-integrity->mapping-coverage->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -59,6 +59,7 @@ scripts/
   prove_controls_freshness.sh # G32 controls evidence freshness proof runner
   prove_exactly_once_million.sh # G4.1 million-duplicate exactly-once proof runner
   prove_mapping_integrity.sh # G36 compliance mapping integrity proof runner
+  prove_mapping_coverage.sh  # G36 controls↔mapping coverage proof runner
   prove_breakers.sh       # G35 circuit-breaker proof runner
   prove_candles.sh        # G17 candle correctness proof runner
   snapshot_verify.sh      # G4.2 snapshot checksum + restore rehearsal verifier
@@ -675,6 +676,18 @@ Outputs:
 - `prove_mapping_integrity_ok=true|false`
 - proof checks duplicate mapping injection fails while baseline mapping succeeds
 
+### 19.2) Mapping coverage proof
+```bash
+make prove-mapping-coverage
+# optional diagnostic mode (allow unmapped non-enforced controls):
+./scripts/prove_mapping_coverage.sh --allow-partial-coverage
+```
+Outputs:
+- `prove_mapping_coverage_report=build/compliance/prove-mapping-coverage-<timestamp>.json`
+- `prove_mapping_coverage_latest=build/compliance/prove-mapping-coverage-latest.json`
+- `prove_mapping_coverage_ok=true|false`
+- report includes: `mapping_coverage_ratio`, `missing_controls_count`, `unmapped_controls_count`, `unmapped_enforced_controls_count`, `duplicate_control_ids_count`, `duplicate_mapping_ids_count`, `require_full_coverage`
+
 ### 20) Transparency report
 ```bash
 make transparency-report
@@ -684,7 +697,7 @@ Success output includes:
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
 - integrity summary includes `idempotency_scope_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
-- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `idempotency_latch_runbook`, `proof_health_runbook`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `controls_freshness_proof`, `budget_freshness_proof` proxies
+- governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `idempotency_latch_runbook`, `proof_health_runbook`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20.1) Proof health metrics exporter
 ```bash
@@ -948,6 +961,7 @@ Outputs:
 - report includes proof-health runbook context: `proof_health_runbook_proof_ok`, `proof_health_runbook_missing_count`, `proof_health_runbook_failing_count`, `proof_health_runbook_recommended_action`
 - report includes proof-health context: `proof_health_ok`, `proof_health_health_ok`, `proof_health_missing_count`, `proof_health_failing_count`
 - report includes mapping-integrity context: `mapping_integrity_ok`
+- report includes mapping-coverage context: `mapping_coverage_ok`, `mapping_coverage_ratio`, `mapping_coverage_missing_controls_count`, `mapping_coverage_unmapped_controls_count`, `mapping_coverage_duplicate_control_ids_count`, `mapping_coverage_duplicate_mapping_ids_count`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 
 ### 26) Legal archive capture + verify

@@ -252,6 +252,9 @@ compliance_latest = read_latest_json("build/compliance/compliance-evidence-lates
 mapping_integrity_latest = read_latest_json(
     "build/compliance/prove-mapping-integrity-latest.json"
 )
+mapping_coverage_latest = read_latest_json(
+    "build/compliance/prove-mapping-coverage-latest.json"
+)
 controls_freshness_latest = read_latest_json("build/controls/prove-controls-freshness-latest.json")
 determinism_latest = read_latest_json("build/determinism/prove-determinism-latest.json")
 idempotency_scope_latest = read_latest_json("build/idempotency/prove-idempotency-latest.json")
@@ -324,6 +327,33 @@ report = {
                     "mapping_coverage_ratio"
                 ),
                 "error": compliance_latest.get("error"),
+            },
+            "mapping_coverage_proof": {
+                "present": mapping_coverage_latest.get("present", False),
+                "path": mapping_coverage_latest.get("path"),
+                "ok": (mapping_coverage_latest.get("payload") or {}).get("ok"),
+                "require_full_coverage": (mapping_coverage_latest.get("payload") or {}).get(
+                    "require_full_coverage"
+                ),
+                "mapping_coverage_ratio": (mapping_coverage_latest.get("payload") or {}).get(
+                    "mapping_coverage_ratio"
+                ),
+                "missing_controls_count": (mapping_coverage_latest.get("payload") or {}).get(
+                    "missing_controls_count"
+                ),
+                "unmapped_controls_count": (mapping_coverage_latest.get("payload") or {}).get(
+                    "unmapped_controls_count"
+                ),
+                "unmapped_enforced_controls_count": (
+                    mapping_coverage_latest.get("payload") or {}
+                ).get("unmapped_enforced_controls_count"),
+                "duplicate_control_ids_count": (
+                    mapping_coverage_latest.get("payload") or {}
+                ).get("duplicate_control_ids_count"),
+                "duplicate_mapping_ids_count": (
+                    mapping_coverage_latest.get("payload") or {}
+                ).get("duplicate_mapping_ids_count"),
+                "error": mapping_coverage_latest.get("error"),
             },
             "controls": {
                 "present": controls_latest.get("present", False),
@@ -613,6 +643,30 @@ report = {
                     "path": mapping_integrity_latest.get("path"),
                     "ok": (mapping_integrity_latest.get("payload") or {}).get("ok"),
                     "error": mapping_integrity_latest.get("error"),
+                },
+                "mapping_coverage": {
+                    "present": mapping_coverage_latest.get("present", False),
+                    "path": mapping_coverage_latest.get("path"),
+                    "ok": (mapping_coverage_latest.get("payload") or {}).get("ok"),
+                    "mapping_coverage_ratio": (
+                        mapping_coverage_latest.get("payload") or {}
+                    ).get("mapping_coverage_ratio"),
+                    "missing_controls_count": (
+                        mapping_coverage_latest.get("payload") or {}
+                    ).get("missing_controls_count"),
+                    "unmapped_controls_count": (
+                        mapping_coverage_latest.get("payload") or {}
+                    ).get("unmapped_controls_count"),
+                    "unmapped_enforced_controls_count": (
+                        mapping_coverage_latest.get("payload") or {}
+                    ).get("unmapped_enforced_controls_count"),
+                    "duplicate_control_ids_count": (
+                        mapping_coverage_latest.get("payload") or {}
+                    ).get("duplicate_control_ids_count"),
+                    "duplicate_mapping_ids_count": (
+                        mapping_coverage_latest.get("payload") or {}
+                    ).get("duplicate_mapping_ids_count"),
+                    "error": mapping_coverage_latest.get("error"),
                 },
             },
         },

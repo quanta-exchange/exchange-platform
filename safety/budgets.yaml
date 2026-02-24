@@ -135,6 +135,18 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "mappingCoverage": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "mustRequireFullCoverage": true,
+      "minCoverageRatio": 1.0,
+      "maxDuplicateControlIds": 0,
+      "maxDuplicateMappingIds": 0,
+      "maxMissingControls": 0,
+      "maxUnmappedControls": 0,
+      "maxUnmappedEnforcedControls": 0
+    },
     "mappingIntegrityRunbook": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -193,6 +205,7 @@
     "policyTamper": "build/policy/prove-policy-tamper-latest.json",
     "complianceEvidence": "build/compliance/compliance-evidence-latest.json",
     "mappingIntegrity": "build/compliance/prove-mapping-integrity-latest.json",
+    "mappingCoverage": "build/compliance/prove-mapping-coverage-latest.json",
     "mappingIntegrityRunbook": "build/runbooks/mapping-integrity-latest.json",
     "proofHealth": "build/metrics/proof-health-latest.json",
     "chaosNetworkPartition": "build/chaos/network-partition-latest.json",

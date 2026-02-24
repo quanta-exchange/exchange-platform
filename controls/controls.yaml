@@ -679,6 +679,12 @@
       "title": "Assurance pack indexes high-risk runbook summaries and proof-health artifacts for audit-ready safety evidence",
       "enforced": false,
       "required_evidence": ["scripts/assurance_pack.sh", "build/runbooks/exactly-once-million-latest.json", "build/runbooks/mapping-integrity-latest.json", "build/runbooks/idempotency-latch-latest.json", "build/runbooks/proof-health-latest.json", "build/metrics/proof-health-latest.json", "README.md"]
+    },
+    {
+      "id": "CTRL-112",
+      "title": "Independent mapping-coverage proof is gated and surfaced across verification, release, safety budget, and observability reports",
+      "enforced": false,
+      "required_evidence": ["scripts/prove_mapping_coverage.sh", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/proof_health_metrics.sh", "scripts/assurance_pack.sh", "README.md", "Makefile"]
     }
   ]
 }

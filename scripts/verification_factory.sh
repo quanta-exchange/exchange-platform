@@ -273,6 +273,9 @@ fi
 if ! run_step "prove-mapping-integrity" "$ROOT_DIR/scripts/prove_mapping_integrity.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "prove-mapping-coverage" "$ROOT_DIR/scripts/prove_mapping_coverage.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "transparency-report" "$ROOT_DIR/scripts/transparency_report.sh"; then
   HAS_FAILURE=true
 fi
@@ -369,6 +372,7 @@ ADVERSARIAL_TESTS_LOG="$LOG_DIR/adversarial-tests.log"
 SHADOW_VERIFY_LOG="$LOG_DIR/shadow-verify.log"
 COMPLIANCE_LOG="$LOG_DIR/compliance-evidence.log"
 PROVE_MAPPING_INTEGRITY_LOG="$LOG_DIR/prove-mapping-integrity.log"
+PROVE_MAPPING_COVERAGE_LOG="$LOG_DIR/prove-mapping-coverage.log"
 TRANSPARENCY_LOG="$LOG_DIR/transparency-report.log"
 PROOF_HEALTH_METRICS_LOG="$LOG_DIR/proof-health-metrics.log"
 ACCESS_REVIEW_LOG="$LOG_DIR/access-review.log"
@@ -418,6 +422,7 @@ ADVERSARIAL_TESTS_REPORT="$(extract_value "adversarial_tests_latest" "$ADVERSARI
 SHADOW_VERIFY_REPORT="$(extract_value "shadow_verify_report" "$SHADOW_VERIFY_LOG")"
 COMPLIANCE_REPORT="$(extract_value "compliance_evidence_report" "$COMPLIANCE_LOG")"
 PROVE_MAPPING_INTEGRITY_REPORT="$(extract_value "prove_mapping_integrity_report" "$PROVE_MAPPING_INTEGRITY_LOG")"
+PROVE_MAPPING_COVERAGE_REPORT="$(extract_value "prove_mapping_coverage_report" "$PROVE_MAPPING_COVERAGE_LOG")"
 TRANSPARENCY_REPORT="$(extract_value "transparency_report_file" "$TRANSPARENCY_LOG")"
 PROOF_HEALTH_METRICS_REPORT="$(extract_value "proof_health_metrics_report" "$PROOF_HEALTH_METRICS_LOG")"
 ACCESS_REVIEW_REPORT="$(extract_value "access_review_report" "$ACCESS_REVIEW_LOG")"
@@ -434,7 +439,7 @@ PROOF_HEALTH_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$PROOF_HEALTH_RU
 ADVERSARIAL_RUNBOOK_DIR="$(extract_value "runbook_output_dir" "$ADVERSARIAL_RUNBOOK_LOG")"
 ASSURANCE_JSON="$(extract_value "assurance_pack_json" "$ASSURANCE_LOG")"
 
-python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_DETERMINISM_REPORT" "$PROVE_EXACTLY_ONCE_MILLION_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_NETWORK_PARTITION" "$NETWORK_PARTITION_RUNBOOK_DIR" "$RUN_REDPANDA_BOUNCE" "$REDPANDA_BOUNCE_RUNBOOK_DIR" "$RUN_EXACTLY_ONCE_RUNBOOK" "$EXACTLY_ONCE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" "$COMPLIANCE_REQUIRE_FULL_MAPPING" "$PROVE_MAPPING_INTEGRITY_REPORT" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$MAPPING_INTEGRITY_RUNBOOK_DIR" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$IDEMPOTENCY_LATCH_RUNBOOK_DIR" "$PROOF_HEALTH_METRICS_REPORT" "$RUN_PROOF_HEALTH_RUNBOOK" "$PROOF_HEALTH_RUNBOOK_DIR" <<'PY'
+python3 - "$SUMMARY_JSON" "$TS_ID" "$RUN_CHECKS" "$RUN_EXTENDED_CHECKS" "$RUN_LOAD_PROFILES" "$STEPS_TSV" "$SAFETY_MANIFEST" "$SAFETY_ARTIFACT" "$LOAD_ALL_REPORT" "$ARCHIVE_RANGE_MANIFEST" "$VERIFY_ARCHIVE_SHA" "$EXTERNAL_REPLAY_REPORT" "$POLICY_SMOKE_REPORT" "$PROVE_POLICY_TAMPER_REPORT" "$CONTROLS_REPORT" "$PROVE_CONTROLS_FRESHNESS_REPORT" "$PROVE_DETERMINISM_REPORT" "$PROVE_EXACTLY_ONCE_MILLION_REPORT" "$PROVE_IDEMPOTENCY_REPORT" "$PROVE_LATCH_APPROVAL_REPORT" "$PROVE_BUDGET_FRESHNESS_REPORT" "$MODEL_CHECK_REPORT" "$PROVE_BREAKERS_REPORT" "$PROVE_CANDLES_REPORT" "$SNAPSHOT_VERIFY_REPORT" "$VERIFY_SERVICE_MODES_REPORT" "$WS_RESUME_SMOKE_REPORT" "$ADVERSARIAL_TESTS_REPORT" "$SHADOW_VERIFY_REPORT" "$COMPLIANCE_REPORT" "$TRANSPARENCY_REPORT" "$ACCESS_REVIEW_REPORT" "$SAFETY_BUDGET_REPORT" "$ASSURANCE_JSON" "$RUN_STARTUP_GUARDRAILS" "$STARTUP_GUARDRAILS_RUNBOOK_DIR" "$RUN_CHANGE_WORKFLOW" "$CHANGE_WORKFLOW_RUNBOOK_DIR" "$BUDGET_FAILURE_RUNBOOK_DIR" "$RUN_POLICY_SIGNATURE" "$POLICY_SIGNATURE_RUNBOOK_DIR" "$RUN_POLICY_TAMPER" "$POLICY_TAMPER_RUNBOOK_DIR" "$RUN_NETWORK_PARTITION" "$NETWORK_PARTITION_RUNBOOK_DIR" "$RUN_REDPANDA_BOUNCE" "$REDPANDA_BOUNCE_RUNBOOK_DIR" "$RUN_EXACTLY_ONCE_RUNBOOK" "$EXACTLY_ONCE_RUNBOOK_DIR" "$RUN_ADVERSARIAL" "$ADVERSARIAL_RUNBOOK_DIR" "$RUN_DETERMINISM" "$RUN_EXACTLY_ONCE_MILLION" "$VERIFY_AUDIT_CHAIN_REPORT" "$VERIFY_CHANGE_AUDIT_CHAIN_REPORT" "$PII_LOG_SCAN_REPORT" "$ANOMALY_DETECTOR_REPORT" "$ANOMALY_SMOKE_REPORT" "$RBAC_SOD_REPORT" "$COMPLIANCE_REQUIRE_FULL_MAPPING" "$PROVE_MAPPING_INTEGRITY_REPORT" "$PROVE_MAPPING_COVERAGE_REPORT" "$RUN_MAPPING_INTEGRITY_RUNBOOK" "$MAPPING_INTEGRITY_RUNBOOK_DIR" "$RUN_IDEMPOTENCY_LATCH_RUNBOOK" "$IDEMPOTENCY_LATCH_RUNBOOK_DIR" "$PROOF_HEALTH_METRICS_REPORT" "$RUN_PROOF_HEALTH_RUNBOOK" "$PROOF_HEALTH_RUNBOOK_DIR" <<'PY'
 import json
 import sys
 
@@ -499,13 +504,14 @@ anomaly_smoke_report = sys.argv[58]
 rbac_sod_report = sys.argv[59]
 compliance_require_full_mapping = sys.argv[60].lower() == "true"
 prove_mapping_integrity_report = sys.argv[61]
-run_mapping_integrity_runbook = sys.argv[62].lower() == "true"
-mapping_integrity_runbook_dir = sys.argv[63]
-run_idempotency_latch_runbook = sys.argv[64].lower() == "true"
-idempotency_latch_runbook_dir = sys.argv[65]
-proof_health_metrics_report = sys.argv[66]
-run_proof_health_runbook = sys.argv[67].lower() == "true"
-proof_health_runbook_dir = sys.argv[68]
+prove_mapping_coverage_report = sys.argv[62]
+run_mapping_integrity_runbook = sys.argv[63].lower() == "true"
+mapping_integrity_runbook_dir = sys.argv[64]
+run_idempotency_latch_runbook = sys.argv[65].lower() == "true"
+idempotency_latch_runbook_dir = sys.argv[66]
+proof_health_metrics_report = sys.argv[67]
+run_proof_health_runbook = sys.argv[68].lower() == "true"
+proof_health_runbook_dir = sys.argv[69]
 
 steps = []
 ok = True
@@ -590,6 +596,7 @@ summary = {
         "shadow_verify_report": shadow_verify_report or None,
         "compliance_evidence_report": compliance_report or None,
         "prove_mapping_integrity_report": prove_mapping_integrity_report or None,
+        "prove_mapping_coverage_report": prove_mapping_coverage_report or None,
         "transparency_report": transparency_report or None,
         "proof_health_metrics_report": proof_health_metrics_report or None,
         "access_review_report": access_review_report or None,

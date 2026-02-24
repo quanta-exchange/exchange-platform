@@ -28,6 +28,7 @@ sources = {
     "latch_approval": "build/latch/prove-latch-approval-latest.json",
     "exactly_once_million": "build/exactly-once/prove-exactly-once-million-latest.json",
     "mapping_integrity": "build/compliance/prove-mapping-integrity-latest.json",
+    "mapping_coverage": "build/compliance/prove-mapping-coverage-latest.json",
     "runbook_exactly_once_million": "build/runbooks/exactly-once-million-latest.json",
     "runbook_mapping_integrity": "build/runbooks/mapping-integrity-latest.json",
     "runbook_idempotency_latch": "build/runbooks/idempotency-latch-latest.json",

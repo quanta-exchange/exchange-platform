@@ -254,6 +254,12 @@ exactly_once_runbook_proof_ok = None
 exactly_once_runbook_proof_repeats = None
 exactly_once_runbook_recommended_action = None
 mapping_integrity_ok = None
+mapping_coverage_ok = None
+mapping_coverage_ratio = None
+mapping_coverage_missing_controls_count = None
+mapping_coverage_unmapped_controls_count = None
+mapping_coverage_duplicate_mapping_ids_count = None
+mapping_coverage_duplicate_control_ids_count = None
 mapping_integrity_runbook_proof_ok = None
 mapping_integrity_runbook_recommended_action = None
 proof_health_ok = None
@@ -433,6 +439,28 @@ if mapping_integrity_report_path:
         with open(candidate, "r", encoding="utf-8") as f:
             mapping_integrity_payload = json.load(f)
         mapping_integrity_ok = bool(mapping_integrity_payload.get("ok", False))
+mapping_coverage_report_path = summary.get("artifacts", {}).get("prove_mapping_coverage_report")
+if mapping_coverage_report_path:
+    candidate = pathlib.Path(mapping_coverage_report_path)
+    if not candidate.is_absolute():
+        candidate = (verification_summary.parent / candidate).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as f:
+            mapping_coverage_payload = json.load(f)
+        mapping_coverage_ok = bool(mapping_coverage_payload.get("ok", False))
+        mapping_coverage_ratio = mapping_coverage_payload.get("mapping_coverage_ratio")
+        mapping_coverage_missing_controls_count = mapping_coverage_payload.get(
+            "missing_controls_count"
+        )
+        mapping_coverage_unmapped_controls_count = mapping_coverage_payload.get(
+            "unmapped_controls_count"
+        )
+        mapping_coverage_duplicate_mapping_ids_count = mapping_coverage_payload.get(
+            "duplicate_mapping_ids_count"
+        )
+        mapping_coverage_duplicate_control_ids_count = mapping_coverage_payload.get(
+            "duplicate_control_ids_count"
+        )
 proof_health_report_path = summary.get("artifacts", {}).get("proof_health_metrics_report")
 if proof_health_report_path:
     candidate = pathlib.Path(proof_health_report_path)
@@ -566,6 +594,12 @@ payload = {
     "exactly_once_runbook_proof_repeats": exactly_once_runbook_proof_repeats,
     "exactly_once_runbook_recommended_action": exactly_once_runbook_recommended_action,
     "mapping_integrity_ok": mapping_integrity_ok,
+    "mapping_coverage_ok": mapping_coverage_ok,
+    "mapping_coverage_ratio": mapping_coverage_ratio,
+    "mapping_coverage_missing_controls_count": mapping_coverage_missing_controls_count,
+    "mapping_coverage_unmapped_controls_count": mapping_coverage_unmapped_controls_count,
+    "mapping_coverage_duplicate_mapping_ids_count": mapping_coverage_duplicate_mapping_ids_count,
+    "mapping_coverage_duplicate_control_ids_count": mapping_coverage_duplicate_control_ids_count,
     "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
     "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook_recommended_action,
     "proof_health_ok": proof_health_ok,

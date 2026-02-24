@@ -116,6 +116,7 @@ evidence = [
     {"id": "idempotency_latch_runbook_summary", "path": pathlib.Path("build/runbooks/idempotency-latch-latest.json"), "required": False},
     {"id": "proof_health_runbook_summary", "path": pathlib.Path("build/runbooks/proof-health-latest.json"), "required": False},
     {"id": "proof_health", "path": pathlib.Path("build/metrics/proof-health-latest.json"), "required": False},
+    {"id": "mapping_coverage", "path": pathlib.Path("build/compliance/prove-mapping-coverage-latest.json"), "required": False},
     {"id": "reconciliation_smoke", "path": pathlib.Path("build/reconciliation/smoke-reconciliation-safety.json"), "required": False},
     {"id": "chaos_replay", "path": pathlib.Path("build/chaos/chaos-replay.json"), "required": False},
     {"id": "redpanda_bounce", "path": pathlib.Path("build/chaos/redpanda-broker-bounce-latest.json"), "required": False},
@@ -197,6 +198,7 @@ pack = {
         {"id": "G33", "text": "Redpanda broker-bounce drill confirms broker stop/restart creates temporary unavailability and recovers with post-restart consume success."},
         {"id": "G34", "text": "Assurance evidence indexes exactly-once/mapping-integrity/idempotency-latch/proof-health runbook summaries so deterministic remediation outcomes are preserved for audits."},
         {"id": "G35", "text": "Proof-health artifact status captures missing/failing proof counts to support deterministic release and on-call trust decisions."},
+        {"id": "G36", "text": "Mapping-coverage proof independently validates controls-to-mapping completeness and duplicate-ID absence so compliance drift is surfaced before release trust decisions."},
     ],
 }
 
