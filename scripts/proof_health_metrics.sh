@@ -25,6 +25,7 @@ json_file = pathlib.Path(sys.argv[3]).resolve()
 sources = {
     "determinism": "build/determinism/prove-determinism-latest.json",
     "idempotency_scope": "build/idempotency/prove-idempotency-latest.json",
+    "idempotency_key_format": "build/idempotency/prove-idempotency-key-format-latest.json",
     "latch_approval": "build/latch/prove-latch-approval-latest.json",
     "exactly_once_million": "build/exactly-once/prove-exactly-once-million-latest.json",
     "mapping_integrity": "build/compliance/prove-mapping-integrity-latest.json",

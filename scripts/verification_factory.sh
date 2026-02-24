@@ -242,6 +242,9 @@ fi
 if ! run_step "prove-idempotency" "$ROOT_DIR/scripts/prove_idempotency_scope.sh"; then
   HAS_FAILURE=true
 fi
+if ! run_step "prove-idempotency-key-format" "$ROOT_DIR/scripts/prove_idempotency_key_format.sh"; then
+  HAS_FAILURE=true
+fi
 if ! run_step "prove-latch-approval" "$ROOT_DIR/scripts/prove_latch_approval.sh"; then
   HAS_FAILURE=true
 fi

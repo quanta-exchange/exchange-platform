@@ -569,6 +569,11 @@
       "controlId": "CTRL-114",
       "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
       "description": "Dedicated mapping-coverage metrics are exported, budgeted, and alerted so coverage drift is observable through verification, release, and runtime monitoring flows"
+    },
+    {
+      "controlId": "CTRL-115",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.1.2"],
+      "description": "Idempotency-Key format proof verifies malformed key rejection and normalization behavior, and surfaces this control across verification/release/safety-budget/status/transparency/assurance evidence flows"
     }
   ]
 }

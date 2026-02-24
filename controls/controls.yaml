@@ -697,6 +697,12 @@
       "title": "Mapping coverage health is exported as dedicated metrics and budgeted in verification/release observability flows",
       "enforced": false,
       "required_evidence": ["scripts/mapping_coverage_metrics.sh", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/proof_health_metrics.sh", "scripts/assurance_pack.sh", "infra/observability/proof-alert-rules.example.yml", "README.md", "Makefile"]
+    },
+    {
+      "id": "CTRL-115",
+      "title": "Idempotency-Key format policy proof is executed and budgeted across verification/release/status/transparency/assurance flows",
+      "enforced": false,
+      "required_evidence": ["scripts/prove_idempotency_key_format.sh", "services/edge-gateway/internal/gateway/server.go", "services/edge-gateway/internal/gateway/server_test.go", "scripts/verification_factory.sh", "scripts/release_gate.sh", "scripts/safety_budget_check.sh", "safety/budgets.yaml", "scripts/system_status.sh", "scripts/transparency_report.sh", "scripts/proof_health_metrics.sh", "scripts/assurance_pack.sh", "README.md", "Makefile"]
     }
   ]
 }

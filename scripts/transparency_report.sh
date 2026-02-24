@@ -46,6 +46,7 @@ core_invariants = read_json("build/invariants/core-invariants.json")
 invariants_summary = read_json("build/invariants/invariants-summary.json")
 determinism = read_json("build/determinism/prove-determinism-latest.json")
 idempotency_scope = read_json("build/idempotency/prove-idempotency-latest.json")
+idempotency_key_format = read_json("build/idempotency/prove-idempotency-key-format-latest.json")
 latch_approval = read_json("build/latch/prove-latch-approval-latest.json")
 exactly_once_million = read_json("build/exactly-once/prove-exactly-once-million-latest.json")
 ws = read_json("build/ws/ws-smoke.json")
@@ -84,6 +85,7 @@ sources = {
     "invariants_summary": invariants_summary,
     "determinism": determinism,
     "idempotency_scope": idempotency_scope,
+    "idempotency_key_format": idempotency_key_format,
     "latch_approval": latch_approval,
     "exactly_once_million": exactly_once_million,
     "ws": ws,
@@ -172,6 +174,9 @@ report = {
             "determinism_executed_runs": int(determinism.get("executed_runs")) if determinism and determinism.get("executed_runs") is not None else None,
             "idempotency_scope_ok": bool(idempotency_scope.get("ok")) if idempotency_scope else None,
             "idempotency_scope_passed": int(idempotency_scope.get("passed")) if idempotency_scope and idempotency_scope.get("passed") is not None else None,
+            "idempotency_key_format_ok": bool(idempotency_key_format.get("ok")) if idempotency_key_format else None,
+            "idempotency_key_format_missing_tests_count": len((idempotency_key_format.get("missing_tests", []) or [])) if idempotency_key_format else None,
+            "idempotency_key_format_failed_tests_count": len((idempotency_key_format.get("failed_tests", []) or [])) if idempotency_key_format else None,
             "latch_approval_ok": bool(latch_approval.get("ok")) if latch_approval else None,
             "latch_approval_missing_tests_count": len((latch_approval.get("missing_tests", []) or [])) if latch_approval else None,
             "exactly_once_million_ok": bool(exactly_once_million.get("ok")) if exactly_once_million else None,
@@ -312,6 +317,7 @@ report = {
         "invariants_summary": "build/invariants/invariants-summary.json",
         "determinism": "build/determinism/prove-determinism-latest.json",
         "idempotency_scope": "build/idempotency/prove-idempotency-latest.json",
+        "idempotency_key_format": "build/idempotency/prove-idempotency-key-format-latest.json",
         "latch_approval": "build/latch/prove-latch-approval-latest.json",
         "exactly_once_million": "build/exactly-once/prove-exactly-once-million-latest.json",
         "ws": "build/ws/ws-smoke.json",

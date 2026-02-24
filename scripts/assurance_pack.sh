@@ -127,6 +127,7 @@ evidence = [
     {"id": "network_partition", "path": pathlib.Path("build/chaos/network-partition-latest.json"), "required": False},
     {"id": "determinism", "path": pathlib.Path("build/determinism/prove-determinism-latest.json"), "required": False},
     {"id": "idempotency_scope", "path": pathlib.Path("build/idempotency/prove-idempotency-latest.json"), "required": False},
+    {"id": "idempotency_key_format", "path": pathlib.Path("build/idempotency/prove-idempotency-key-format-latest.json"), "required": False},
     {"id": "latch_dual_approval", "path": pathlib.Path("build/latch/prove-latch-approval-latest.json"), "required": False},
     {"id": "budget_freshness", "path": pathlib.Path("build/safety/prove-budget-freshness-latest.json"), "required": False},
     {"id": "circuit_breakers", "path": pathlib.Path("build/breakers/prove-breakers-latest.json"), "required": False},
@@ -205,6 +206,7 @@ pack = {
         {"id": "G36", "text": "Mapping-coverage proof independently validates controls-to-mapping completeness and duplicate-ID absence so compliance drift is surfaced before release trust decisions."},
         {"id": "G37", "text": "Mapping-coverage runbook evidence proves strict/full and partial coverage modes behave deterministically under synthetic unmapped-control probes."},
         {"id": "G38", "text": "Mapping-coverage metrics artifact exports coverage health ratios/counts and runbook action hints for deterministic alerting and release-governance decisions."},
+        {"id": "G39", "text": "Idempotency-Key format policy proof validates create/cancel command rejection and normalization behavior to prevent malformed replay keys from entering order paths."},
     ],
 }
 

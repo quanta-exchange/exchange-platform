@@ -42,7 +42,7 @@ scripts/
   safety_case.sh          # I-0108 evidence bundle generator (base + extended evidence)
   assurance_pack.sh       # G31 assurance pack generator (claims + evidence index)
   controls_check.sh       # G32 controls catalog automated checker
-  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/mapping-coverage-runbook/idempotency-latch-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->mapping-integrity->mapping-coverage->mapping-coverage-metrics->transparency->access->budget->assurance)
+  verification_factory.sh # G33 continuous verification wrapper (optional load-all/startup/change/policy/policy-tamper/network-partition/redpanda-bounce/determinism/exactly-once-runbook/mapping-integrity-runbook/mapping-coverage-runbook/idempotency-latch-runbook/proof-health-runbook/exactly-once-million/adversarial-runbook + safety->policy-smoke->prove-policy-tamper->controls->controls-freshness->audit-chain->change-audit-chain->pii-scan->anomaly-detector->idempotency->idempotency-key-format->latch-approval->budget-freshness->model-check->breakers->candles->snapshot->service-modes->ws-resume-smoke->adversarial-tests->shadow-verify->compliance->mapping-integrity->mapping-coverage->mapping-coverage-metrics->transparency->access->budget->assurance)
   release_gate.sh         # G4.6 release blocking gate wrapper
   safety_budget_check.sh  # G31 safety budget checker
   anomaly_detector.sh     # G13 anomaly detector + alert webhook emitter
@@ -55,6 +55,7 @@ scripts/
   adversarial_tests.sh    # G30 adversarial reliability bundle
   prove_determinism.sh    # G4.6 deterministic replay proof runner
   prove_idempotency_scope.sh # G4.1 idempotency scope/TTL proof runner
+  prove_idempotency_key_format.sh # G4.1 Idempotency-Key format policy proof runner
   prove_latch_approval.sh # G4.1 reconciliation latch approval proof runner
   prove_budget_freshness.sh # G31 safety budget artifact freshness proof runner
   prove_controls_freshness.sh # G32 controls evidence freshness proof runner
@@ -429,6 +430,7 @@ make safety-case-extended
 - `build/exactly-once/exactly-once-stress.json`
 - `build/exactly-once/prove-exactly-once-million-latest.json` (있을 때 자동 포함)
 - `build/idempotency/prove-idempotency-latest.json`
+- `build/idempotency/prove-idempotency-key-format-latest.json`
 - `build/latch/prove-latch-approval-latest.json`
 - `build/safety/prove-budget-freshness-latest.json`
 - `build/reconciliation/smoke-reconciliation-safety.json`
@@ -527,7 +529,7 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
-- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `latchApproval`, `idempotencyLatchRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
+- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingCoverage`, `mappingIntegrityRunbook`, `mappingCoverageRunbook`, `proofHealth`, `idempotencyScope`, `idempotencyKeyFormat`, `latchApproval`, `idempotencyLatchRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
 - supports report freshness policy via `safety/budgets.yaml`:
   - top-level `freshness.defaultMaxAgeSeconds`
   - per-check override `budgets.<check>.maxAgeSeconds`
@@ -609,7 +611,7 @@ Success output includes:
 - `system_status_report=build/status/system-status-<timestamp>.json`
 - `system_status_latest=build/status/system-status-latest.json`
 - `system_status_ok=true|false`
-- report includes `checks.compliance.evidence_pack`, `checks.compliance.mapping_coverage_proof`, `checks.compliance.mapping_coverage_metrics`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.mapping_coverage`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`, `mapping_coverage`, `mapping_coverage_metrics`)
+- report includes `checks.compliance.evidence_pack`, `checks.compliance.mapping_coverage_proof`, `checks.compliance.mapping_coverage_metrics`, `checks.compliance.controls`, `checks.compliance.audit_chain`, `checks.compliance.change_audit_chain`, `checks.compliance.pii_log_scan`, `checks.compliance.policy_smoke`, `checks.compliance.policy_tamper`, `checks.compliance.chaos_network_partition`, `checks.compliance.chaos_redpanda_bounce`, `checks.compliance.safety_budget`, `checks.compliance.runbooks.exactly_once_million`, `checks.compliance.runbooks.mapping_integrity`, `checks.compliance.runbooks.mapping_coverage`, `checks.compliance.runbooks.idempotency_latch`, `checks.compliance.runbooks.proof_health`, `checks.compliance.proofs` snapshots when latest artifacts exist (`determinism`, `idempotency_scope`, `idempotency_key_format`, `latch_approval`, `exactly_once_million`, `controls_freshness`, `budget_freshness`, `proof_health`, `mapping_integrity`, `mapping_coverage`, `mapping_coverage_metrics`)
 
 ### 17.1) Anomaly detector
 ```bash
@@ -715,7 +717,7 @@ Success output includes:
 - `transparency_report_file=build/transparency/transparency-report-<timestamp>.json`
 - `transparency_report_latest=build/transparency/transparency-report-latest.json`
 - `transparency_report_ok=true|false`
-- integrity summary includes `idempotency_scope_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
+- integrity summary includes `idempotency_scope_ok`, `idempotency_key_format_ok`, `latch_approval_ok`, `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency` proxies
 - governance summary now includes `audit_chain`, `change_audit_chain`, `pii_log_scan`, `policy_smoke`, `policy_tamper`, `chaos_network_partition`, `chaos_redpanda_bounce`, `rbac_sod`, `anomaly_detector`, `exactly_once_runbook`, `mapping_integrity_runbook`, `mapping_coverage_runbook`, `idempotency_latch_runbook`, `proof_health_runbook`, `proof_health`, `compliance_duplicate_mappings`, `mapping_integrity_ok`, `mapping_coverage_ok`, `mapping_coverage_ratio`, `controls_freshness_proof`, `budget_freshness_proof` proxies
 
 ### 20.1) Proof health metrics exporter
@@ -1002,7 +1004,7 @@ Outputs:
 - report includes network-partition context: `network_partition_ok`, `network_partition_during_reachable`, `network_partition_recovered`
 - report includes redpanda-bounce context: `redpanda_bounce_ok`, `redpanda_bounce_during_reachable`, `redpanda_bounce_recovered`
 - report includes determinism context: `determinism_ok`, `determinism_executed_runs`, `determinism_distinct_hash_count`
-- report includes idempotency/latch proof context: `idempotency_scope_ok`, `idempotency_scope_passed`, `idempotency_scope_failed`, `latch_approval_ok`, `latch_approval_missing_tests_count`, `latch_approval_failed_tests_count`
+- report includes idempotency/latch proof context: `idempotency_scope_ok`, `idempotency_scope_passed`, `idempotency_scope_failed`, `idempotency_key_format_ok`, `idempotency_key_format_missing_tests_count`, `idempotency_key_format_failed_tests_count`, `latch_approval_ok`, `latch_approval_missing_tests_count`, `latch_approval_failed_tests_count`
 - report includes exactly-once-million context: `exactly_once_million_ok`, `exactly_once_million_repeats`, `exactly_once_million_concurrency`
 - report includes exactly-once runbook context: `exactly_once_runbook_proof_ok`, `exactly_once_runbook_proof_repeats`, `exactly_once_runbook_recommended_action`
 - report includes mapping-integrity runbook context: `mapping_integrity_runbook_proof_ok`, `mapping_integrity_runbook_recommended_action`
@@ -1094,7 +1096,16 @@ Outputs:
 - `prove_idempotency_latest=build/idempotency/prove-idempotency-latest.json`
 - `prove_idempotency_ok=true|false`
 
-### 27.2) Latch approval proof
+### 27.2) Idempotency-Key format proof
+```bash
+make prove-idempotency-key-format
+```
+Outputs:
+- `prove_idempotency_key_format_report=build/idempotency/prove-idempotency-key-format-<timestamp>.json`
+- `prove_idempotency_key_format_latest=build/idempotency/prove-idempotency-key-format-latest.json`
+- `prove_idempotency_key_format_ok=true|false`
+
+### 27.3) Latch approval proof
 ```bash
 make prove-latch-approval
 ```
@@ -1103,7 +1114,7 @@ Outputs:
 - `prove_latch_approval_latest=build/latch/prove-latch-approval-latest.json`
 - `prove_latch_approval_ok=true|false`
 
-### 27.3) Budget freshness proof
+### 27.4) Budget freshness proof
 ```bash
 make prove-budget-freshness
 ```
@@ -1112,7 +1123,7 @@ Outputs:
 - `prove_budget_freshness_latest=build/safety/prove-budget-freshness-latest.json`
 - `prove_budget_freshness_ok=true|false`
 
-### 27.4) Controls freshness proof
+### 27.5) Controls freshness proof
 ```bash
 make prove-controls-freshness
 ```
@@ -1121,7 +1132,7 @@ Outputs:
 - `prove_controls_freshness_latest=build/controls/prove-controls-freshness-latest.json`
 - `prove_controls_freshness_ok=true|false`
 
-### 27.5) Circuit-breaker proof
+### 27.6) Circuit-breaker proof
 ```bash
 make prove-breakers
 ```
@@ -1130,7 +1141,7 @@ Outputs:
 - `prove_breakers_latest=build/breakers/prove-breakers-latest.json`
 - `prove_breakers_ok=true|false`
 
-### 27.6) Service-mode matrix verification
+### 27.7) Service-mode matrix verification
 ```bash
 make verify-service-modes
 ```

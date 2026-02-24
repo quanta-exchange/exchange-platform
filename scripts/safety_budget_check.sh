@@ -211,6 +211,25 @@ for key, budget in budgets.items():
         if failed > 0:
             entry["ok"] = False
             entry["details"].append(f"idempotency_failed={failed}")
+    elif key == "idempotencyKeyFormat":
+        must_ok = bool(budget.get("mustBeOk", True))
+        key_format_ok = bool(payload.get("ok", False))
+        missing_tests = len(payload.get("missing_tests", []) or [])
+        failed_tests = len(payload.get("failed_tests", []) or [])
+        if must_ok and not key_format_ok:
+            entry["ok"] = False
+            entry["details"].append("idempotency_key_format_not_ok")
+        max_missing_tests = int(budget.get("maxMissingTests", 0))
+        if missing_tests > max_missing_tests:
+            entry["ok"] = False
+            entry["details"].append(
+                f"idempotency_key_format_missing_tests={missing_tests} > {max_missing_tests}"
+            )
+        if failed_tests > 0:
+            entry["ok"] = False
+            entry["details"].append(
+                f"idempotency_key_format_failed_tests={failed_tests}"
+            )
     elif key == "latchApproval":
         must_ok = bool(budget.get("mustBeOk", True))
         latch_ok = bool(payload.get("ok", False))

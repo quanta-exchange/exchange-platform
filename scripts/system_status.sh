@@ -258,6 +258,9 @@ mapping_coverage_latest = read_latest_json(
 controls_freshness_latest = read_latest_json("build/controls/prove-controls-freshness-latest.json")
 determinism_latest = read_latest_json("build/determinism/prove-determinism-latest.json")
 idempotency_scope_latest = read_latest_json("build/idempotency/prove-idempotency-latest.json")
+idempotency_key_format_latest = read_latest_json(
+    "build/idempotency/prove-idempotency-key-format-latest.json"
+)
 latch_approval_latest = read_latest_json("build/latch/prove-latch-approval-latest.json")
 exactly_once_million_latest = read_latest_json(
     "build/exactly-once/prove-exactly-once-million-latest.json"
@@ -633,6 +636,22 @@ report = {
                     "failed": (idempotency_scope_latest.get("payload") or {}).get("failed"),
                     "cargo_exit_code": (idempotency_scope_latest.get("payload") or {}).get("cargo_exit_code"),
                     "error": idempotency_scope_latest.get("error"),
+                },
+                "idempotency_key_format": {
+                    "present": idempotency_key_format_latest.get("present", False),
+                    "path": idempotency_key_format_latest.get("path"),
+                    "ok": (idempotency_key_format_latest.get("payload") or {}).get("ok"),
+                    "requested_tests_count": len(
+                        ((idempotency_key_format_latest.get("payload") or {}).get("requested_tests", []) or [])
+                    ),
+                    "missing_tests_count": len(
+                        ((idempotency_key_format_latest.get("payload") or {}).get("missing_tests", []) or [])
+                    ),
+                    "failed_tests_count": len(
+                        ((idempotency_key_format_latest.get("payload") or {}).get("failed_tests", []) or [])
+                    ),
+                    "go_exit_code": (idempotency_key_format_latest.get("payload") or {}).get("go_exit_code"),
+                    "error": idempotency_key_format_latest.get("error"),
                 },
                 "latch_approval": {
                     "present": latch_approval_latest.get("present", False),

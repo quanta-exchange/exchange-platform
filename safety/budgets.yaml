@@ -36,6 +36,12 @@
       "mustBeOk": true,
       "minPassed": 1
     },
+    "idempotencyKeyFormat": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "maxMissingTests": 0
+    },
     "latchApproval": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -204,6 +210,7 @@
     "invariants": "build/invariants/ledger-invariants.json",
     "determinism": "build/determinism/prove-determinism-latest.json",
     "idempotencyScope": "build/idempotency/prove-idempotency-latest.json",
+    "idempotencyKeyFormat": "build/idempotency/prove-idempotency-key-format-latest.json",
     "latchApproval": "build/latch/prove-latch-approval-latest.json",
     "idempotencyLatchRunbook": "build/runbooks/idempotency-latch-latest.json",
     "proofHealthRunbook": "build/runbooks/proof-health-latest.json",
