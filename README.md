@@ -1102,8 +1102,10 @@ Outputs:
 - report includes mapping-coverage metrics context: `mapping_coverage_metrics_ok`, `mapping_coverage_metrics_health_ok`, `mapping_coverage_metrics_ratio`, `mapping_coverage_metrics_missing_controls_count`, `mapping_coverage_metrics_unmapped_enforced_controls_count`, `mapping_coverage_metrics_duplicate_control_ids_count`, `mapping_coverage_metrics_duplicate_mapping_ids_count`, `mapping_coverage_metrics_runbook_recommended_action`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 - report includes adversarial runbook context: `adversarial_runbook_ok`, `adversarial_runbook_budget_ok`, `adversarial_runbook_failed_step_count`, `adversarial_runbook_recommended_action`
+- report includes release-gate fallback/context proof context: `release_gate_fallback_smoke_report`, `release_gate_fallback_smoke_ok`, `release_gate_fallback_smoke_exit_code`, `release_gate_context_proof_report`, `release_gate_context_proof_ok`, `release_gate_context_proof_exit_code`, `release_gate_context_proof_failed_checks_count`, `release_gate_context_proof_expect_require_runbook_context`, `release_gate_context_proof_release_gate_present`, `release_gate_context_proof_release_gate_runbook_context_missing_count`, `release_gate_context_proof_fallback_present`, `release_gate_context_proof_fallback_missing_fields_count`
 - report includes runbook context backfill status: `runbook_context_backfill_ok`, `runbook_context_missing`, `runbook_context_required_fields`
 - when a runbook is not executed in the current release-gate run, runbook context fields are backfilled from `build/runbooks/*-latest.json` when available
+- release gate automatically runs `release_gate_fallback_smoke` (against the generated report) and `prove_release_gate_context` to refresh downstream observability/safety-budget proof artifacts
 
 ### 25.1) Release-gate runbook fallback smoke
 ```bash

@@ -1455,6 +1455,120 @@ with open(report_file, "w", encoding="utf-8") as f:
     f.write("\n")
 PY
 
+# Generate fallback-smoke and context-proof artifacts using this exact gate report.
+FALLBACK_CMD=(
+  "$ROOT_DIR/scripts/release_gate_fallback_smoke.sh"
+  --skip-release-gate
+  --report-file
+  "$REPORT_FILE"
+)
+if [[ "$REQUIRE_RUNBOOK_CONTEXT" == "true" ]]; then
+  FALLBACK_CMD+=(--require-runbook-context)
+fi
+
+set +e
+FALLBACK_OUTPUT="$("${FALLBACK_CMD[@]}" 2>&1)"
+FALLBACK_EXIT_CODE=$?
+set -e
+echo "$FALLBACK_OUTPUT"
+
+FALLBACK_REPORT="$(echo "$FALLBACK_OUTPUT" | awk -F= '/^release_gate_fallback_smoke_report=/{print $2}' | tail -n 1)"
+FALLBACK_OK="$(echo "$FALLBACK_OUTPUT" | awk -F= '/^release_gate_fallback_smoke_ok=/{print $2}' | tail -n 1)"
+if [[ -z "$FALLBACK_OK" ]]; then
+  if [[ "$FALLBACK_EXIT_CODE" -eq 0 ]]; then
+    FALLBACK_OK=true
+  else
+    FALLBACK_OK=false
+  fi
+fi
+
+PROOF_CMD=(
+  "$ROOT_DIR/scripts/prove_release_gate_context.sh"
+  --release-gate-report
+  "$REPORT_FILE"
+)
+if [[ -n "$FALLBACK_REPORT" ]]; then
+  PROOF_CMD+=(--fallback-smoke-report "$FALLBACK_REPORT")
+fi
+if [[ "$REQUIRE_RUNBOOK_CONTEXT" == "true" ]]; then
+  PROOF_CMD+=(--expect-require-runbook-context)
+else
+  PROOF_CMD+=(--allow-require-runbook-context-false)
+fi
+
+set +e
+PROOF_OUTPUT="$("${PROOF_CMD[@]}" 2>&1)"
+PROOF_EXIT_CODE=$?
+set -e
+echo "$PROOF_OUTPUT"
+
+PROOF_REPORT="$(echo "$PROOF_OUTPUT" | awk -F= '/^prove_release_gate_context_report=/{print $2}' | tail -n 1)"
+PROOF_OK="$(echo "$PROOF_OUTPUT" | awk -F= '/^prove_release_gate_context_ok=/{print $2}' | tail -n 1)"
+if [[ -z "$PROOF_OK" ]]; then
+  if [[ "$PROOF_EXIT_CODE" -eq 0 ]]; then
+    PROOF_OK=true
+  else
+    PROOF_OK=false
+  fi
+fi
+
+python3 - "$REPORT_FILE" "$FALLBACK_REPORT" "$FALLBACK_OK" "$FALLBACK_EXIT_CODE" "$PROOF_REPORT" "$PROOF_OK" "$PROOF_EXIT_CODE" "$REQUIRE_RUNBOOK_CONTEXT" <<'PY'
+import json
+import pathlib
+import sys
+
+report_file = pathlib.Path(sys.argv[1]).resolve()
+fallback_report = sys.argv[2]
+fallback_ok = sys.argv[3].lower() == "true"
+fallback_exit_code = int(sys.argv[4])
+proof_report = sys.argv[5]
+proof_ok = sys.argv[6].lower() == "true"
+proof_exit_code = int(sys.argv[7])
+require_runbook_context = sys.argv[8].lower() == "true"
+
+with open(report_file, "r", encoding="utf-8") as f:
+    payload = json.load(f)
+
+proof_payload = None
+if proof_report:
+    candidate = pathlib.Path(proof_report).resolve()
+    if candidate.exists():
+        with open(candidate, "r", encoding="utf-8") as pf:
+            proof_payload = json.load(pf)
+
+payload["release_gate_fallback_smoke_report"] = fallback_report or None
+payload["release_gate_fallback_smoke_ok"] = fallback_ok
+payload["release_gate_fallback_smoke_exit_code"] = fallback_exit_code
+payload["release_gate_context_proof_report"] = proof_report or None
+payload["release_gate_context_proof_ok"] = proof_ok
+payload["release_gate_context_proof_exit_code"] = proof_exit_code
+
+if isinstance(proof_payload, dict):
+    failed_checks = list(proof_payload.get("failed_checks", []) or [])
+    payload["release_gate_context_proof_failed_checks"] = failed_checks
+    payload["release_gate_context_proof_failed_checks_count"] = len(failed_checks)
+    payload["release_gate_context_proof_expect_require_runbook_context"] = proof_payload.get(
+        "expect_require_runbook_context"
+    )
+    release_gate_ctx = (proof_payload.get("release_gate", {}) or {})
+    fallback_ctx = (proof_payload.get("fallback_smoke", {}) or {})
+    payload["release_gate_context_proof_release_gate_present"] = release_gate_ctx.get("present")
+    payload["release_gate_context_proof_release_gate_runbook_context_missing_count"] = release_gate_ctx.get(
+        "runbook_context_missing_count"
+    )
+    payload["release_gate_context_proof_fallback_present"] = fallback_ctx.get("present")
+    payload["release_gate_context_proof_fallback_missing_fields_count"] = fallback_ctx.get(
+        "missing_fields_count"
+    )
+
+if require_runbook_context:
+    payload["ok"] = bool(payload.get("ok")) and proof_ok
+
+with open(report_file, "w", encoding="utf-8") as f:
+    json.dump(payload, f, indent=2, sort_keys=True)
+    f.write("\n")
+PY
+
 cp "$REPORT_FILE" "$LATEST_FILE"
 
 GATE_OK="$(
