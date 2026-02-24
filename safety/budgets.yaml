@@ -140,6 +140,13 @@
       "maxAgeSeconds": 604800,
       "mustBeOk": true
     },
+    "proofHealth": {
+      "required": false,
+      "maxAgeSeconds": 604800,
+      "mustBeOk": true,
+      "maxMissingCount": 0,
+      "maxFailingCount": 0
+    },
     "chaosNetworkPartition": {
       "required": false,
       "maxAgeSeconds": 604800,
@@ -187,6 +194,7 @@
     "complianceEvidence": "build/compliance/compliance-evidence-latest.json",
     "mappingIntegrity": "build/compliance/prove-mapping-integrity-latest.json",
     "mappingIntegrityRunbook": "build/runbooks/mapping-integrity-latest.json",
+    "proofHealth": "build/metrics/proof-health-latest.json",
     "chaosNetworkPartition": "build/chaos/network-partition-latest.json",
     "chaosRedpandaBounce": "build/chaos/redpanda-broker-bounce-latest.json",
     "adversarial": "build/adversarial/adversarial-tests-latest.json"

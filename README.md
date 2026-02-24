@@ -522,7 +522,7 @@ Success output includes:
 - `safety_budget_report=build/safety/safety-budget-<timestamp>.json`
 - `safety_budget_latest=build/safety/safety-budget-latest.json`
 - `safety_budget_ok=true|false`
-- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingIntegrityRunbook`, `idempotencyScope`, `latchApproval`, `idempotencyLatchRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
+- when reports exist, budget checks include `auditChain`, `changeAuditChain`, `piiLogScan`, `anomaly`, `complianceEvidence`, `mappingIntegrity`, `mappingIntegrityRunbook`, `proofHealth`, `idempotencyScope`, `latchApproval`, `idempotencyLatchRunbook`, `proofHealthRunbook`, `exactlyOnceMillion` gates
 - supports report freshness policy via `safety/budgets.yaml`:
   - top-level `freshness.defaultMaxAgeSeconds`
   - per-check override `budgets.<check>.maxAgeSeconds`
@@ -695,6 +695,8 @@ Success output includes:
 - `proof_health_metrics_prom=build/metrics/proof-health-<timestamp>.prom`
 - `proof_health_metrics_prom_latest=build/metrics/proof-health-latest.prom`
 - `proof_health_metrics_ok=true|false`
+- json includes `ok`, `health_ok`, `export_ok`, `tracked_count`, `present_count`, `missing_count`, `failing_count`
+- command success/exit is tied to `export_ok`; operational degradation is read from `ok`/`health_ok`
 - alert examples: `infra/observability/proof-alert-rules.example.yml`
 
 ### 20) External replay demo
@@ -943,7 +945,7 @@ Outputs:
 - report includes mapping-integrity runbook context: `mapping_integrity_runbook_proof_ok`, `mapping_integrity_runbook_recommended_action`
 - report includes idempotency+latch runbook context: `idempotency_latch_runbook_idempotency_ok`, `idempotency_latch_runbook_latch_ok`, `idempotency_latch_runbook_recommended_action`
 - report includes proof-health runbook context: `proof_health_runbook_proof_ok`, `proof_health_runbook_missing_count`, `proof_health_runbook_failing_count`, `proof_health_runbook_recommended_action`
-- report includes proof-health context: `proof_health_ok`, `proof_health_failing_count`
+- report includes proof-health context: `proof_health_ok`, `proof_health_health_ok`, `proof_health_missing_count`, `proof_health_failing_count`
 - report includes mapping-integrity context: `mapping_integrity_ok`
 - report includes adversarial context: `adversarial_tests_ok`, `adversarial_failed_steps`
 

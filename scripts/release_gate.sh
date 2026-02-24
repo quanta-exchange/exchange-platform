@@ -257,6 +257,8 @@ mapping_integrity_ok = None
 mapping_integrity_runbook_proof_ok = None
 mapping_integrity_runbook_recommended_action = None
 proof_health_ok = None
+proof_health_health_ok = None
+proof_health_missing_count = None
 proof_health_failing_count = None
 idempotency_latch_runbook_idempotency_ok = None
 idempotency_latch_runbook_latch_ok = None
@@ -440,6 +442,8 @@ if proof_health_report_path:
         with open(candidate, "r", encoding="utf-8") as f:
             proof_health_payload = json.load(f)
         proof_health_ok = bool(proof_health_payload.get("ok", False))
+        proof_health_health_ok = bool(proof_health_payload.get("health_ok", proof_health_ok))
+        proof_health_missing_count = proof_health_payload.get("missing_count")
         proof_health_failing_count = proof_health_payload.get("failing_count")
 mapping_integrity_runbook_dir = summary.get("artifacts", {}).get(
     "mapping_integrity_runbook_dir"
@@ -565,6 +569,8 @@ payload = {
     "mapping_integrity_runbook_proof_ok": mapping_integrity_runbook_proof_ok,
     "mapping_integrity_runbook_recommended_action": mapping_integrity_runbook_recommended_action,
     "proof_health_ok": proof_health_ok,
+    "proof_health_health_ok": proof_health_health_ok,
+    "proof_health_missing_count": proof_health_missing_count,
     "proof_health_failing_count": proof_health_failing_count,
     "idempotency_latch_runbook_idempotency_ok": idempotency_latch_runbook_idempotency_ok,
     "idempotency_latch_runbook_latch_ok": idempotency_latch_runbook_latch_ok,

@@ -19,6 +19,24 @@ groups:
           summary: "Proof artifact reports failure"
           description: "Latest proof artifact for {{ $labels.proof }} reports non-ok."
 
+      - alert: ProofHealthDegraded
+        expr: proof_health_overall_ok == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proof health degraded"
+          description: "At least one proof artifact is missing or failing."
+
+      - alert: ProofHealthMissingArtifacts
+        expr: proof_health_missing_count > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Missing proof artifacts detected"
+          description: "{{ $value }} proof artifacts are missing."
+
       - alert: ProofArtifactStale
         expr: proof_health_artifact_age_seconds > 604800
         for: 1h

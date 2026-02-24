@@ -544,6 +544,11 @@
       "controlId": "CTRL-109",
       "frameworks": ["SOC2:CC7.3", "ISO27001:A.17.1.3"],
       "description": "Runbook-as-code exists for proof-health failures and is wired into verification/release/status/transparency/safety-budget contexts for deterministic remediation evidence"
+    },
+    {
+      "controlId": "CTRL-110",
+      "frameworks": ["SOC2:CC7.2", "ISO27001:A.12.4.1"],
+      "description": "Proof-health artifacts expose overall/missing/failing counters and are budgeted/alerted so release trust and on-call routing react deterministically to missing or failed proofs"
     }
   ]
 }

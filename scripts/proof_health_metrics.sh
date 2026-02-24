@@ -78,6 +78,7 @@ now = datetime.now(timezone.utc)
 error_count = 0
 failing_count = 0
 present_count = 0
+missing_count = 0
 
 for name, rel in sources.items():
     path = root / rel
@@ -104,6 +105,8 @@ for name, rel in sources.items():
         action = payload.get("recommended_action") if isinstance(payload, dict) else None
         if action:
             runbook_actions.append((name, str(action)))
+    else:
+        missing_count += 1
     age_seconds = None
     if ts is not None:
         age_seconds = max(0, int((now - ts).total_seconds()))
@@ -124,6 +127,12 @@ lines.append("# HELP proof_health_artifact_age_seconds Age in seconds of the lat
 lines.append("# TYPE proof_health_artifact_age_seconds gauge")
 lines.append("# HELP proof_health_runbook_recommended_action Current recommended action emitted by runbook summaries.")
 lines.append("# TYPE proof_health_runbook_recommended_action gauge")
+lines.append("# HELP proof_health_overall_ok Whether proof health is fully green (no missing/failing artifacts).")
+lines.append("# TYPE proof_health_overall_ok gauge")
+lines.append("# HELP proof_health_missing_count Number of missing latest proof artifacts.")
+lines.append("# TYPE proof_health_missing_count gauge")
+lines.append("# HELP proof_health_failing_count Number of present latest proof artifacts that report non-ok.")
+lines.append("# TYPE proof_health_failing_count gauge")
 for name, entry in tracked.items():
     present = 1 if entry["present"] else 0
     ok = 1 if entry["ok"] else 0
@@ -135,6 +144,10 @@ for runbook, action in runbook_actions:
     lines.append(
         f'proof_health_runbook_recommended_action{{runbook="{runbook}",action="{action}"}} 1'
     )
+health_ok = missing_count == 0 and failing_count == 0
+lines.append(f"proof_health_overall_ok {1 if health_ok else 0}")
+lines.append(f"proof_health_missing_count {missing_count}")
+lines.append(f"proof_health_failing_count {failing_count}")
 
 prom_file.parent.mkdir(parents=True, exist_ok=True)
 with open(prom_file, "w", encoding="utf-8") as f:
@@ -142,10 +155,13 @@ with open(prom_file, "w", encoding="utf-8") as f:
 
 payload = {
     "generated_at_utc": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "ok": error_count == 0,
+    "ok": health_ok,
+    "export_ok": error_count == 0,
+    "health_ok": health_ok,
     "error_count": error_count,
     "tracked_count": len(tracked),
     "present_count": present_count,
+    "missing_count": missing_count,
     "failing_count": failing_count,
     "tracked": tracked,
     "runbook_recommended_actions": [
@@ -166,7 +182,7 @@ import json
 import sys
 with open(sys.argv[1], "r", encoding="utf-8") as f:
     payload = json.load(f)
-print("true" if payload.get("ok") else "false")
+print("true" if payload.get("export_ok") else "false")
 PY
 )"
 

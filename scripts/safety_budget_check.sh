@@ -440,6 +440,26 @@ for key, budget in budgets.items():
         if must_ok and not runbook_proof_ok:
             entry["ok"] = False
             entry["details"].append("mapping_integrity_runbook_proof_not_ok")
+    elif key == "proofHealth":
+        must_ok = bool(budget.get("mustBeOk", True))
+        proof_health_ok = bool(payload.get("ok", False))
+        missing_count = int(payload.get("missing_count", 0))
+        failing_count = int(payload.get("failing_count", 0))
+        if must_ok and not proof_health_ok:
+            entry["ok"] = False
+            entry["details"].append("proof_health_not_ok")
+        max_missing_count = int(budget.get("maxMissingCount", 0))
+        if missing_count > max_missing_count:
+            entry["ok"] = False
+            entry["details"].append(
+                f"proof_health_missing_count={missing_count} > {max_missing_count}"
+            )
+        max_failing_count = int(budget.get("maxFailingCount", 0))
+        if failing_count > max_failing_count:
+            entry["ok"] = False
+            entry["details"].append(
+                f"proof_health_failing_count={failing_count} > {max_failing_count}"
+            )
     elif key == "chaosNetworkPartition":
         must_ok = bool(budget.get("mustBeOk", True))
         partition_ok = bool(payload.get("ok", False))

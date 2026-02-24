@@ -588,11 +588,20 @@ report = {
                     "present": proof_health_latest.get("present", False),
                     "path": proof_health_latest.get("path"),
                     "ok": (proof_health_latest.get("payload") or {}).get("ok"),
+                    "health_ok": (proof_health_latest.get("payload") or {}).get(
+                        "health_ok"
+                    ),
+                    "export_ok": (proof_health_latest.get("payload") or {}).get(
+                        "export_ok"
+                    ),
                     "tracked_count": (proof_health_latest.get("payload") or {}).get(
                         "tracked_count"
                     ),
                     "present_count": (proof_health_latest.get("payload") or {}).get(
                         "present_count"
+                    ),
+                    "missing_count": (proof_health_latest.get("payload") or {}).get(
+                        "missing_count"
                     ),
                     "failing_count": (proof_health_latest.get("payload") or {}).get(
                         "failing_count"

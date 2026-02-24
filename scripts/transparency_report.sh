@@ -265,6 +265,8 @@ report = {
             "proof_health_runbook_failing_count": int(proof_health_runbook.get("failing_count")) if proof_health_runbook and proof_health_runbook.get("failing_count") is not None else None,
             "proof_health_runbook_recommended_action": proof_health_runbook.get("recommended_action") if proof_health_runbook else None,
             "proof_health_ok": bool(proof_health.get("ok")) if proof_health else None,
+            "proof_health_health_ok": bool(proof_health.get("health_ok")) if proof_health else None,
+            "proof_health_missing_count": int(proof_health.get("missing_count")) if proof_health and proof_health.get("missing_count") is not None else None,
             "proof_health_failing_count": int(proof_health.get("failing_count")) if proof_health and proof_health.get("failing_count") is not None else None,
             "controls_freshness_proof_ok": bool(controls_freshness.get("ok")) if controls_freshness else None,
             "budget_freshness_proof_ok": bool(budget_freshness.get("ok")) if budget_freshness else None,
